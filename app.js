@@ -1,4 +1,4 @@
-/* Good Globe Game — front end. Plain JavaScript, no build step. */
+/* GeoGeniuses — front end. Plain JavaScript, no build step. */
 (function () {
   "use strict";
 
@@ -321,7 +321,7 @@
       li.querySelector(".p").textContent = (scores[i] != null ? scores[i] : "–") + "/" + MAX_PTS[i];
       list.appendChild(li);
     });
-    session.share = "Good Globe Game · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
+    session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
       "\n" + emojis + " · " + fmt(total) + "/" + fmt(DAY_MAX) + "\n" + location.origin + location.pathname;
     $("copied").hidden = true;
     fillPast();
