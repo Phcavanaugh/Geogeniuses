@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#0f2a44">
 <title>Good Globe Game</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
+<link rel="stylesheet" href="vendor/maplibre-gl.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,7 +30,7 @@
       <p id="qClue" class="clue"></p>
     </div>
     <div id="globeWrap" class="globe-wrap">
-      <canvas id="globe"></canvas>
+      <div id="map"></div>
       <div id="hint" class="hint">Tap to drop a pin · drag to spin · pinch to zoom</div>
     </div>
     <div class="bottom">
@@ -80,6 +81,7 @@
 <script src="config.js"></script>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
+<script src="vendor/maplibre-gl.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -36,11 +36,15 @@
   function milesBetween(a, b) { // [lon,lat]
     return d3.geoDistance(a, b) * 3958.8;
   }
-  function pointsFor(miles, max) {
-    if (miles <= PERFECT_MILES) return max;
+  // Every question is scored out of 100, then multiplied (x1, x1, x2, x3, x3).
+  // Full marks within 20 miles; the score falls fast at first and reaches zero at 10,000 miles.
+  const CURVE_POWER = 5.7;
+  function baseScore(miles) {
+    if (miles <= PERFECT_MILES) return 100;
     const f = Math.max(0, 1 - (miles - PERFECT_MILES) / (ZERO_MILES - PERFECT_MILES));
-    return Math.min(max - 1, Math.round(max * f * f));
+    return Math.min(99, Math.round(100 * Math.pow(f, CURVE_POWER)));
   }
+  function pointsFor(miles, max) { return baseScore(miles) * (max / 100); }
   function emojiFor(pts, max) {
     if (pts >= max) return PERFECT_EMOJI;
     const pct = pts / max;
@@ -96,165 +100,110 @@
     },
   };
 
-  // ---------- Globe ----------
+  // ---------- Globe (MapLibre, satellite imagery) ----------
   const Globe = (function () {
-    const canvas = $("globe"), ctx = canvas.getContext("2d");
-    const proj = d3.geoOrthographic().clipAngle(90).precision(0.5);
-    const path = d3.geoPath(proj, ctx);
-    const grat = d3.geoGraticule10();
-    const DEFAULT_ROT = [30, -20, 0];
-    let W = 0, H = 0, R = 0, k = 1, rot = DEFAULT_ROT.slice();
-    let hi = null, lo = null, pin = null, answer = null, locked = false;
-    let onPin = () => {}, idleTimer = null, interacting = false, anim = null;
+    const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
+    const MAX_ZOOM = 7.5; // about state/region level — no street-level zoom
+    const START_CENTER = [-30, 20];
+    let map = null, pin = null, answer = null, locked = false, onPin = () => {};
+    let pinMarker = null, ansMarker = null;
 
-    function resize() {
-      const rect = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
-      W = rect.width; H = rect.height;
-      canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      R = Math.min(W, H) / 2 * 0.92;
-      draw();
+    function pinEl(color) {
+      const el = document.createElement("div");
+      el.className = "pin";
+      el.innerHTML = '<svg width="28" height="38" viewBox="0 0 28 38"><path d="M14 37C14 37 26 22.5 26 13.5A12 12 0 0 0 2 13.5C2 22.5 14 37 14 37Z" fill="' + color +
+        '" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>';
+      return el;
     }
-    function visible(p) { return d3.geoDistance(p, [-rot[0], -rot[1]]) < Math.PI / 2 - 1e-6; }
-    function marker(p, color) {
-      if (!visible(p)) return;
-      const [x, y] = proj(p);
-      ctx.beginPath(); ctx.arc(x, y - 14, 8, 0, 2 * Math.PI);
-      ctx.moveTo(x - 6.5, y - 9.5); ctx.lineTo(x, y); ctx.lineTo(x + 6.5, y - 9.5);
-      ctx.fillStyle = color; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#fff"; ctx.stroke();
-      ctx.beginPath(); ctx.arc(x, y - 14, 3, 0, 2 * Math.PI); ctx.fillStyle = "#fff"; ctx.fill();
+    function fitZoom() {
+      const el = map.getContainer();
+      const d = Math.min(el.clientWidth, el.clientHeight) * 0.9;
+      return d > 0 ? Math.log2(d * Math.PI / 512) : 1;
     }
-    function draw() {
-      if (!W) return;
-      const d = (interacting || !hi) ? lo : hi;
-      proj.translate([W / 2, H / 2]).scale(R * k).rotate(rot);
-      ctx.clearRect(0, 0, W, H);
-      ctx.beginPath(); path({ type: "Sphere" }); ctx.fillStyle = "#cfe3f3"; ctx.fill();
-      ctx.beginPath(); path(grat); ctx.strokeStyle = "rgba(15,42,68,.08)"; ctx.lineWidth = 0.7; ctx.stroke();
-      if (d) {
-        ctx.beginPath(); path(d.land); ctx.fillStyle = "#f3ecd9"; ctx.fill();
-        ctx.beginPath(); path(d.borders); ctx.strokeStyle = "#7a7468"; ctx.lineWidth = 0.7; ctx.stroke();
-        if (d.states) { ctx.beginPath(); path(d.states); ctx.strokeStyle = "rgba(122,116,104,.55)"; ctx.lineWidth = 0.5; ctx.stroke(); }
-        ctx.beginPath(); path(d.coast); ctx.strokeStyle = "#8aa7bf"; ctx.lineWidth = 0.6; ctx.stroke();
+    function arc(a, b) {
+      const f = d3.geoInterpolate(a, b), pts = [];
+      for (let i = 0; i <= 128; i++) pts.push(f(i / 128));
+      for (let i = 1; i < pts.length; i++) { // keep longitudes continuous across the date line
+        while (pts[i][0] - pts[i - 1][0] > 180) pts[i][0] -= 360;
+        while (pts[i][0] - pts[i - 1][0] < -180) pts[i][0] += 360;
       }
-      ctx.beginPath(); path({ type: "Sphere" }); ctx.strokeStyle = "rgba(15,42,68,.35)"; ctx.lineWidth = 1; ctx.stroke();
-      if (pin && answer) {
-        ctx.beginPath(); path({ type: "LineString", coordinates: [pin, answer] });
-        ctx.setLineDash([5, 4]); ctx.strokeStyle = "#15212e"; ctx.lineWidth = 1.6; ctx.stroke(); ctx.setLineDash([]);
-      }
-      if (pin) marker(pin, "#e4572e");
-      if (answer) marker(answer, "#2f9e5b");
+      return pts;
     }
-    function zoomAt(newK, sx, sy) {
-      // Change zoom while keeping the spot under the finger/cursor in place.
-      const r = canvas.getBoundingClientRect(), x = sx - r.left, y = sy - r.top;
-      proj.scale(R * k).rotate(rot);
-      const before = proj.invert([x, y]);
-      k = newK;
-      if (!before || !isFinite(before[0])) return;
-      for (let n = 0; n < 3; n++) {
-        proj.scale(R * k).rotate(rot);
-        const after = proj.invert([x, y]);
-        if (!after || !isFinite(after[0])) return;
-        let dl = after[0] - before[0]; dl = ((dl + 540) % 360) - 180;
-        rot = [rot[0] + dl, Math.max(-90, Math.min(90, rot[1] + (after[1] - before[1]))), 0];
-      }
+    function setLine(coords) {
+      const src = map.getSource("guessline");
+      if (src) src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: coords || [] } });
     }
-    function settle() {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => { interacting = false; draw(); }, 180);
-    }
-
-    // Pointer handling: one finger drags, two fingers pinch, a still tap drops the pin.
-    const ptrs = new Map();
-    let start = null, pinch = null;
-    canvas.addEventListener("pointerdown", (e) => {
-      canvas.setPointerCapture(e.pointerId);
-      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (anim) { anim.stop(); anim = null; }
-      if (ptrs.size === 1) start = { x: e.clientX, y: e.clientY, t: Date.now(), moved: false, rot: rot.slice() };
-      if (ptrs.size === 2) {
-        const [a, b] = [...ptrs.values()];
-        pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k };
-        if (start) start.moved = true;
-      }
-    });
-    canvas.addEventListener("pointermove", (e) => {
-      if (!ptrs.has(e.pointerId)) return;
-      ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
-      if (ptrs.size === 2 && pinch) {
-        const [a, b] = [...ptrs.values()];
-        zoomAt(Math.max(1, Math.min(60, pinch.k * Math.hypot(a.x - b.x, a.y - b.y) / pinch.d)), (a.x + b.x) / 2, (a.y + b.y) / 2);
-        interacting = true; draw(); settle(); return;
-      }
-      if (ptrs.size === 1 && start) {
-        const dx = e.clientX - start.x, dy = e.clientY - start.y;
-        if (!start.moved && Math.hypot(dx, dy) > 7) start.moved = true;
-        if (start.moved) {
-          const deg = 180 / Math.PI / (R * k);
-          rot = [start.rot[0] + dx * deg, Math.max(-90, Math.min(90, start.rot[1] - dy * deg)), 0];
-          interacting = true; draw(); settle();
-        }
-      }
-    });
-    function up(e) {
-      const wasSingle = ptrs.size === 1;
-      ptrs.delete(e.pointerId);
-      if (ptrs.size < 2) pinch = null;
-      if (wasSingle && start && !start.moved && Date.now() - start.t < 700 && !locked) {
-        const r = canvas.getBoundingClientRect();
-        const x = e.clientX - r.left, y = e.clientY - r.top;
-        if (Math.hypot(x - W / 2, y - H / 2) <= R * k) {
-          const p = proj.invert([x, y]);
-          if (p && isFinite(p[0])) { pin = p; draw(); onPin(p); }
-        }
-      }
-      if (ptrs.size === 0) start = null;
-      else if (ptrs.size === 1) { const [p] = [...ptrs.values()]; start = { x: p.x, y: p.y, t: 0, moved: true, rot: rot.slice() }; }
-    }
-    canvas.addEventListener("pointerup", up);
-    canvas.addEventListener("pointercancel", up);
-    canvas.addEventListener("wheel", (e) => {
-      e.preventDefault();
-      zoomAt(Math.max(1, Math.min(60, k * Math.exp(-e.deltaY * 0.0015))), e.clientX, e.clientY);
-      interacting = true; draw(); settle();
-    }, { passive: false });
-    window.addEventListener("resize", resize);
 
     return {
       async load() {
-        const [w110, w50, us] = await Promise.all(
-          ["data/countries-110m.json", "data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())));
-        const build = (w, withStates) => ({
-          land: topojson.feature(w, w.objects.land),
-          borders: topojson.mesh(w, w.objects.countries, (a, b) => a !== b),
-          coast: topojson.mesh(w, w.objects.land),
-          states: withStates ? topojson.mesh(us, us.objects.states, (a, b) => a !== b) : null,
+        const [w50, us] = await Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())));
+        const borders = topojson.mesh(w50, w50.objects.countries, (a, b) => a !== b);
+        const states = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
+        map = new maplibregl.Map({
+          container: "map",
+          style: {
+            version: 8,
+            projection: { type: "globe" },
+            sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
+            sources: {
+              backup: { type: "raster", tiles: ["tiles/{z}/{x}/{y}.jpg"], tileSize: 256, maxzoom: 2 },
+              nasa: { type: "raster", tiles: [GIBS], tileSize: 256, maxzoom: 8,
+                attribution: 'Imagery: <a href="https://earthdata.nasa.gov/gibs" target="_blank">NASA Blue Marble</a>' },
+              borders: { type: "geojson", data: borders },
+              states: { type: "geojson", data: states },
+              guessline: { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } },
+            },
+            layers: [
+              { id: "space", type: "background", paint: { "background-color": "#0b1a2b" } },
+              { id: "backup", type: "raster", source: "backup" },
+              { id: "nasa", type: "raster", source: "nasa", paint: { "raster-fade-duration": 150 } },
+              { id: "states", type: "line", source: "states", paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.6 } },
+              { id: "borders", type: "line", source: "borders", paint: { "line-color": "rgba(255,255,255,0.7)", "line-width": 0.9 } },
+              { id: "guessline", type: "line", source: "guessline", layout: { "line-cap": "round" },
+                paint: { "line-color": "#ffffff", "line-width": 2.2, "line-dasharray": [2, 1.5] } },
+            ],
+          },
+          center: START_CENTER, zoom: 1, minZoom: 0, maxZoom: MAX_ZOOM,
+          dragRotate: false, pitchWithRotate: false, touchPitch: false, keyboard: false,
+          renderWorldCopies: false, attributionControl: { compact: true },
         });
-        lo = build(w110, false); hi = build(w50, true);
-        resize();
+        map.touchZoomRotate.disableRotation();
+        map.on("click", (e) => {
+          if (locked) return;
+          pin = [e.lngLat.lng, e.lngLat.lat];
+          if (!pinMarker) pinMarker = new maplibregl.Marker({ element: pinEl("#e4572e"), anchor: "bottom" });
+          pinMarker.setLngLat(pin).addTo(map);
+          onPin(pin);
+        });
+        await new Promise((res) => map.once("load", res));
+        this.reset();
       },
-      invertAt(sx, sy) { const r = canvas.getBoundingClientRect(); proj.scale(R * k).rotate(rot); return proj.invert([sx - r.left, sy - r.top]); },
-      reset() { rot = DEFAULT_ROT.slice(); k = 1; pin = null; answer = null; locked = false; draw(); },
+      reset() {
+        if (!map) return;
+        pin = null; answer = null; locked = false;
+        if (pinMarker) pinMarker.remove();
+        if (ansMarker) ansMarker.remove();
+        setLine(null);
+        map.stop();
+        map.jumpTo({ center: START_CENTER, zoom: fitZoom(), bearing: 0, pitch: 0 });
+      },
       onPin(fn) { onPin = fn; },
       getPin() { return pin; },
-      resize,
+      resize() { if (map) map.resize(); },
+      invertAt(sx, sy) { const r = map.getContainer().getBoundingClientRect(); const p = map.unproject([sx - r.left, sy - r.top]); return [p.lng, p.lat]; },
       reveal(guess, ans) {
         pin = guess; answer = ans; locked = true;
-        const mid = d3.geoInterpolate(guess, ans)(0.5);
+        if (!ansMarker) ansMarker = new maplibregl.Marker({ element: pinEl("#2f9e5b"), anchor: "bottom" });
+        ansMarker.setLngLat(ans).addTo(map);
+        const line = arc(guess, ans);
+        setLine(line);
+        // Zoom so both pins fit on screen, centered between them.
+        const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight) * 0.36;
         const half = d3.geoDistance(guess, ans) / 2;
-        const targetK = Math.max(1, Math.min(14, 0.8 / Math.max(Math.sin(half), 0.01)));
-        const r0 = rot.slice(), k0 = k, r1 = [-mid[0], -mid[1], 0];
-        let dl = r1[0] - r0[0]; dl = ((dl + 540) % 360) - 180;
-        const ease = d3.easeCubicInOut;
-        if (anim) anim.stop();
-        anim = d3.timer((t) => {
-          const u = Math.min(1, t / 1100), e = ease(u);
-          rot = [r0[0] + dl * e, r0[1] + (r1[1] - r0[1]) * e, 0];
-          k = k0 * Math.pow(targetK / k0, e);
-          interacting = u < 1; draw();
-          if (u >= 1) { anim.stop(); anim = null; }
-        });
+        const mid = d3.geoInterpolate(guess, ans)(0.5);
+        const radius = room / Math.max(Math.sin(half), 0.002);
+        const z = Math.max(fitZoom(), Math.min(6, Math.log2(radius * 2 * Math.PI / 512)));
+        map.flyTo({ center: mid, zoom: z, duration: 1200, essential: true });
       },
     };
   })();
@@ -266,7 +215,7 @@
 
   function show(id) {
     ["pickScreen", "gameScreen", "doneScreen", "msgScreen"].forEach((s) => { $(s).hidden = s !== id; });
-    if (id === "gameScreen") requestAnimationFrame(Globe.resize);
+    if (id === "gameScreen") Globe.resize();
   }
   function message(title, body) { $("msgTitle").textContent = title; $("msgBody").textContent = body; show("msgScreen"); }
   function setWho() {
@@ -479,5 +428,5 @@
   })();
 
   // Exposed for testing only.
-  window.__ggg = { pointsFor, emojiFor, computeBoard, milesBetween, globe: Globe };
+  window.__ggg = { pointsFor, baseScore, emojiFor, computeBoard, milesBetween, globe: Globe };
 })();
