@@ -254,6 +254,10 @@
           if (map.isStyleLoaded()) return res();
           map.once("style.load", res); map.once("load", res); setTimeout(res, 4000);
         });
+        // Keep the imagery credit collapsed behind the (i) button until someone taps it.
+        const collapseAttrib = () => document.querySelectorAll(".maplibregl-ctrl-attrib.maplibregl-compact-show")
+          .forEach((el) => el.classList.remove("maplibregl-compact-show"));
+        collapseAttrib(); map.once("idle", collapseAttrib); setTimeout(collapseAttrib, 1500);
         overlay = document.createElement("canvas");
         overlay.className = "line-overlay";
         map.getContainer().appendChild(overlay);
@@ -279,7 +283,8 @@
       invertAt(sx, sy) { const r = map.getContainer().getBoundingClientRect(); const p = map.unproject([sx - r.left, sy - r.top]); return [p.lng, p.lat]; },
       // Draw a dotted line from the guess to the answer, with the camera following it,
       // then drop the answer flag at the end. Resolves when the flag has landed.
-      reveal(guess, ans) {
+      reveal(guess, ans, hooks) {
+        hooks = hooks || {};
         pin = guess; answer = ans; locked = true;
         map.stop();
         const angle = d3.geoDistance(guess, ans), miles = angle * 3958.8;
@@ -295,6 +300,7 @@
             const n = Math.max(2, Math.ceil(96 * t));
             const pts = []; for (let i = 0; i <= n; i++) pts.push(interp((i / n) * t));
             drawing = pts;
+            if (hooks.onProgress) hooks.onProgress(t);
             // Camera: centered on the drawn part of the line, zoomed out just enough to keep it in view.
             const target = interp(t / 2), blend = Math.min(1, u / 0.25);
             const center = d3.geoInterpolate(start, target)(blend);
@@ -306,11 +312,78 @@
             const full = []; for (let i = 0; i <= 128; i++) full.push(interp(i / 128));
             setLine(unwrap(full));
             ansMarker = new maplibregl.Marker({ element: pinEl("#2f9e5b", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
+            if (hooks.onLand) setTimeout(hooks.onLand, 330); // as the flag hits the ground
             setTimeout(done, 550);
           };
           anim = requestAnimationFrame(step);
         });
       },
+    };
+  })();
+
+  // ---------- Sound and haptics ----------
+  const Feedback = (function () {
+    let ctx = null;
+    let on = store.get("ggg:sound") !== false;
+    function audio() {
+      if (!on) return null;
+      try {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === "suspended") ctx.resume();
+      } catch (e) { return null; }
+      return ctx;
+    }
+    function tone(freq, start, dur, type, vol, endFreq) {
+      const c = audio(); if (!c) return;
+      const t = c.currentTime + start, o = c.createOscillator(), g = c.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, t);
+      if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.3, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    function thud(start) {
+      const c = audio(); if (!c) return;
+      const t = c.currentTime + (start || 0), n = Math.floor(c.sampleRate * 0.12);
+      const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = buf; f.type = "lowpass"; f.frequency.value = 500; g.gain.value = 0.5;
+      src.connect(f).connect(g).connect(c.destination); src.start(t);
+      tone(150, start || 0, 0.22, "sine", 0.45, 55);
+    }
+    // iPhones ignore navigator.vibrate; toggling a hidden switch control triggers a tap on iOS 18+.
+    let iosSwitch = null;
+    function buzz(pattern) {
+      if (!on) return;
+      if (navigator.vibrate) { try { navigator.vibrate(pattern); return; } catch (e) {} }
+      try {
+        if (!iosSwitch) {
+          const label = document.createElement("label");
+          label.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+          const input = document.createElement("input");
+          input.type = "checkbox"; input.setAttribute("switch", "");
+          label.appendChild(input); document.body.appendChild(label); iosSwitch = label;
+        }
+        const taps = Array.isArray(pattern) ? Math.ceil(pattern.length / 2) : 1;
+        for (let i = 0; i < taps; i++) setTimeout(() => iosSwitch.click(), i * 90);
+      } catch (e) {}
+    }
+    return {
+      unlock() { audio(); },
+      pin() { tone(880, 0, 0.05, "triangle", 0.12); buzz(10); },
+      land(perfect) {
+        thud(0);
+        if (perfect) {
+          [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.12 + i * 0.09, 0.35, "triangle", 0.22));
+          buzz([30, 60, 30, 60, 80]);
+        } else buzz(35);
+      },
+      isOn() { return on; },
+      toggle() { on = !on; store.set("ggg:sound", on); if (on) audio(); return on; },
     };
   })();
 
@@ -437,10 +510,11 @@
     $("confirmBtn").hidden = false; $("confirmBtn").disabled = true;
     $("result").hidden = true;
     $("hint").hidden = false;
+    $("milesChip").hidden = true;
     show("gameScreen");
     Globe.reset();
   }
-  Globe.onPin(() => { $("confirmBtn").disabled = false; $("hint").hidden = true; });
+  Globe.onPin(() => { $("confirmBtn").disabled = false; $("hint").hidden = true; Feedback.pin(); });
 
   $("confirmBtn").onclick = async () => {
     const p = Globe.getPin(); if (!p) return;
@@ -450,7 +524,13 @@
     session.progress.guesses.push({ lon: +p[0].toFixed(4), lat: +p[1].toFixed(4), miles: Math.round(miles), pts });
     store.set(session.key, session.progress);
     $("confirmBtn").disabled = true;
-    await Globe.reveal(p, ans);
+    Feedback.unlock();
+    const chip = $("milesChip"), total = Math.round(miles), perfect = pts === MAX_PTS[i];
+    chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
+    await Globe.reveal(p, ans, {
+      onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; },
+      onLand() { chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(perfect); },
+    });
     $("confirmBtn").hidden = true;
     $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
     $("rAnswer").textContent = q.answer;
@@ -573,6 +653,10 @@
     if (last < 0) { const o = document.createElement("option"); o.textContent = "No past days yet"; sel.appendChild(o); }
   }
   $("pastBtn").onclick = () => { const d = $("pastSel").value; if (d) { store.del("ggg:v1:" + player + ":" + d + ":practice"); begin(d, true); } };
+
+  function setSoundBtn() { $("soundBtn").textContent = Feedback.isOn() ? "🔊" : "🔇"; $("soundBtn").setAttribute("aria-label", Feedback.isOn() ? "Sound on" : "Sound off"); }
+  $("soundBtn").onclick = () => { Feedback.toggle(); setSoundBtn(); };
+  setSoundBtn();
 
   $("whoBtn").onclick = () => {
     if (confirm("Switch player? You'll pick your name again.")) { store.del("ggg:player"); player = null; setWho(); pickPlayer(); }
