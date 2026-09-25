@@ -38,6 +38,10 @@
   // 100 at the spot, 71 at 1,000 miles, 50 at 3,000 miles, 41 at 5,000 miles.
   function baseScore(miles) { return Math.round(100 / Math.sqrt(1 + miles / 1000)); }
   function pointsFor(miles, max) { return baseScore(miles) * (max / 100); }
+  function tierFor(pts, max) {
+    const base = Math.round(pts * 100 / max);
+    return base >= 100 ? "perfect" : base >= 90 ? "green" : base >= 50 ? "yellow" : base >= 1 ? "red" : "black";
+  }
   function emojiFor(pts, max) {
     const base = Math.round(pts * 100 / max);
     if (base >= 100) return PERFECT_EMOJI;
@@ -293,6 +297,7 @@
         const zEnd = zoomToFit(angle / 2);
         const duration = Math.min(3200, 1100 + miles * 0.35);
         const t0 = performance.now();
+        if (hooks.onStart) hooks.onStart(duration);
         return new Promise((done) => {
           const step = (now) => {
             const u = Math.min(1, (now - t0) / duration);
@@ -372,16 +377,42 @@
         for (let i = 0; i < taps; i++) setTimeout(() => iosSwitch.click(), i * 90);
       } catch (e) {}
     }
+    // While the line draws: a soft whoosh plus ticks that speed up and rise in pitch.
+    let whoosh = null, lastTick = -1;
+    function lineStart(duration) {
+      const c = audio(); if (!c) return;
+      const secs = duration / 1000, n = Math.floor(c.sampleRate * (secs + 0.3));
+      const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+      src.buffer = buf; f.type = "bandpass"; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(350, t); f.frequency.exponentialRampToValueAtTime(1600, t + secs);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.25);
+      g.gain.setValueAtTime(0.07, t + Math.max(0.3, secs - 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, t + secs + 0.1);
+      src.connect(f).connect(g).connect(c.destination); src.start(t); src.stop(t + secs + 0.2);
+      whoosh = src; lastTick = -1;
+    }
+    function lineProgress(t) {
+      const step = Math.floor(t * 24);            // 24 ticks over the whole line
+      if (step <= lastTick) return;
+      lastTick = step;
+      tone(520 + step * 22, 0, 0.035, "square", 0.035);
+    }
+    function lineStop() { if (whoosh) { try { whoosh.stop(); } catch (e) {} whoosh = null; } }
+    // A different sound for each score color, on top of the flag's thunk.
+    const outcomes = {
+      perfect() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.12 + i * 0.09, 0.38, "triangle", 0.22));
+                  [1318.5, 1567.98].forEach((f, i) => tone(f, 0.5 + i * 0.07, 0.25, "sine", 0.1)); buzz([30, 60, 30, 60, 80]); },
+      green()   { tone(783.99, 0.12, 0.18, "triangle", 0.22); tone(1046.5, 0.24, 0.3, "triangle", 0.22); buzz([25, 50, 25]); },
+      yellow()  { tone(659.25, 0.12, 0.28, "sine", 0.22); buzz(30); },
+      red()     { tone(392, 0.12, 0.22, "triangle", 0.2, 370); tone(311.13, 0.34, 0.45, "triangle", 0.2, 262); buzz(45); },
+      black()   { tone(110, 0.12, 0.5, "sawtooth", 0.12, 80); buzz([60, 40, 60]); },
+    };
     return {
       unlock() { audio(); },
       pin() { tone(880, 0, 0.05, "triangle", 0.12); buzz(10); },
-      land(perfect) {
-        thud(0);
-        if (perfect) {
-          [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.12 + i * 0.09, 0.35, "triangle", 0.22));
-          buzz([30, 60, 30, 60, 80]);
-        } else buzz(35);
-      },
+      lineStart, lineProgress, lineStop,
+      land(tier) { lineStop(); thud(0); (outcomes[tier] || outcomes.yellow)(); },
       isOn() { return on; },
       toggle() { on = !on; store.set("ggg:sound", on); if (on) audio(); return on; },
     };
@@ -525,11 +556,12 @@
     store.set(session.key, session.progress);
     $("confirmBtn").disabled = true;
     Feedback.unlock();
-    const chip = $("milesChip"), total = Math.round(miles), perfect = pts === MAX_PTS[i];
+    const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, MAX_PTS[i]);
     chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
     await Globe.reveal(p, ans, {
-      onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; },
-      onLand() { chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(perfect); },
+      onStart(duration) { Feedback.lineStart(duration); },
+      onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; Feedback.lineProgress(t); },
+      onLand() { chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
     });
     $("confirmBtn").hidden = true;
     $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
