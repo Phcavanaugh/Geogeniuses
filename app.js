@@ -8,8 +8,6 @@
   const TZ = "America/Chicago";
   const MAX_PTS = [100, 100, 200, 300, 300];
   const DAY_MAX = MAX_PTS.reduce((a, b) => a + b, 0);
-  const PERFECT_MILES = 20;
-  const ZERO_MILES = 10000;
   const PERFECT_EMOJI = "👨🏻‍🦰";
 
   // ---------- Small helpers ----------
@@ -36,22 +34,19 @@
   function milesBetween(a, b) { // [lon,lat]
     return d3.geoDistance(a, b) * 3958.8;
   }
-  // Every question is scored out of 100, then multiplied (x1, x1, x2, x3, x3).
-  // Full marks within 20 miles; the score falls fast at first and reaches zero at 10,000 miles.
-  const CURVE_POWER = 5.7;
-  function baseScore(miles) {
-    if (miles <= PERFECT_MILES) return 100;
-    const f = Math.max(0, 1 - (miles - PERFECT_MILES) / (ZERO_MILES - PERFECT_MILES));
-    return Math.min(99, Math.round(100 * Math.pow(f, CURVE_POWER)));
-  }
+  // Every question is scored out of 100 (GeoHistory's curve), then multiplied (x1, x1, x2, x3, x3).
+  // 100 at the spot, 71 at 1,000 miles, 50 at 3,000 miles, 41 at 5,000 miles.
+  function baseScore(miles) { return Math.round(100 / Math.sqrt(1 + miles / 1000)); }
   function pointsFor(miles, max) { return baseScore(miles) * (max / 100); }
   function emojiFor(pts, max) {
-    if (pts >= max) return PERFECT_EMOJI;
-    const pct = pts / max;
-    if (pct > 0.9) return "🟢";
-    if (pct >= 0.7) return "🟡";
-    return "🔴";
+    const base = Math.round(pts * 100 / max);
+    if (base >= 100) return PERFECT_EMOJI;
+    if (base >= 90) return "🟢";
+    if (base >= 50) return "🟡";
+    if (base >= 1) return "🔴";
+    return "⚫";
   }
+
 
   // ---------- Leaderboard math (demo mode; the Sheet script does the same) ----------
   function computeBoard(rows, today) {
@@ -100,18 +95,50 @@
     },
   };
 
-  // ---------- Globe (MapLibre, satellite imagery) ----------
+  // ---------- Globe (MapLibre, static NASA Blue Marble imagery bundled with the game) ----------
   const Globe = (function () {
-    const GIBS = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/BlueMarble_NextGeneration/default/GoogleMapsCompatible_Level8/{z}/{y}/{x}.jpeg";
-    const MAX_ZOOM = 7.5; // about state/region level — no street-level zoom
-    const START_CENTER = [-30, 20];
+    const MAX_ZOOM = 4.6;                 // about regional level; the imagery gets soft beyond this
+    const US_CENTER = [-98.5, 39.5];
     let map = null, pin = null, answer = null, locked = false, onPin = () => {};
-    let pinMarker = null, ansMarker = null;
+    let pinMarker = null, ansMarker = null, anim = null, placed = false;
 
-    function pinEl(color) {
+    // --- Serve map tiles by cutting them out of five static images (no live map service) ---
+    const imgCache = {};
+    function loadImage(url) {
+      if (!imgCache[url]) {
+        imgCache[url] = new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im); im.onerror = () => rej(new Error("image " + url));
+          im.src = url;
+        });
+      }
+      return imgCache[url];
+    }
+    const tileCanvas = document.createElement("canvas");
+    tileCanvas.width = tileCanvas.height = 256;
+    const tctx = tileCanvas.getContext("2d");
+    function tileBlob() { return new Promise((res) => tileCanvas.toBlob(res, "image/jpeg", 0.9)); }
+    maplibregl.addProtocol("bm", async (params) => {
+      const [z, x, y] = params.url.replace("bm://", "").split("/").map(Number);
+      let im, sx, sy, size;
+      if (z <= 2) {                       // overview: whole world at 1024 px
+        im = await loadImage("imagery/world-1024.jpg");
+        size = 1024 / Math.pow(2, z); sx = x * size; sy = y * size;
+      } else {                            // quadrants: world at 4096 px, split in four 2048 px images
+        const shift = z - 1, qx = x >> shift, qy = y >> shift;
+        im = await loadImage("imagery/q" + qx + qy + ".jpg");
+        size = 2048 / Math.pow(2, shift);
+        sx = (x - (qx << shift)) * size; sy = (y - (qy << shift)) * size;
+      }
+      tctx.drawImage(im, sx, sy, size, size, 0, 0, 256, 256);
+      const blob = await tileBlob();
+      return { data: await blob.arrayBuffer() };
+    });
+
+    function pinEl(color, drop) {
       const el = document.createElement("div");
       el.className = "pin";
-      el.innerHTML = '<svg width="28" height="38" viewBox="0 0 28 38"><path d="M14 37C14 37 26 22.5 26 13.5A12 12 0 0 0 2 13.5C2 22.5 14 37 14 37Z" fill="' + color +
+      el.innerHTML = '<svg class="' + (drop ? "drop" : "") + '" width="28" height="38" viewBox="0 0 28 38"><path d="M14 37C14 37 26 22.5 26 13.5A12 12 0 0 0 2 13.5C2 22.5 14 37 14 37Z" fill="' + color +
         '" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>';
       return el;
     }
@@ -120,14 +147,45 @@
       const d = Math.min(el.clientWidth, el.clientHeight) * 0.9;
       return d > 0 ? Math.log2(d * Math.PI / 512) : 1;
     }
-    function arc(a, b) {
-      const f = d3.geoInterpolate(a, b), pts = [];
-      for (let i = 0; i <= 128; i++) pts.push(f(i / 128));
-      for (let i = 1; i < pts.length; i++) { // keep longitudes continuous across the date line
+    // Zoom at which an arc of `halfAngle` radians either side of center fits on screen.
+    function zoomToFit(halfAngle) {
+      const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight) * 0.36;
+      const radius = room / Math.max(Math.sin(Math.min(halfAngle, Math.PI / 2)), 0.002);
+      return Math.max(fitZoom(), Math.min(4.2, Math.log2(radius * 2 * Math.PI / 512)));
+    }
+    function unwrap(pts) {
+      for (let i = 1; i < pts.length; i++) {
         while (pts[i][0] - pts[i - 1][0] > 180) pts[i][0] -= 360;
         while (pts[i][0] - pts[i - 1][0] < -180) pts[i][0] += 360;
       }
       return pts;
+    }
+    // Overlay canvas for the line while it's being drawn, redrawn on every map frame so it stays in step.
+    let overlay = null, octx = null, drawing = null;
+    function sizeOverlay() {
+      if (!overlay) return;
+      const el = map.getContainer(), dpr = window.devicePixelRatio || 1;
+      overlay.width = el.clientWidth * dpr; overlay.height = el.clientHeight * dpr;
+      overlay.style.width = el.clientWidth + "px"; overlay.style.height = el.clientHeight + "px";
+      octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function drawOverlay() {
+      if (!octx) return;
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      if (!drawing || drawing.length < 2) return;
+      const c = map.getCenter(), center = [c.lng, c.lat];
+      octx.save();
+      octx.strokeStyle = "#fff"; octx.lineWidth = 2.4; octx.lineCap = "round"; octx.setLineDash([4, 5]);
+      octx.shadowColor = "rgba(0,0,0,.5)"; octx.shadowBlur = 2;
+      octx.beginPath();
+      let pen = false;
+      drawing.forEach((pt) => {
+        if (d3.geoDistance(pt, center) > Math.PI / 2 - 0.02) { pen = false; return; } // far side of the globe
+        const q = map.project(pt);
+        if (pen) octx.lineTo(q.x, q.y); else { octx.moveTo(q.x, q.y); pen = true; }
+      });
+      octx.stroke();
+      octx.restore();
     }
     function setLine(coords) {
       const src = map.getSource("guessline");
@@ -146,24 +204,22 @@
             projection: { type: "globe" },
             sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
             sources: {
-              backup: { type: "raster", tiles: ["tiles/{z}/{x}/{y}.jpg"], tileSize: 256, maxzoom: 2 },
-              nasa: { type: "raster", tiles: [GIBS], tileSize: 256, maxzoom: 8,
-                attribution: 'Imagery: <a href="https://earthdata.nasa.gov/gibs" target="_blank">NASA Blue Marble</a>' },
+              earth: { type: "raster", tiles: ["bm://{z}/{x}/{y}"], tileSize: 256, maxzoom: 4,
+                attribution: "Imagery: NASA Blue Marble" },
               borders: { type: "geojson", data: borders },
               states: { type: "geojson", data: states },
               guessline: { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } },
             },
             layers: [
               { id: "space", type: "background", paint: { "background-color": "#0b1a2b" } },
-              { id: "backup", type: "raster", source: "backup" },
-              { id: "nasa", type: "raster", source: "nasa", paint: { "raster-fade-duration": 150 } },
+              { id: "earth", type: "raster", source: "earth", paint: { "raster-fade-duration": 0 } },
               { id: "states", type: "line", source: "states", paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.6 } },
               { id: "borders", type: "line", source: "borders", paint: { "line-color": "rgba(255,255,255,0.7)", "line-width": 0.9 } },
               { id: "guessline", type: "line", source: "guessline", layout: { "line-cap": "round" },
-                paint: { "line-color": "#ffffff", "line-width": 2.2, "line-dasharray": [2, 1.5] } },
+                paint: { "line-color": "#ffffff", "line-width": 2.4, "line-dasharray": [1.5, 1.5] } },
             ],
           },
-          center: START_CENTER, zoom: 1, minZoom: 0, maxZoom: MAX_ZOOM,
+          center: US_CENTER, zoom: 1, minZoom: 0, maxZoom: MAX_ZOOM,
           dragRotate: false, pitchWithRotate: false, touchPitch: false, keyboard: false,
           renderWorldCopies: false, attributionControl: { compact: true },
         });
@@ -176,34 +232,62 @@
           onPin(pin);
         });
         await new Promise((res) => map.once("load", res));
-        this.reset();
+        overlay = document.createElement("canvas");
+        overlay.className = "line-overlay";
+        map.getContainer().appendChild(overlay);
+        octx = overlay.getContext("2d");
+        sizeOverlay();
+        map.on("resize", sizeOverlay);
+        map.on("render", drawOverlay);
       },
+      // Clear pins and line for the next question. The camera stays where it was;
+      // only the very first question of a visit starts centered on the continental U.S.
       reset() {
         if (!map) return;
+        if (anim) { cancelAnimationFrame(anim); anim = null; }
         pin = null; answer = null; locked = false;
         if (pinMarker) pinMarker.remove();
-        if (ansMarker) ansMarker.remove();
-        setLine(null);
-        map.stop();
-        map.jumpTo({ center: START_CENTER, zoom: fitZoom(), bearing: 0, pitch: 0 });
+        if (ansMarker) { ansMarker.remove(); ansMarker = null; }
+        setLine(null); drawing = null; drawOverlay();
+        if (!placed) { map.jumpTo({ center: US_CENTER, zoom: fitZoom() }); placed = true; }
       },
       onPin(fn) { onPin = fn; },
       getPin() { return pin; },
       resize() { if (map) map.resize(); },
       invertAt(sx, sy) { const r = map.getContainer().getBoundingClientRect(); const p = map.unproject([sx - r.left, sy - r.top]); return [p.lng, p.lat]; },
+      // Draw a dotted line from the guess to the answer, with the camera following it,
+      // then drop the answer flag at the end. Resolves when the flag has landed.
       reveal(guess, ans) {
         pin = guess; answer = ans; locked = true;
-        if (!ansMarker) ansMarker = new maplibregl.Marker({ element: pinEl("#2f9e5b"), anchor: "bottom" });
-        ansMarker.setLngLat(ans).addTo(map);
-        const line = arc(guess, ans);
-        setLine(line);
-        // Zoom so both pins fit on screen, centered between them.
-        const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight) * 0.36;
-        const half = d3.geoDistance(guess, ans) / 2;
-        const mid = d3.geoInterpolate(guess, ans)(0.5);
-        const radius = room / Math.max(Math.sin(half), 0.002);
-        const z = Math.max(fitZoom(), Math.min(6, Math.log2(radius * 2 * Math.PI / 512)));
-        map.flyTo({ center: mid, zoom: z, duration: 1200, essential: true });
+        map.stop();
+        const angle = d3.geoDistance(guess, ans), miles = angle * 3958.8;
+        const interp = d3.geoInterpolate(guess, ans);
+        const c0 = map.getCenter(), start = [c0.lng, c0.lat], z0 = map.getZoom();
+        const zEnd = zoomToFit(angle / 2);
+        const duration = Math.min(3200, 1100 + miles * 0.35);
+        const t0 = performance.now();
+        return new Promise((done) => {
+          const step = (now) => {
+            const u = Math.min(1, (now - t0) / duration);
+            const t = d3.easeCubicInOut(u);
+            const n = Math.max(2, Math.ceil(96 * t));
+            const pts = []; for (let i = 0; i <= n; i++) pts.push(interp((i / n) * t));
+            drawing = pts;
+            // Camera: centered on the drawn part of the line, zoomed out just enough to keep it in view.
+            const target = interp(t / 2), blend = Math.min(1, u / 0.25);
+            const center = d3.geoInterpolate(start, target)(blend);
+            const zoom = Math.min(z0 + (zEnd - z0) * t, zoomToFit((angle * t) / 2 + 0.01));
+            map.jumpTo({ center, zoom: Math.max(zoom, zEnd < z0 ? zEnd : fitZoom()) });
+            if (u < 1) { anim = requestAnimationFrame(step); return; }
+            anim = null;
+            drawing = null; drawOverlay();
+            const full = []; for (let i = 0; i <= 128; i++) full.push(interp(i / 128));
+            setLine(unwrap(full));
+            ansMarker = new maplibregl.Marker({ element: pinEl("#2f9e5b", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
+            setTimeout(done, 550);
+          };
+          anim = requestAnimationFrame(step);
+        });
       },
     };
   })();
@@ -280,18 +364,19 @@
   }
   Globe.onPin(() => { $("confirmBtn").disabled = false; $("hint").hidden = true; });
 
-  $("confirmBtn").onclick = () => {
+  $("confirmBtn").onclick = async () => {
     const p = Globe.getPin(); if (!p) return;
     const i = session.progress.guesses.length, q = session.qs[i];
     const ans = [q.lon, q.lat];
     const miles = milesBetween(p, ans), pts = pointsFor(miles, MAX_PTS[i]);
     session.progress.guesses.push({ lon: +p[0].toFixed(4), lat: +p[1].toFixed(4), miles: Math.round(miles), pts });
     store.set(session.key, session.progress);
-    Globe.reveal(p, ans);
+    $("confirmBtn").disabled = true;
+    await Globe.reveal(p, ans);
     $("confirmBtn").hidden = true;
     $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
     $("rAnswer").textContent = q.answer;
-    $("rDist").textContent = miles <= PERFECT_MILES ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
+    $("rDist").textContent = pts === MAX_PTS[i] ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
     $("rPts").textContent = "+" + pts;
     $("rFact").textContent = q.fact;
     $("nextBtn").textContent = i === 4 ? "See results" : "Next";

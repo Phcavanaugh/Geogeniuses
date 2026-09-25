@@ -68,3 +68,8 @@ p.muted{margin:0 16px 16px}
 .demo{background:#fff4d6;color:#6b5100;font-size:12px;text-align:center;padding:6px}
 .demo[hidden]{display:none}
 .practice{background:#e8f1fb;color:#1f4e78;font-size:12px;text-align:center;padding:5px;font-weight:600}
+
+/* Answer flag drops in at the end of the line */
+.pin svg.drop{animation:flagdrop .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% 100%}
+@keyframes flagdrop{0%{transform:translateY(-60px) scale(.9);opacity:0}60%{opacity:1}100%{transform:translateY(0) scale(1)}}
+.line-overlay{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
