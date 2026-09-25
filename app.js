@@ -659,9 +659,13 @@
   // ---------- Share ----------
   $("shareBtn").onclick = async () => {
     const text = session.share;
-    if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
-      try { await navigator.share({ text }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+    $("copied").hidden = true;
+    // Open the phone's (or computer's) share sheet whenever the browser offers one.
+    if (navigator.share) {
+      try { await navigator.share({ text }); return; }
+      catch (e) { if (e && e.name === "AbortError") return; } // they closed the share sheet
     }
+    // No share sheet available: copy to the clipboard instead.
     try { await navigator.clipboard.writeText(text); }
     catch (e) {
       const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
