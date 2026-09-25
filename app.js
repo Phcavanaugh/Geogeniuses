@@ -640,26 +640,37 @@
     try { board = await api.board(); renderBoard(); }
     catch (e) { $("boardList").innerHTML = '<li class="muted">Couldn\'t load the leaderboard.</li>'; }
   }
+  const TOP_N = 10;
   function renderBoard() {
     if (!board) return;
     const ul = $("boardList"); ul.innerHTML = "";
-    let rows = [], note = "";
-    if (tab === "today") { rows = board.today.map((r) => [r.name, fmt(r.total), (r.scores || []).map((s, i) => emojiFor(s, MAX_PTS[i])).join("")]); note = "Today's scores"; }
-    if (tab === "week") { rows = board.week.map((r) => [r.name, fmt(r.total), r.games + (r.games === 1 ? " day" : " days")]); note = "Total points since Monday, " + prettyDate(board.weekStart, false); }
-    if (tab === "avg") { rows = board.avg.map((r) => [r.name, fmt(r.avg), r.games + (r.games === 1 ? " game" : " games")]); note = "Average daily score, all time"; }
-    if (tab === "streak") { rows = board.streak.map((r) => [r.name, r.streak + (r.streak === 1 ? " day" : " days"), ""]); note = "Days played in a row"; }
-    if (!rows.length) ul.innerHTML = '<li class="muted">No scores yet.</li>';
-    rows.forEach((r, i) => {
+    let rows = [], note = "";  // each row: [name, display value, sub-label, sort value]
+    if (tab === "today") { rows = board.today.map((r) => [r.name, fmt(r.total), (r.scores || []).map((s, i) => emojiFor(s, MAX_PTS[i])).join(""), r.total]); note = "Today's scores"; }
+    if (tab === "week") { rows = board.week.map((r) => [r.name, fmt(r.total), r.games + (r.games === 1 ? " day" : " days"), r.total]); note = "Total points since Monday, " + prettyDate(board.weekStart, false); }
+    if (tab === "avg") { rows = board.avg.map((r) => [r.name, fmt(r.avg), r.games + (r.games === 1 ? " game" : " games"), r.avg]); note = "Average daily score, all time"; }
+    if (tab === "streak") { rows = board.streak.map((r) => [r.name, r.streak + (r.streak === 1 ? " day" : " days"), "", r.streak]); note = "Days played in a row"; }
+    if (!rows.length) { ul.innerHTML = '<li class="muted">No scores yet.</li>'; $("boardNote").textContent = note; return; }
+    // Ties share a place (1, 2, 2, 4 …).
+    const ranks = []; rows.forEach((r, i) => { ranks.push(i > 0 && r[3] === rows[i - 1][3] ? ranks[i - 1] : i + 1); });
+    const addRow = (r, rank) => {
       const li = document.createElement("li");
       li.innerHTML = '<span class="rank"></span><span class="n"></span><span class="v"></span>';
-      li.querySelector(".rank").textContent = i + 1;
+      li.querySelector(".rank").textContent = rank;
       li.querySelector(".n").textContent = r[0];
       if (r[2]) { const s = document.createElement("span"); s.className = "sub"; s.textContent = r[2]; li.querySelector(".n").appendChild(s); }
       li.querySelector(".v").textContent = r[1];
-      if (r[0] === player) li.style.background = "#fff7f2";
+      if (r[0] === player) li.classList.add("me");
       ul.appendChild(li);
-    });
-    $("boardNote").textContent = note;
+    };
+    rows.slice(0, TOP_N).forEach((r, i) => addRow(r, ranks[i]));
+    const mine = rows.findIndex((r) => r[0] === player);
+    if (mine >= TOP_N) {
+      const gap = document.createElement("li"); gap.className = "gap"; gap.textContent = "⋯"; ul.appendChild(gap);
+      addRow(rows[mine], ranks[mine]);
+    }
+    const count = rows.length + (rows.length === 1 ? " player" : " players");
+    const you = mine >= 0 ? "" : (tab === "streak" ? " · Play today to start a streak" : " · You're not on this board yet");
+    $("boardNote").textContent = note + " · " + count + you;
   }
   document.querySelectorAll(".tab").forEach((b) => {
     b.onclick = () => {

@@ -104,3 +104,7 @@ p.muted{margin:0 16px 16px}
 .miles-chip[hidden]{display:none}
 .miles-chip.done{animation:chippop .35s ease-out}
 @keyframes chippop{0%{transform:translateX(-50%) scale(1)}40%{transform:translateX(-50%) scale(1.15)}100%{transform:translateX(-50%) scale(1)}}
+
+.board-list li.me{background:#fff7f2}
+.board-list li.gap{justify-content:center;color:var(--muted);padding:2px 0;border-bottom:1px solid var(--line);letter-spacing:4px}
+.board-list .rank{width:auto;min-width:26px}
