@@ -337,19 +337,51 @@
   async function pickPlayer() {
     show("pickScreen");
     newErr("");
-    const sel = $("nameSel");
-    sel.innerHTML = '<option value="">Loading names…</option>';
+    $("findName").value = "";
+    $("matches").innerHTML = '<div class="muted small">Loading names…</div>';
     try {
       knownPlayers = await api.players();
-      const sorted = knownPlayers.slice().sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
-      sel.innerHTML = '<option value="">Choose your name…</option>';
-      sorted.forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
+      renderMatches();
     } catch (e) {
-      sel.innerHTML = '<option value="">Couldn\'t load names — refresh to try again</option>';
+      $("matches").innerHTML = '<div class="muted small">Couldn\'t load names — refresh to try again.</div>';
     }
   }
-  $("pickBtn").onclick = () => { const n = $("nameSel").value; if (n) choosePlayer(n); };
-  $("nameSel").onchange = () => newErr("");
+  // Names matching what's typed: names starting with it first, then names containing it.
+  function findMatches(q) {
+    q = cleanName(q).toLowerCase();
+    if (!q) return [];
+    const starts = [], contains = [];
+    knownPlayers.forEach((n) => {
+      const l = n.toLowerCase();
+      if (l.startsWith(q) || l.split(" ").some((w) => w.startsWith(q))) starts.push(n);
+      else if (l.includes(q)) contains.push(n);
+    });
+    const byName = (a, b) => a.localeCompare(b, "en", { sensitivity: "base" });
+    return starts.sort(byName).concat(contains.sort(byName)).slice(0, 8);
+  }
+  function renderMatches() {
+    const box = $("matches"), q = $("findName").value;
+    box.innerHTML = "";
+    if (!cleanName(q)) {
+      box.innerHTML = '<div class="muted small">' + knownPlayers.length + (knownPlayers.length === 1 ? " player" : " players") + " so far.</div>";
+      return;
+    }
+    const list = findMatches(q);
+    if (!list.length) { box.innerHTML = '<div class="muted small">No one by that name yet. New here? Join above.</div>'; return; }
+    list.forEach((n) => {
+      const b = document.createElement("button");
+      b.className = "match"; b.textContent = n;
+      b.onclick = () => choosePlayer(n);
+      box.appendChild(b);
+    });
+  }
+  $("findName").addEventListener("input", renderMatches);
+  $("findName").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const list = findMatches($("findName").value);
+    const exact = list.find((n) => n.toLowerCase() === cleanName($("findName").value).toLowerCase());
+    if (exact || list.length === 1) choosePlayer(exact || list[0]);
+  });
   $("newName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
   $("newName").addEventListener("input", () => newErr(""));
   $("joinBtn").onclick = async () => {

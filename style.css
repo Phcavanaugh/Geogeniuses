@@ -85,3 +85,9 @@ p.muted{margin:0 16px 16px}
 .pick-err[hidden]{display:none}
 .pick-or{display:flex;align-items:center;gap:10px;margin:22px 16px 4px;color:var(--muted);font-size:13px}
 .pick-or::before,.pick-or::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.pick-search{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);font-size:16px;background:#fff;color:var(--ink)}
+.matches{display:flex;flex-direction:column;gap:6px;margin-top:8px;padding-bottom:24px}
+.matches .muted{padding:4px 2px}
+.match{text-align:left;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:#f7f9fb;font-size:16px;font-weight:600;color:var(--ink)}
+.match:active{background:#eef2f6}

@@ -7,7 +7,7 @@
 <title>GeoGeniuses</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=6">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 <div id="app">
@@ -30,11 +30,9 @@
     </div>
     <div class="pick-or"><span>or</span></div>
     <div class="pick-block">
-      <label for="nameSel" class="pick-label">Already playing? Pick your name</label>
-      <div class="pick-row">
-        <select id="nameSel"><option value="">Loading names…</option></select>
-        <button id="pickBtn" class="pick-btn">Play</button>
-      </div>
+      <label for="findName" class="pick-label">Already playing? Find your name</label>
+      <input id="findName" class="pick-search" type="search" autocomplete="off" autocapitalize="words" placeholder="Start typing your name">
+      <div id="matches" class="matches"></div>
     </div>
   </section>
 
@@ -93,10 +91,10 @@
 
   <div id="demo" class="demo" hidden>Demo mode — scores are only saved on this device.</div>
 </div>
-<script src="config.js?v=6"></script>
+<script src="config.js?v=7"></script>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>
