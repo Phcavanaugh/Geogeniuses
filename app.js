@@ -168,8 +168,8 @@
       return d > 0 ? Math.log2(d * Math.PI / 512) : 1;
     }
     // Zoom at which an arc of `halfAngle` radians either side of center fits on screen.
-    function zoomToFit(halfAngle) {
-      const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight) * 0.36;
+    function zoomToFit(halfAngle, padBottom) {
+      const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight - (padBottom || 0)) * 0.36;
       const radius = room / Math.max(Math.sin(Math.min(halfAngle, Math.PI / 2)), 0.002);
       return Math.max(fitZoom(), Math.min(7, Math.log2(radius * 2 * Math.PI / 512)));
     }
@@ -294,7 +294,9 @@
         const angle = d3.geoDistance(guess, ans), miles = angle * 3958.8;
         const interp = d3.geoInterpolate(guess, ans);
         const c0 = map.getCenter(), start = [c0.lng, c0.lat], z0 = map.getZoom();
-        const zEnd = zoomToFit(angle / 2);
+        // Frame both pins in the part of the map above the result card (hooks.padBottom px).
+        const padEnd = hooks.padBottom || 0, pad0 = (map.getPadding() || {}).bottom || 0;
+        const zEnd = zoomToFit(angle / 2, padEnd);
         const duration = Math.min(3200, 1100 + miles * 0.35);
         const t0 = performance.now();
         if (hooks.onStart) hooks.onStart(duration);
@@ -309,8 +311,9 @@
             // Camera: centered on the drawn part of the line, zoomed out just enough to keep it in view.
             const target = interp(t / 2), blend = Math.min(1, u / 0.25);
             const center = d3.geoInterpolate(start, target)(blend);
-            const zoom = Math.min(z0 + (zEnd - z0) * t, zoomToFit((angle * t) / 2 + 0.01));
-            map.jumpTo({ center, zoom: Math.max(zoom, zEnd < z0 ? zEnd : fitZoom()) });
+            const zoom = Math.min(z0 + (zEnd - z0) * t, zoomToFit((angle * t) / 2 + 0.01, padEnd));
+            const padding = { top: 0, left: 0, right: 0, bottom: pad0 + (padEnd - pad0) * blend };
+            map.jumpTo({ center, zoom: Math.max(zoom, zEnd < z0 ? zEnd : fitZoom()), padding });
             if (u < 1) { anim = requestAnimationFrame(step); return; }
             anim = null;
             drawing = null; drawOverlay();
@@ -539,7 +542,8 @@
     $("qPts").textContent = MAX_PTS[i] + " pts";
     $("qClue").textContent = q.clue;
     $("confirmBtn").hidden = false; $("confirmBtn").disabled = true;
-    $("result").hidden = true;
+    $("nextBtn").hidden = true;
+    $("result").hidden = true; $("result").classList.remove("show");
     $("hint").hidden = false;
     $("milesChip").hidden = true;
     show("gameScreen");
@@ -556,21 +560,30 @@
     store.set(session.key, session.progress);
     $("confirmBtn").disabled = true;
     Feedback.unlock();
-    const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, MAX_PTS[i]);
-    chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
-    await Globe.reveal(p, ans, {
-      onStart(duration) { Feedback.lineStart(duration); },
-      onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; Feedback.lineProgress(t); },
-      onLand() { chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
-    });
-    $("confirmBtn").hidden = true;
+    // Fill in the result card now (hidden) so we know how much of the map it will cover.
+    const card = $("result");
     $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
     $("rAnswer").textContent = q.answer;
     $("rDist").textContent = pts === MAX_PTS[i] ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
     $("rPts").textContent = "+" + pts;
     $("rFact").textContent = q.fact;
+    card.classList.remove("show"); card.style.visibility = "hidden"; card.hidden = false;
+    const cardH = card.offsetHeight + 16;
+    card.hidden = true; card.style.visibility = "";
+    const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, MAX_PTS[i]);
+    chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
+    await Globe.reveal(p, ans, {
+      padBottom: cardH,
+      onStart(duration) { Feedback.lineStart(duration); },
+      onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; Feedback.lineProgress(t); },
+      onLand() { chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
+    });
+    // Same spot, same size: Confirm becomes Next, and the card slides up over the map.
+    $("confirmBtn").hidden = true;
     $("nextBtn").textContent = i === 4 ? "See results" : "Next";
-    $("result").hidden = false;
+    $("nextBtn").hidden = false;
+    card.hidden = false;
+    requestAnimationFrame(() => card.classList.add("show"));
   };
   $("nextBtn").onclick = () => {
     if (session.progress.guesses.length >= 5) finish(false); else showQuestion();

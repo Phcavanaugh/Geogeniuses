@@ -7,7 +7,7 @@
 <title>GeoGeniuses</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌍</text></svg>">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=10">
+<link rel="stylesheet" href="style.css?v=11">
 </head>
 <body>
 <div id="app">
@@ -46,14 +46,14 @@
       <div id="map"></div>
       <div id="hint" class="hint">Tap to drop a pin · drag to spin · pinch to zoom</div>
       <div id="milesChip" class="miles-chip" hidden></div>
-    </div>
-    <div class="bottom">
-      <button id="confirmBtn" class="primary" disabled>Confirm</button>
       <div id="result" class="result" hidden>
         <div class="rtop"><span id="rEmoji" class="remoji"></span><div><div id="rAnswer" class="ranswer"></div><div id="rDist" class="muted"></div></div><div id="rPts" class="rpts"></div></div>
         <p id="rFact" class="fact"></p>
-        <button id="nextBtn" class="primary">Next</button>
       </div>
+    </div>
+    <div class="bottom">
+      <button id="confirmBtn" class="primary" disabled>Confirm</button>
+      <button id="nextBtn" class="primary" hidden>Next</button>
     </div>
   </section>
 
@@ -92,10 +92,10 @@
 
   <div id="demo" class="demo" hidden>Demo mode — scores are only saved on this device.</div>
 </div>
-<script src="config.js?v=10"></script>
+<script src="config.js?v=11"></script>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
-<script src="app.js?v=10"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

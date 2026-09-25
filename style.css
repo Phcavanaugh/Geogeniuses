@@ -35,7 +35,11 @@ p.muted{margin:0 16px 16px}
 .bottom{padding:10px 16px;padding-bottom:max(12px,env(safe-area-inset-bottom));border-top:1px solid var(--line)}
 .primary{width:100%;padding:14px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:17px;font-weight:700}
 .primary:disabled{background:#c9ced4}
+.result{position:absolute;left:8px;right:8px;bottom:8px;z-index:4;background:#fff;border-radius:14px;
+  padding:12px 14px 4px;box-shadow:0 6px 22px rgba(0,0,0,.35);transform:translateY(calc(100% + 16px));transition:transform .28s ease-out}
+.result.show{transform:translateY(0)}
 .result[hidden]{display:none}
+#nextBtn[hidden],#confirmBtn[hidden]{display:none}
 .rtop{display:flex;align-items:center;gap:10px}
 .remoji{font-size:30px;line-height:1}
 .ranswer{font-weight:700}
