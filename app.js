@@ -106,7 +106,13 @@
 
   // ---------- Globe (MapLibre, static NASA Blue Marble imagery bundled with the game) ----------
   const Globe = (function () {
-    const MAX_ZOOM = 6.2;                 // about metro-area level; the imagery gets soft beyond this
+    const MAX_ZOOM = 8.6;                 // closest view is roughly 40 x 40 miles on a phone
+    // Live Esri World Imagery (the same source GeoHistory uses). The bundled NASA images sit
+    // underneath, so if Esri is ever unreachable the globe still shows, just less sharp.
+    const ESRI_KEY = (window.GGG_ESRI_KEY || "").trim();
+    const ESRI_TILES = ESRI_KEY
+      ? "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=" + encodeURIComponent(ESRI_KEY)
+      : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
     const US_CENTER = [-98.5, 39.5];
     let map = null, pin = null, answer = null, locked = false, onPin = () => {};
     let pinMarker = null, ansMarker = null, anim = null, placed = false;
@@ -127,29 +133,18 @@
     tileCanvas.width = tileCanvas.height = 256;
     const tctx = tileCanvas.getContext("2d");
     function tileBlob() { return new Promise((res) => tileCanvas.toBlob(res, "image/jpeg", 0.9)); }
-    // Three levels of static images: a 1,024-px overview, four 2,048-px quadrants (4,096-px world),
-    // and 64 2,048-px chunks (16,384-px world) that only load when someone zooms in.
-    const hiOrder = [];
-    function loadHi(url) {
-      if (!imgCache[url]) { hiOrder.push(url); while (hiOrder.length > 10) delete imgCache[hiOrder.shift()]; }
-      return loadImage(url);
-    }
+    // Fallback imagery: a 1,024-px overview and four 2,048-px quadrants of NASA Blue Marble.
     maplibregl.addProtocol("bm", async (params) => {
       const [z, x, y] = params.url.replace("bm://", "").split("/").map(Number);
       let im, sx, sy, size;
       if (z <= 2) {
         im = await loadImage("imagery/world-1024.jpg");
         size = 1024 / Math.pow(2, z); sx = x * size; sy = y * size;
-      } else if (z <= 4) {
+      } else {
         const shift = z - 1, qx = x >> shift, qy = y >> shift;
         im = await loadImage("imagery/q" + qx + qy + ".jpg");
         size = 2048 / Math.pow(2, shift);
         sx = (x - (qx << shift)) * size; sy = (y - (qy << shift)) * size;
-      } else {
-        const shift = z - 3, cx = x >> shift, cy = y >> shift;
-        im = await loadHi("imagery/hi/" + cx + "-" + cy + ".jpg");
-        size = 2048 / Math.pow(2, shift);
-        sx = (x - (cx << shift)) * size; sy = (y - (cy << shift)) * size;
       }
       tctx.drawImage(im, sx, sy, size, size, 0, 0, 256, 256);
       const blob = await tileBlob();
@@ -172,7 +167,7 @@
     function zoomToFit(halfAngle) {
       const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight) * 0.36;
       const radius = room / Math.max(Math.sin(Math.min(halfAngle, Math.PI / 2)), 0.002);
-      return Math.max(fitZoom(), Math.min(5.5, Math.log2(radius * 2 * Math.PI / 512)));
+      return Math.max(fitZoom(), Math.min(7, Math.log2(radius * 2 * Math.PI / 512)));
     }
     function unwrap(pts) {
       for (let i = 1; i < pts.length; i++) {
@@ -225,8 +220,9 @@
             projection: { type: "globe" },
             sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
             sources: {
-              earth: { type: "raster", tiles: ["bm://{z}/{x}/{y}"], tileSize: 256, maxzoom: 6,
-                attribution: "Imagery: NASA Blue Marble" },
+              earth: { type: "raster", tiles: ["bm://{z}/{x}/{y}"], tileSize: 256, maxzoom: 4 },
+              esri: { type: "raster", tiles: [ESRI_TILES], tileSize: 256, maxzoom: 19,
+                attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" },
               borders: { type: "geojson", data: borders },
               states: { type: "geojson", data: states },
               guessline: { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } },
@@ -234,6 +230,7 @@
             layers: [
               { id: "space", type: "background", paint: { "background-color": "#0b1a2b" } },
               { id: "earth", type: "raster", source: "earth", paint: { "raster-fade-duration": 0 } },
+              { id: "esri", type: "raster", source: "esri", paint: { "raster-fade-duration": 200 } },
               { id: "states", type: "line", source: "states", paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.6 } },
               { id: "borders", type: "line", source: "borders", paint: { "line-color": "rgba(255,255,255,0.7)", "line-width": 0.9 } },
               { id: "guessline", type: "line", source: "guessline", layout: { "line-cap": "round" },

@@ -50,6 +50,7 @@ Before you start, unzip `good-globe-game.zip` somewhere easy to find, like your 
 - **Changing config.js later:** on GitHub, open the file, click the pencil icon, edit, and commit. The site updates in about a minute.
 - **Changing the Apps Script later:** after saving, go to **Deploy → Manage deployments → pencil icon → Version: New version → Deploy**. The URL stays the same.
 - **Demo mode:** if `GGG_API_URL` is empty, the game still works, but scores stay on that one device. A yellow bar at the bottom says so.
-- **Satellite imagery** comes from NASA's free Blue Marble service and loads as you zoom. If NASA's server is ever slow, a built-in lower-detail copy shows instead.
+- **Satellite imagery** streams from Esri World Imagery (the same source GeoHistory uses). NASA Blue Marble images in the `imagery` folder sit underneath as a backup if Esri is unreachable.
+- **Esri key (optional, recommended):** create a free account at developers.arcgis.com, make an API key with the *Basemaps* privilege, restrict it to your github.io address, and paste it into `GGG_ESRI_KEY` in config.js.
 - **Honor system:** anyone with the link could technically pick someone else's name. Only the first play of the day counts, and scores can only be submitted for today.
 - **The question bank** is in `questions.json` and covers 90 days from the start date. When it's time for more, send me the file and I'll extend it.
