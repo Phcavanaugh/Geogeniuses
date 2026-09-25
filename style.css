@@ -73,3 +73,15 @@ p.muted{margin:0 16px 16px}
 .pin svg.drop{animation:flagdrop .5s cubic-bezier(.3,1.5,.5,1) both;transform-origin:50% 100%}
 @keyframes flagdrop{0%{transform:translateY(-60px) scale(.9);opacity:0}60%{opacity:1}100%{transform:translateY(0) scale(1)}}
 .line-overlay{position:absolute;left:0;top:0;pointer-events:none;z-index:1}
+
+/* Name screen */
+.pick-block{margin:14px 16px 0}
+.pick-label{display:block;font-weight:700;margin-bottom:6px}
+.pick-row{display:flex;gap:8px}
+.pick-row input,.pick-row select{flex:1;min-width:0;padding:12px;border-radius:10px;border:1px solid var(--line);font-size:16px;background:#fff;color:var(--ink)}
+.pick-btn{padding:12px 18px;border:0;border-radius:10px;background:var(--accent);color:#fff;font-size:16px;font-weight:700}
+.pick-btn:disabled{background:#c9ced4}
+.pick-err{margin-top:8px;color:#b3261e;font-size:14px;line-height:1.35}
+.pick-err[hidden]{display:none}
+.pick-or{display:flex;align-items:center;gap:10px;margin:22px 16px 4px;color:var(--muted);font-size:13px}
+.pick-or::before,.pick-or::after{content:"";flex:1;height:1px;background:var(--line)}

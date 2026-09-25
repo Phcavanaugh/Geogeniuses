@@ -17,10 +17,25 @@
   </header>
 
   <!-- Name picker -->
-  <section id="pickScreen" class="screen" hidden>
+  <section id="pickScreen" class="screen scroll" hidden>
     <h1>Who's playing?</h1>
-    <p class="muted">Tap your name. Your phone will remember it.</p>
-    <div id="nameGrid" class="name-grid"></div>
+    <p class="muted">Your phone will remember you after this.</p>
+    <div class="pick-block">
+      <label for="newName" class="pick-label">New player?</label>
+      <div class="pick-row">
+        <input id="newName" type="text" maxlength="20" autocomplete="off" autocapitalize="words" placeholder="Type your name">
+        <button id="joinBtn" class="pick-btn">Join</button>
+      </div>
+      <div id="newErr" class="pick-err" hidden></div>
+    </div>
+    <div class="pick-or"><span>or</span></div>
+    <div class="pick-block">
+      <label for="nameSel" class="pick-label">Already playing? Pick your name</label>
+      <div class="pick-row">
+        <select id="nameSel"><option value="">Loading names…</option></select>
+        <button id="pickBtn" class="pick-btn">Play</button>
+      </div>
+    </div>
   </section>
 
   <!-- Game -->

@@ -83,8 +83,17 @@
       const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "submit" }, payload)) });
       return r.json();
     },
+    async addPlayer(name) {
+      const r = await fetch(API, { method: "POST", body: JSON.stringify({ action: "addPlayer", name }) });
+      return r.json();
+    },
   } : {
-    async players() { return ["Pete", "Guest"]; },
+    async players() { return ["Pete", "Guest"].concat(store.get("ggg:demo:players") || []); },
+    async addPlayer(name) {
+      const list = store.get("ggg:demo:players") || [];
+      if (["Pete", "Guest"].concat(list).some((k) => k.toLowerCase() === name.toLowerCase())) return { ok: false, taken: true };
+      list.push(name); store.set("ggg:demo:players", list); return { ok: true, name };
+    },
     async board() { return computeBoard(store.get("ggg:demo:rows") || [], todayCentral()); },
     async submit(p) {
       const rows = store.get("ggg:demo:rows") || [];
@@ -97,7 +106,7 @@
 
   // ---------- Globe (MapLibre, static NASA Blue Marble imagery bundled with the game) ----------
   const Globe = (function () {
-    const MAX_ZOOM = 4.6;                 // about regional level; the imagery gets soft beyond this
+    const MAX_ZOOM = 6.2;                 // about metro-area level; the imagery gets soft beyond this
     const US_CENTER = [-98.5, 39.5];
     let map = null, pin = null, answer = null, locked = false, onPin = () => {};
     let pinMarker = null, ansMarker = null, anim = null, placed = false;
@@ -118,17 +127,29 @@
     tileCanvas.width = tileCanvas.height = 256;
     const tctx = tileCanvas.getContext("2d");
     function tileBlob() { return new Promise((res) => tileCanvas.toBlob(res, "image/jpeg", 0.9)); }
+    // Three levels of static images: a 1,024-px overview, four 2,048-px quadrants (4,096-px world),
+    // and 64 2,048-px chunks (16,384-px world) that only load when someone zooms in.
+    const hiOrder = [];
+    function loadHi(url) {
+      if (!imgCache[url]) { hiOrder.push(url); while (hiOrder.length > 10) delete imgCache[hiOrder.shift()]; }
+      return loadImage(url);
+    }
     maplibregl.addProtocol("bm", async (params) => {
       const [z, x, y] = params.url.replace("bm://", "").split("/").map(Number);
       let im, sx, sy, size;
-      if (z <= 2) {                       // overview: whole world at 1024 px
+      if (z <= 2) {
         im = await loadImage("imagery/world-1024.jpg");
         size = 1024 / Math.pow(2, z); sx = x * size; sy = y * size;
-      } else {                            // quadrants: world at 4096 px, split in four 2048 px images
+      } else if (z <= 4) {
         const shift = z - 1, qx = x >> shift, qy = y >> shift;
         im = await loadImage("imagery/q" + qx + qy + ".jpg");
         size = 2048 / Math.pow(2, shift);
         sx = (x - (qx << shift)) * size; sy = (y - (qy << shift)) * size;
+      } else {
+        const shift = z - 3, cx = x >> shift, cy = y >> shift;
+        im = await loadHi("imagery/hi/" + cx + "-" + cy + ".jpg");
+        size = 2048 / Math.pow(2, shift);
+        sx = (x - (cx << shift)) * size; sy = (y - (cy << shift)) * size;
       }
       tctx.drawImage(im, sx, sy, size, size, 0, 0, 256, 256);
       const blob = await tileBlob();
@@ -151,7 +172,7 @@
     function zoomToFit(halfAngle) {
       const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight) * 0.36;
       const radius = room / Math.max(Math.sin(Math.min(halfAngle, Math.PI / 2)), 0.002);
-      return Math.max(fitZoom(), Math.min(4.2, Math.log2(radius * 2 * Math.PI / 512)));
+      return Math.max(fitZoom(), Math.min(5.5, Math.log2(radius * 2 * Math.PI / 512)));
     }
     function unwrap(pts) {
       for (let i = 1; i < pts.length; i++) {
@@ -204,7 +225,7 @@
             projection: { type: "globe" },
             sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
             sources: {
-              earth: { type: "raster", tiles: ["bm://{z}/{x}/{y}"], tileSize: 256, maxzoom: 4,
+              earth: { type: "raster", tiles: ["bm://{z}/{x}/{y}"], tileSize: 256, maxzoom: 6,
                 attribution: "Imagery: NASA Blue Marble" },
               borders: { type: "geojson", data: borders },
               states: { type: "geojson", data: states },
@@ -231,7 +252,11 @@
           pinMarker.setLngLat(pin).addTo(map);
           onPin(pin);
         });
-        await new Promise((res) => map.once("load", res));
+        // Don't wait for imagery: the map is still hidden behind the name screen, so no tiles load yet.
+        await new Promise((res) => {
+          if (map.isStyleLoaded()) return res();
+          map.once("style.load", res); map.once("load", res); setTimeout(res, 4000);
+        });
         overlay = document.createElement("canvas");
         overlay.className = "line-overlay";
         map.getContainer().appendChild(overlay);
@@ -307,23 +332,47 @@
     b.hidden = !player; b.textContent = player ? player + " ▾" : "";
   }
 
+  let knownPlayers = [];
+  function choosePlayer(n) { player = n; store.set("ggg:player", n); setWho(); begin(todayCentral(), false); }
+  function cleanName(n) { return String(n || "").replace(/\s+/g, " ").trim(); }
+  function newErr(msg) { $("newErr").textContent = msg || ""; $("newErr").hidden = !msg; }
+
   async function pickPlayer() {
     show("pickScreen");
-    const grid = $("nameGrid");
-    grid.innerHTML = '<p class="muted">Loading names…</p>';
+    newErr("");
+    const sel = $("nameSel");
+    sel.innerHTML = '<option value="">Loading names…</option>';
     try {
-      const names = await api.players();
-      grid.innerHTML = "";
-      names.forEach((n) => {
-        const b = document.createElement("button");
-        b.textContent = n;
-        b.onclick = () => { player = n; store.set("ggg:player", n); setWho(); begin(todayCentral(), false); };
-        grid.appendChild(b);
-      });
+      knownPlayers = await api.players();
+      const sorted = knownPlayers.slice().sort((a, b) => a.localeCompare(b, "en", { sensitivity: "base" }));
+      sel.innerHTML = '<option value="">Choose your name…</option>';
+      sorted.forEach((n) => { const o = document.createElement("option"); o.value = n; o.textContent = n; sel.appendChild(o); });
     } catch (e) {
-      grid.innerHTML = '<p class="muted">Couldn\'t load the player list. Check your connection and refresh.</p>';
+      sel.innerHTML = '<option value="">Couldn\'t load names — refresh to try again</option>';
     }
   }
+  $("pickBtn").onclick = () => { const n = $("nameSel").value; if (n) choosePlayer(n); };
+  $("nameSel").onchange = () => newErr("");
+  $("newName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
+  $("newName").addEventListener("input", () => newErr(""));
+  $("joinBtn").onclick = async () => {
+    const n = cleanName($("newName").value);
+    if (!n) return newErr("Type your name first.");
+    if (!/^[A-Za-zÀ-ÿ0-9 .'-]{1,20}$/.test(n)) return newErr("Use letters, numbers and spaces only (up to 20 characters).");
+    const taken = () => newErr("“" + n + "” is already taken. Enter a different name, or pick yours from the list below.");
+    if (knownPlayers.some((k) => k.toLowerCase() === n.toLowerCase())) return taken();
+    $("joinBtn").disabled = true; $("joinBtn").textContent = "…";
+    try {
+      const res = await api.addPlayer(n);
+      if (res && res.ok) { knownPlayers.push(res.name || n); choosePlayer(res.name || n); }
+      else if (res && res.taken) taken();
+      else newErr((res && res.error) || "Couldn't add you. Try again.");
+    } catch (e) {
+      newErr("Couldn't reach the scoreboard. Check your connection and try again.");
+    } finally {
+      $("joinBtn").disabled = false; $("joinBtn").textContent = "Join";
+    }
+  };
 
   async function begin(date, practice) {
     const dayIdx = daysBetween(START, date);
