@@ -653,7 +653,10 @@
       const li = document.createElement("li");
       const x = g[i];
       li.innerHTML = '<span class="e dot"></span><span class="a"></span><span class="m"></span><span class="p"></span>';
-      li.querySelector(".e").classList.add(scores[i] != null ? tierFor(scores[i], MAX_PTS[i]) : "none");
+      const t = scores[i] != null ? tierFor(scores[i], MAX_PTS[i]) : "none";
+      // A perfect score shows the redhead emoji instead of a dot, so it can't be mistaken for yellow.
+      if (t === "perfect") { li.querySelector(".e").className = "e face"; li.querySelector(".e").textContent = PERFECT_EMOJI; }
+      else li.querySelector(".e").classList.add(t);
       li.querySelector(".a").textContent = q.answer;
       li.querySelector(".m").textContent = x ? fmt(x.miles) + " mi" : "";
       li.querySelector(".p").textContent = scores[i] != null ? scores[i] : "–";
