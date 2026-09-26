@@ -290,6 +290,7 @@
       // How much of the screen the clue card (top) and the Confirm button (bottom) cover.
       setInsets(top, bottom) { topPad = top || 0; restBottom = bottom || 0; },
       onPin(fn) { onPin = fn; },
+      tileTemplate() { return ESRI_TILES; },
       getPin() { return pin; },
       resize() { if (map) map.resize(); },
       invertAt(sx, sy) { const r = map.getContainer().getBoundingClientRect(); const p = map.unproject([sx - r.left, sy - r.top]); return [p.lng, p.lat]; },
@@ -660,6 +661,10 @@
       li.querySelector(".a").textContent = q.answer;
       li.querySelector(".m").textContent = x ? fmt(x.miles) + " mi" : "";
       li.querySelector(".p").textContent = scores[i] != null ? scores[i] : "–";
+      // Tap a row to jump to that question's review card.
+      li.tabIndex = 0; li.setAttribute("role", "link");
+      const jump = () => { const c = $("rev" + i); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); };
+      li.onclick = jump; li.onkeydown = (e) => { if (e.key === "Enter") jump(); };
       list.appendChild(li);
     });
     session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
@@ -667,6 +672,7 @@
     $("copied").hidden = true;
     fillPast();
     show("doneScreen");
+    renderReview(scores); // after the screen is visible, so the maps can measure their size
 
     if (!session.practice && g.length >= 5 && !session.progress.submitted) {
       $("sNote").textContent = "Saving your score…";
@@ -683,6 +689,107 @@
       }
     }
     loadBoard();
+  }
+
+  // ---------- Question review: one card per question with a small map ----------
+  let bordersP = null;
+  function loadBorders() {
+    if (!bordersP) {
+      bordersP = Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())))
+        .then(([w, us]) => ({
+          countries: topojson.mesh(w, w.objects.countries, (a, b) => a !== b),
+          coast: topojson.mesh(w, w.objects.countries, (a, b) => a === b),
+          states: topojson.mesh(us, us.objects.states, (a, b) => a !== b),
+        })).catch(() => null);
+    }
+    return bordersP;
+  }
+  const PIN_SVG = (fill) => '<svg viewBox="0 0 28 38" width="22" height="30"><path d="M14 37C14 37 26 22.5 26 13.5A12 12 0 0 0 2 13.5C2 22.5 14 37 14 37Z" fill="' +
+    fill + '" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>';
+
+  // A still satellite map framing the answer (and your guess, if we have it), built from image tiles.
+  async function miniMap(box, ans, guess) {
+    const w = box.clientWidth || 320, h = box.clientHeight || 200;
+    const mercY = (lat) => { const r = Math.max(-85, Math.min(85, lat)) * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2; };
+    // Take the short way around the globe between the two points.
+    let g = guess ? [guess[0], guess[1]] : null;
+    if (g) { while (g[0] - ans[0] > 180) g[0] -= 360; while (g[0] - ans[0] < -180) g[0] += 360; }
+    const cLon = g ? (g[0] + ans[0]) / 2 : ans[0];
+    const yA = mercY(ans[1]), yG = g ? mercY(g[1]) : yA, cY = (yA + yG) / 2;
+    const dLon = g ? Math.abs(g[0] - ans[0]) / 360 : 0, dY = Math.abs(yA - yG);
+    let z = 7;
+    while (z > 1 && (dLon * 256 * Math.pow(2, z) > w * 0.72 || dY * 256 * Math.pow(2, z) > h * 0.62)) z--;
+    const W = 256 * Math.pow(2, z);
+    const cx = ((cLon + 180) / 360) * W, cy = cY * W, tlx = cx - w / 2, tly = cy - h / 2;
+    // Tiles one zoom level deeper, drawn at half size, so the map stays sharp on phone screens.
+    const tz = z + 1, n = Math.pow(2, tz), ts = 128, tpl = Globe.tileTemplate();
+    const layer = document.createElement("div"); layer.className = "mm-tiles";
+    for (let ty = Math.floor(tly / ts); ty <= Math.floor((tly + h) / ts); ty++) {
+      if (ty < 0 || ty >= n) continue;
+      for (let tx = Math.floor(tlx / ts); tx <= Math.floor((tlx + w) / ts); tx++) {
+        const im = new Image();
+        im.alt = ""; im.loading = "lazy"; im.decoding = "async";
+        im.src = tpl.replace("{z}", tz).replace("{y}", ty).replace("{x}", ((tx % n) + n) % n);
+        im.style.left = (tx * ts - tlx) + "px"; im.style.top = (ty * ts - tly) + "px";
+        im.onerror = () => im.remove();
+        layer.appendChild(im);
+      }
+    }
+    box.appendChild(layer);
+    const proj = d3.geoMercator().rotate([-cLon, 0]).scale(W / (2 * Math.PI)).translate([w / 2, W / 2 - tly]);
+    const svg = d3.select(box).append("svg").attr("class", "mm-lines").attr("viewBox", "0 0 " + w + " " + h);
+    const path = d3.geoPath(proj);
+    const b = await loadBorders();
+    if (b) {
+      if (z >= 4) svg.append("path").attr("d", path(b.states)).attr("class", "mm-state");
+      svg.append("path").attr("d", path(b.coast)).attr("class", "mm-coast");
+      svg.append("path").attr("d", path(b.countries)).attr("class", "mm-border");
+    }
+    if (g) {
+      const line = { type: "LineString", coordinates: d3.range(0, 1.0001, 1 / 64).map((t) => d3.geoInterpolate(g, ans)(t)) };
+      svg.append("path").attr("d", path(line)).attr("class", "mm-route");
+    }
+    const place = (pt, fill) => {
+      const p = proj(pt), el = document.createElement("div");
+      el.className = "mm-pin"; el.innerHTML = PIN_SVG(fill);
+      el.style.left = p[0] + "px"; el.style.top = p[1] + "px";
+      box.appendChild(el);
+    };
+    if (g) place(g, "#ff6b3d");
+    place(ans, "#3ecf7a");
+  }
+
+  function renderReview(scores) {
+    const wrap = $("review"), g = session.progress.guesses;
+    wrap.innerHTML = "";
+    session.qs.forEach((q, i) => {
+      const x = g[i], pts = scores[i];
+      const card = document.createElement("article");
+      card.className = "rev"; card.id = "rev" + i;
+      const t = pts != null ? tierFor(pts, MAX_PTS[i]) : "none";
+      card.innerHTML =
+        '<div class="rev-head"><span class="rev-q"></span><span class="rev-x"></span><span class="rev-where"></span><span class="rev-score"><span class="rev-mark"></span><b></b></span></div>' +
+        '<p class="rev-clue"></p><div class="mm" role="img"></div>' +
+        '<div class="rev-ans"></div><div class="rev-dist"></div><p class="rev-fact"></p>';
+      card.querySelector(".rev-q").textContent = "Q" + (i + 1);
+      card.querySelector(".rev-x").textContent = "×" + (MAX_PTS[i] / 100);
+      card.querySelector(".rev-where").textContent = i < 2 ? "U.S." : "World";
+      const mark = card.querySelector(".rev-mark");
+      if (t === "perfect") { mark.className = "rev-mark face"; mark.textContent = PERFECT_EMOJI; } else mark.className = "rev-mark dot " + t;
+      card.querySelector(".rev-score b").textContent = pts != null ? pts : "–";
+      card.querySelector(".rev-clue").textContent = q.clue;
+      card.querySelector(".rev-ans").textContent = q.answer;
+      const dist = card.querySelector(".rev-dist");
+      if (x) {
+        dist.innerHTML = "You were <b></b> from the answer.";
+        dist.querySelector("b").textContent = fmt(x.miles) + (x.miles === 1 ? " mile" : " miles");
+      } else dist.textContent = "Played on another device.";
+      card.querySelector(".rev-fact").textContent = q.fact;
+      const mm = card.querySelector(".mm");
+      mm.setAttribute("aria-label", "Map of " + q.answer + (x ? " with your guess" : ""));
+      wrap.appendChild(card);
+      miniMap(mm, [q.lon, q.lat], x ? [x.lon, x.lat] : null).catch(() => {});
+    });
   }
 
   // The total counts up from zero when you've just finished; otherwise it just shows.
