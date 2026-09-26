@@ -120,6 +120,7 @@
     const US_CENTER = [-98.5, 39.5];
     let map = null, pin = null, answer = null, locked = false, onPin = () => {};
     let pinMarker = null, ansMarker = null, anim = null, placed = false;
+    let topPad = 0, restBottom = 0; // screen space covered by the floating clue card and Confirm button
 
     // --- Serve map tiles by cutting them out of five static images (no live map service) ---
     const imgCache = {};
@@ -169,7 +170,7 @@
     }
     // Zoom at which an arc of `halfAngle` radians either side of center fits on screen.
     function zoomToFit(halfAngle, padBottom) {
-      const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight - (padBottom || 0)) * 0.36;
+      const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight - (padBottom || 0) - topPad) * 0.36;
       const radius = room / Math.max(Math.sin(Math.min(halfAngle, Math.PI / 2)), 0.002);
       return Math.max(fitZoom(), Math.min(7, Math.log2(radius * 2 * Math.PI / 512)));
     }
@@ -249,7 +250,7 @@
         map.on("click", (e) => {
           if (locked) return;
           pin = [e.lngLat.lng, e.lngLat.lat];
-          if (!pinMarker) pinMarker = new maplibregl.Marker({ element: pinEl("#e4572e"), anchor: "bottom" });
+          if (!pinMarker) pinMarker = new maplibregl.Marker({ element: pinEl("#ff6b3d"), anchor: "bottom" });
           pinMarker.setLngLat(pin).addTo(map);
           onPin(pin);
         });
@@ -279,8 +280,15 @@
         if (pinMarker) pinMarker.remove();
         if (ansMarker) { ansMarker.remove(); ansMarker = null; }
         setLine(null); drawing = null; drawOverlay();
-        if (!placed) { map.jumpTo({ center: US_CENTER, zoom: fitZoom() }); placed = true; }
+        if (!placed) {
+          map.jumpTo({ center: US_CENTER, zoom: fitZoom(), padding: { top: topPad, bottom: restBottom, left: 0, right: 0 } });
+          placed = true;
+        } else {
+          map.easeTo({ padding: { top: topPad, bottom: restBottom, left: 0, right: 0 }, duration: 350 });
+        }
       },
+      // How much of the screen the clue card (top) and the Confirm button (bottom) cover.
+      setInsets(top, bottom) { topPad = top || 0; restBottom = bottom || 0; },
       onPin(fn) { onPin = fn; },
       getPin() { return pin; },
       resize() { if (map) map.resize(); },
@@ -312,14 +320,14 @@
             const target = interp(t / 2), blend = Math.min(1, u / 0.25);
             const center = d3.geoInterpolate(start, target)(blend);
             const zoom = Math.min(z0 + (zEnd - z0) * t, zoomToFit((angle * t) / 2 + 0.01, padEnd));
-            const padding = { top: 0, left: 0, right: 0, bottom: pad0 + (padEnd - pad0) * blend };
+            const padding = { top: topPad, left: 0, right: 0, bottom: pad0 + (padEnd - pad0) * blend };
             map.jumpTo({ center, zoom: Math.max(zoom, zEnd < z0 ? zEnd : fitZoom()), padding });
             if (u < 1) { anim = requestAnimationFrame(step); return; }
             anim = null;
             drawing = null; drawOverlay();
             const full = []; for (let i = 0; i <= 128; i++) full.push(interp(i / 128));
             setLine(unwrap(full));
-            ansMarker = new maplibregl.Marker({ element: pinEl("#2f9e5b", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
+            ansMarker = new maplibregl.Marker({ element: pinEl("#3ecf7a", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
             if (hooks.onLand) setTimeout(hooks.onLand, 330); // as the flag hits the ground
             setTimeout(done, 550);
           };
@@ -431,9 +439,41 @@
     if (id === "gameScreen") Globe.resize();
   }
   function message(title, body) { $("msgTitle").textContent = title; $("msgBody").textContent = body; show("msgScreen"); }
+  // Each player gets a consistent colored initial, wherever their name appears.
+  const AV_COLORS = ["#ff6b3d", "#1fa7a0", "#8a63d2", "#3a86d6", "#d64f8a", "#d99a00", "#2f9e5b", "#6c7bd9", "#c2572b", "#0f8fb8"];
+  function avatar(name) {
+    let h = 0;
+    for (const ch of String(name)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    const el = document.createElement("span");
+    el.className = "av";
+    el.style.background = AV_COLORS[h % AV_COLORS.length];
+    el.textContent = (String(name).trim()[0] || "?").toUpperCase();
+    el.setAttribute("aria-hidden", "true");
+    return el;
+  }
   function setWho() {
     const b = $("whoBtn");
-    b.hidden = !player; b.textContent = player ? player + " ▾" : "";
+    b.hidden = !player; b.innerHTML = "";
+    if (player) {
+      b.appendChild(avatar(player));
+      const s = document.createElement("span"); s.className = "who-name"; s.textContent = player; b.appendChild(s);
+      b.setAttribute("aria-label", "Playing as " + player + ". Switch player");
+    }
+  }
+  // Five segments across the top of the clue card, colored as each answer lands.
+  function renderProgress(current) {
+    const g = session.progress.guesses, box = $("prog");
+    box.innerHTML = "";
+    for (let k = 0; k < 5; k++) {
+      const seg = document.createElement("i");
+      if (g[k] && k !== current) seg.className = tierFor(g[k].pts, MAX_PTS[k]);
+      else if (k === current) seg.className = "now";
+      box.appendChild(seg);
+    }
+    const shown = g.filter((x, k) => k !== current);
+    const tot = document.createElement("em");
+    tot.textContent = fmt(shown.reduce((a, x) => a + x.pts, 0));
+    box.appendChild(tot);
   }
 
   let knownPlayers = [];
@@ -547,6 +587,14 @@
     $("hint").hidden = false;
     $("milesChip").hidden = true;
     show("gameScreen");
+    renderProgress(i);
+    // The clue card and the Confirm button float over the globe; keep the globe's
+    // working area clear of both.
+    const qc = $("qcard"), top = qc.offsetTop + qc.offsetHeight + 6, bottom = $("bottomBar").offsetHeight;
+    const gs = $("gameScreen");
+    gs.style.setProperty("--qh", top + "px");
+    gs.style.setProperty("--bb", bottom + "px");
+    Globe.setInsets(top, bottom);
     Globe.reset();
   }
   Globe.onPin(() => { $("confirmBtn").disabled = false; $("hint").hidden = true; Feedback.pin(); });
@@ -568,7 +616,7 @@
     $("rPts").textContent = "+" + pts;
     $("rFact").textContent = q.fact;
     card.classList.remove("show"); card.style.visibility = "hidden"; card.hidden = false;
-    const cardH = card.offsetHeight + 16;
+    const cardH = card.offsetHeight + $("bottomBar").offsetHeight + 16;
     card.hidden = true; card.style.visibility = "";
     const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, MAX_PTS[i]);
     chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
@@ -576,7 +624,7 @@
       padBottom: cardH,
       onStart(duration) { Feedback.lineStart(duration); },
       onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; Feedback.lineProgress(t); },
-      onLand() { chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
+      onLand() { renderProgress(-1); chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
     });
     // Same spot, same size: Confirm becomes Next, and the card slides up over the map.
     $("confirmBtn").hidden = true;
@@ -597,16 +645,18 @@
     const emojis = scores.map((s, i) => emojiFor(s, MAX_PTS[i])).join("");
     $("sTitle").textContent = "Day " + (session.dayIdx + 1) + " · " + prettyDate(session.date, false) + (session.practice ? " · practice" : "");
     $("sEmoji").textContent = emojis;
-    $("sTotal").textContent = fmt(total) + " / " + fmt(DAY_MAX);
+    countUp($("sTotal"), total, !already);
+    $("sMax").textContent = "/ " + fmt(DAY_MAX);
     $("sNote").textContent = "";
     const list = $("sList"); list.innerHTML = "";
     session.qs.forEach((q, i) => {
       const li = document.createElement("li");
       const x = g[i];
-      li.innerHTML = '<span class="e"></span><span class="a"></span><span class="p"></span>';
-      li.querySelector(".e").textContent = scores[i] != null ? emojiFor(scores[i], MAX_PTS[i]) : "";
-      li.querySelector(".a").textContent = q.answer + (x ? " — " + fmt(x.miles) + " mi" : "");
-      li.querySelector(".p").textContent = (scores[i] != null ? scores[i] : "–") + "/" + MAX_PTS[i];
+      li.innerHTML = '<span class="e dot"></span><span class="a"></span><span class="m"></span><span class="p"></span>';
+      li.querySelector(".e").classList.add(scores[i] != null ? tierFor(scores[i], MAX_PTS[i]) : "none");
+      li.querySelector(".a").textContent = q.answer;
+      li.querySelector(".m").textContent = x ? fmt(x.miles) + " mi" : "";
+      li.querySelector(".p").textContent = scores[i] != null ? scores[i] : "–";
       list.appendChild(li);
     });
     session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
@@ -632,12 +682,42 @@
     loadBoard();
   }
 
+  // The total counts up from zero when you've just finished; otherwise it just shows.
+  function countUp(el, end, animate) {
+    if (!animate || matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = fmt(end); return; }
+    const t0 = performance.now(), dur = 1200;
+    const step = (now) => {
+      const u = Math.min(1, (now - t0) / dur);
+      el.textContent = fmt(Math.round(end * (1 - Math.pow(1 - u, 3))));
+      if (u < 1) requestAnimationFrame(step);
+    };
+    el.textContent = "0";
+    requestAnimationFrame(step);
+  }
+
+  // Today's top three on a podium: 2nd, 1st, 3rd from left to right.
+  function renderPodium(list) {
+    const box = $("podium"), wrap = $("podiumWrap");
+    box.innerHTML = "";
+    const top = (list || []).slice(0, 3);
+    wrap.hidden = !top.length;
+    [1, 0, 2].forEach((k) => {
+      const r = top[k], d = document.createElement("div");
+      if (!r) { d.className = "step empty"; box.appendChild(d); return; }
+      d.className = "step s" + (k + 1) + (r.name === player ? " me" : "");
+      d.appendChild(avatar(r.name));
+      const n = document.createElement("span"); n.className = "pn"; n.textContent = r.name; d.appendChild(n);
+      const b = document.createElement("span"); b.className = "blk"; b.textContent = fmt(r.total); d.appendChild(b);
+      box.appendChild(d);
+    });
+  }
+
   // ---------- Leaderboard ----------
   let board = null, tab = "today";
   async function loadBoard() {
     $("boardList").innerHTML = '<li class="muted">Loading…</li>';
     $("boardNote").textContent = "";
-    try { board = await api.board(); renderBoard(); }
+    try { board = await api.board(); renderPodium(board.today); renderBoard(); }
     catch (e) { $("boardList").innerHTML = '<li class="muted">Couldn\'t load the leaderboard.</li>'; }
   }
   const TOP_N = 10;
@@ -657,6 +737,7 @@
       li.innerHTML = '<span class="rank"></span><span class="n"></span><span class="v"></span>';
       li.querySelector(".rank").textContent = rank;
       li.querySelector(".n").textContent = r[0];
+      li.insertBefore(avatar(r[0]), li.querySelector(".n"));
       if (r[2]) { const s = document.createElement("span"); s.className = "sub"; s.textContent = r[2]; li.querySelector(".n").appendChild(s); }
       li.querySelector(".v").textContent = r[1];
       if (r[0] === player) li.classList.add("me");
