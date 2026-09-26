@@ -233,7 +233,7 @@
               guessline: { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } },
             },
             layers: [
-              { id: "space", type: "background", paint: { "background-color": "#0b1a2b" } },
+              // No background layer: space around the globe stays see-through so the starfield shows.
               { id: "earth", type: "raster", source: "earth", paint: { "raster-fade-duration": 0 } },
               { id: "esri", type: "raster", source: "esri", paint: { "raster-fade-duration": 200 } },
               { id: "states", type: "line", source: "states", paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.6 } },
@@ -338,6 +338,68 @@
     };
   })();
 
+  // ---------- Starfield behind the globe (Milky Way) ----------
+  // Drawn on its own canvas under the map, so spinning the globe never moves the stars.
+  const Stars = (function () {
+    const cv = $("stars"), c = cv.getContext("2d");
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let w = 0, h = 0, stars = [], running = false, last = 0;
+    function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+    function build() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = cv.clientWidth; h = cv.clientHeight;
+      if (!w || !h) return;
+      cv.width = w * dpr; cv.height = h * dpr; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const r = rng(23), area = (w * h) / (300 * 620);
+      stars = [];
+      for (let i = 0; i < 170 * area; i++)
+        stars.push({ x: r() * w, y: r() * h, s: r() < 0.12 ? 1.5 : r() * 0.9 + 0.4, a: 0.5 + r() * 0.5, tw: 0.4 + r() * 1.6, ph: r() * 6.28, c: "255,255,255" });
+      // The Milky Way: a dense, faint band of stars on a diagonal.
+      for (let i = 0; i < 900 * area; i++) {
+        const t = r(), off = (r() + r() + r() - 1.5) * 70;
+        stars.push({ x: t * w * 1.3 - w * 0.15, y: h * 0.95 - t * h * 0.9 + off, s: r() * 0.7 + 0.2, a: 0.12 + r() * 0.35, tw: 0.2 + r(), ph: r() * 6.28, c: "225,232,255" });
+      }
+      const tints = ["170,200,255", "255,214,150", "200,220,255"];
+      for (let i = 0; i < 9 * area; i++) stars.push({ x: r() * w, y: r() * h * 0.8, s: 1.9, a: 0.9, tw: 0.8 + r(), ph: r() * 6.28, c: tints[i % 3], glow: true });
+    }
+    function draw(s) {
+      c.fillStyle = "#050a14"; c.fillRect(0, 0, w, h);
+      c.save(); c.translate(w / 2, h / 2); c.rotate(-Math.atan2(h * 0.9, w * 1.3));
+      const g = c.createLinearGradient(0, -90, 0, 90);
+      g.addColorStop(0, "rgba(120,140,200,0)"); g.addColorStop(0.5, "rgba(160,175,230,.2)"); g.addColorStop(1, "rgba(120,140,200,0)");
+      c.fillStyle = g; c.fillRect(-w, -90, w * 2, 180); c.restore();
+      const drift = reduce ? 0 : s * 1.2;
+      for (const st of stars) {
+        const a = reduce ? st.a : st.a * (0.65 + 0.35 * Math.sin(s * st.tw + st.ph));
+        const x = (((st.x + drift) % (w + 4)) + w + 4) % (w + 4) - 2;
+        if (st.glow) {
+          const gg = c.createRadialGradient(x, st.y, 0, x, st.y, st.s * 4);
+          gg.addColorStop(0, "rgba(" + st.c + "," + a + ")"); gg.addColorStop(1, "rgba(" + st.c + ",0)");
+          c.fillStyle = gg; c.beginPath(); c.arc(x, st.y, st.s * 4, 0, 7); c.fill();
+        }
+        c.fillStyle = "rgba(" + st.c + "," + a + ")"; c.beginPath(); c.arc(x, st.y, st.s, 0, 7); c.fill();
+      }
+    }
+    function loop(t) {
+      if (!running) return;
+      // About 20 frames a second is plenty for a slow twinkle and easy on the battery.
+      if (t - last > 50) { last = t; draw(t / 1000); }
+      requestAnimationFrame(loop);
+    }
+    function start() {
+      build();
+      if (!w) return;
+      if (reduce) { draw(0); return; }
+      if (!running) { running = true; requestAnimationFrame(loop); }
+    }
+    function stop() { running = false; }
+    window.addEventListener("resize", () => { if (running || reduce) { build(); draw(performance.now() / 1000); } });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stop(); else if (!$("gameScreen").hidden) start();
+    });
+    return { start, stop };
+  })();
+
   // ---------- Sound and haptics ----------
   const Feedback = (function () {
     let ctx = null;
@@ -437,7 +499,7 @@
 
   function show(id) {
     ["pickScreen", "gameScreen", "doneScreen", "msgScreen"].forEach((s) => { $(s).hidden = s !== id; });
-    if (id === "gameScreen") Globe.resize();
+    if (id === "gameScreen") { Globe.resize(); Stars.start(); } else Stars.stop();
   }
   function message(title, body) { $("msgTitle").textContent = title; $("msgBody").textContent = body; show("msgScreen"); }
   // Each player gets a consistent colored initial, wherever their name appears.
