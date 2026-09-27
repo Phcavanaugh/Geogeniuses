@@ -308,13 +308,9 @@ p.muted{margin:0 16px 16px}
 .mm-guess{position:absolute;width:16px;height:16px;margin:-8px 0 0 -8px;border-radius:50%;background:#fff;border:4px solid #ff6b3d;box-shadow:0 1px 4px rgba(0,0,0,.6);z-index:3}
 .mm-pin{z-index:2}
 
-/* Badge art (perfect-score emoji dressed up) */
-.medal .art{position:absolute;inset:7%;border-radius:50%;overflow:hidden;container-type:size;background:radial-gradient(circle at 50% 30%,#2d5a8f,#0d1f38 75%)}
+/* Badge art (badge-art.js) */
+.medal .art{position:absolute;inset:7%;border-radius:50%;overflow:hidden}
 .medal.t5 .art{inset:4%}
-.medal .art .ov{position:absolute;inset:0;width:100%;height:100%}
-.medal .art .fig{position:absolute;left:50%;width:1em;height:1em;transform:translateX(-50%)}
-.medal .art .fig .em{position:absolute;inset:0;font-size:1em;line-height:1;text-align:center;z-index:1}
-.medal .art .fig .fl{position:absolute;left:-.8em;top:-.3em;width:2.6em;height:2.9em;overflow:visible;display:block}
-.medal .art .fig .fl.back{z-index:0}.medal .art .fig .fl.front{z-index:2}
+.medal .art svg{display:block;width:100%;height:100%}
 .medal .lv{z-index:3}
 .medal.locked .art{filter:grayscale(1) brightness(.55);opacity:.5}
