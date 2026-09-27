@@ -1116,7 +1116,8 @@
       const o = after[b.id], row = document.createElement("button");
       row.type = "button"; row.className = "al-row";
       row.innerHTML = '<span class="e"></span><span class="t"><b></b><small></small></span><span class="n"></span><span class="meter"><i></i></span>';
-      row.querySelector(".e").textContent = b.icon;
+      // The badge art for the level you're working toward.
+      row.querySelector(".e").appendChild(medal(b, o.level + 1, 38));
       row.querySelector("b").textContent = b.name + " · " + lvlName(b, o.level + 1);
       row.querySelector("small").textContent = fmt(o.next) + " " + unitFor(b, o.next);
       row.querySelector(".n").textContent = fmt(o.toward) + "/" + fmt(o.next);
