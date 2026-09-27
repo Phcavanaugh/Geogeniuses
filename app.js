@@ -91,6 +91,11 @@
       const r = await fetch(API, { method: "POST", body: JSON.stringify({ action: "addPlayer", name }) });
       return r.json();
     },
+    async history() { const r = await fetch(API + "?action=history"); return r.json(); },
+    async share(p) {
+      const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "share" }, p)) });
+      return r.json();
+    },
   } : {
     async players() { return ["Pete", "Guest"].concat(store.get("ggg:demo:players") || []); },
     async addPlayer(name) {
@@ -99,6 +104,12 @@
       list.push(name); store.set("ggg:demo:players", list); return { ok: true, name };
     },
     async board() { return computeBoard(store.get("ggg:demo:rows") || [], todayCentral()); },
+    async history() { return { ok: true, rows: store.get("ggg:demo:rows") || [], shares: store.get("ggg:demo:shares") || [] }; },
+    async share(p) {
+      const list = store.get("ggg:demo:shares") || [];
+      if (!list.some((s) => s.player === p.player && s.date === p.date)) { list.push({ player: p.player, date: p.date }); store.set("ggg:demo:shares", list); }
+      return { ok: true };
+    },
     async submit(p) {
       const rows = store.get("ggg:demo:rows") || [];
       if (rows.some((r) => r.player === p.player && r.date === p.date)) return { ok: true, duplicate: true };
@@ -498,7 +509,7 @@
   let session = null; // {date, dayIdx, practice, key, progress}
 
   function show(id) {
-    ["pickScreen", "gameScreen", "doneScreen", "msgScreen"].forEach((s) => { $(s).hidden = s !== id; });
+    ["pickScreen", "gameScreen", "doneScreen", "msgScreen", "badgeScreen"].forEach((s) => { $(s).hidden = s !== id; });
     if (id === "gameScreen") { Globe.resize(); Stars.start(); } else Stars.stop();
   }
   function message(title, body) { $("msgTitle").textContent = title; $("msgBody").textContent = body; show("msgScreen"); }
@@ -729,8 +740,10 @@
       li.onclick = jump; li.onkeydown = (e) => { if (e.key === "Enter") jump(); };
       list.appendChild(li);
     });
-    session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
-      "\n" + emojis + " · " + fmt(total) + "/" + fmt(DAY_MAX) + "\n" + location.origin + location.pathname;
+    session.shareBase = { emojis, total };
+    session.shareExtra = "";
+    buildShare();
+    $("badgeWrap").hidden = true;
     $("copied").hidden = true;
     fillPast();
     show("doneScreen");
@@ -751,6 +764,7 @@
       }
     }
     loadBoard();
+    loadBadges();
   }
 
   // ---------- Question review: one card per question with a small map ----------
@@ -884,6 +898,349 @@
     });
   }
 
+  function buildShare() {
+    const b = session.shareBase;
+    session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
+      "\n" + b.emojis + " · " + fmt(b.total) + "/" + fmt(DAY_MAX) +
+      (session.shareExtra ? "\n" + session.shareExtra : "") + "\n" + location.origin + location.pathname;
+  }
+
+  // ---------- Badges ----------
+  // Everything is worked out here from the saved score history, so thresholds can change
+  // without touching the Google Sheet script.
+  const BADGES = [
+    { id: "streak",   icon: "🔥", name: "On a Roll",     levels: [3, 7, 30, 100, 365], unit: ["day in a row", "days in a row"],
+      how: "Play days in a row. Your longest run counts, so a missed day never takes a level away." },
+    { id: "flyer",    icon: "🧳", name: "Frequent Flyer", levels: [5, 25, 50, 100, 365], unit: ["day played", "days played"],
+      how: "Play the daily puzzle. Every day counts, in a row or not." },
+    { id: "bullseye", icon: "🎯", name: "Bullseye",      levels: [1, 10, 50, 100, 250], unit: ["perfect answer", "perfect answers"],
+      how: "Score a perfect 100 on a question by landing within about 10 miles." },
+    { id: "pb",       icon: "📈", name: "Personal Best", levels: [1, 3, 5, 10, 25], unit: ["new best day", "new best days"],
+      how: "Beat your own best daily score." },
+    { id: "postcard", icon: "📮", name: "Postcard",      levels: [1, 10, 30, 100, 365], unit: ["day shared", "days shared"],
+      how: "Share your result with Share result. One share a day counts." },
+    { id: "champ",    icon: "🥇", name: "Daily Champ",   levels: [1, 5, 25, 100], unit: ["win", "wins"],
+      how: "Finish 1st for the day, with at least 2 players. Ties count for everyone tied. Days count once they're over." },
+    { id: "podium",   icon: "🏅", name: "Podium",        levels: [5, 25, 100, 250], unit: ["top-3 finish", "top-3 finishes"],
+      how: "Finish in the top 3 for the day, on days with at least 4 players. Days count once they're over." },
+    { id: "weekly",   icon: "👑", name: "Weekly Winner", levels: [1, 5, 10, 25], unit: ["week won", "weeks won"],
+      how: "Score the most points from Monday to Sunday. Weeks count once Sunday is over." },
+    { id: "genius",   icon: PERFECT_EMOJI, name: "GeoGenius", levels: [1, 3, 10], unit: ["perfect day", "perfect days"],
+      how: "Score a perfect 1,000 in a day." },
+  ];
+  const ROMAN = ["", "I", "II", "III", "IV", "V"];
+  const unitFor = (b, n) => b.unit[n === 1 ? 0 : 1];
+
+  let HIST = null;        // { rows, shares } from the Sheet (or this device in demo mode)
+  let histReady = false;  // false until the updated Sheet script answers
+
+  // Shares made on this phone, kept until the Sheet confirms it saved them.
+  const shareKey = "ggg:shares";
+  function localShares() { return store.get(shareKey) || []; }
+  function noteShare(p, date) {
+    const list = localShares();
+    if (!list.some((s) => s.player === p && s.date === date)) { list.push({ player: p, date, sent: false }); store.set(shareKey, list); }
+  }
+  async function flushShares() {
+    const list = localShares();
+    let changed = false;
+    for (const s of list) {
+      if (s.sent) continue;
+      try { const res = await api.share({ player: s.player, date: s.date }); if (res && res.ok) { s.sent = true; changed = true; } } catch (e) {}
+    }
+    // Keep only the last few weeks on the phone.
+    const cutoff = addDays(todayCentral(), -21);
+    const kept = list.filter((s) => !s.sent || s.date >= cutoff);
+    if (changed || kept.length !== list.length) store.set(shareKey, kept);
+  }
+
+  async function loadHistory() {
+    try {
+      const h = await api.history();
+      if (h && Array.isArray(h.rows)) { HIST = { rows: h.rows, shares: h.shares || [] }; histReady = true; }
+    } catch (e) {}
+    return histReady;
+  }
+  // History with anything this phone knows about that the Sheet may not have yet.
+  function mergedHistory() {
+    const rows = (HIST ? HIST.rows : []).slice();
+    const shares = (HIST ? HIST.shares : []).slice();
+    const seenR = new Set(rows.map((r) => r.player + "|" + r.date));
+    if (session && !session.practice && player) {
+      const g = session.progress.guesses;
+      if (g.length >= 5 && !seenR.has(player + "|" + session.date)) {
+        const scores = g.map((x) => x.pts);
+        rows.push({ date: session.date, player, scores, total: scores.reduce((a, b) => a + b, 0) });
+      }
+    }
+    const seenS = new Set(shares.map((s) => s.player + "|" + s.date));
+    localShares().forEach((s) => { if (!seenS.has(s.player + "|" + s.date)) { shares.push({ player: s.player, date: s.date }); seenS.add(s.player + "|" + s.date); } });
+    return { rows, shares };
+  }
+
+  // Badge progress for one player, counting only what was known by the end of `cutoff`.
+  // Head-to-head badges (champ, podium, weekly) only count days/weeks that finished before `cutoff`.
+  function badgeData(hist, who, cutoff) {
+    const seen = new Set(), rows = [];
+    hist.rows.forEach((r) => { const k = r.player + "|" + r.date; if (!seen.has(k) && r.date <= cutoff) { seen.add(k); rows.push(r); } });
+    const mine = rows.filter((r) => r.player === who).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const events = []; // [date, id, value, mode]
+    let best = -1, run = 0, prev = null;
+    mine.forEach((r) => {
+      events.push([r.date, "flyer", 1, "add"]);
+      const bulls = (r.scores || []).filter((s, i) => Number(s) === MAX_PTS[i]).length;
+      if (bulls) events.push([r.date, "bullseye", bulls, "add"]);
+      if (Number(r.total) >= DAY_MAX) events.push([r.date, "genius", 1, "add"]);
+      if (best >= 0 && r.total > best) events.push([r.date, "pb", 1, "add"]);
+      best = Math.max(best, r.total);
+      run = prev && addDays(prev, 1) === r.date ? run + 1 : 1; prev = r.date;
+      events.push([r.date, "streak", run, "max"]);
+    });
+    const byDate = {};
+    rows.forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    mine.forEach((r) => {
+      if (r.date >= cutoff) return;
+      const day = byDate[r.date], higher = day.filter((o) => o.total > r.total).length;
+      if (day.length >= 2 && higher === 0) events.push([r.date, "champ", 1, "add"]);
+      if (day.length >= 4 && higher <= 2) events.push([r.date, "podium", 1, "add"]);
+    });
+    const weeks = {};
+    rows.forEach((r) => {
+      const dow = new Date(ymdToUTC(r.date)).getUTCDay(), mon = addDays(r.date, -((dow + 6) % 7));
+      const w = (weeks[mon] = weeks[mon] || {}); w[r.player] = (w[r.player] || 0) + Number(r.total);
+    });
+    Object.keys(weeks).forEach((mon) => {
+      const sun = addDays(mon, 6), w = weeks[mon];
+      if (sun >= cutoff || !(who in w) || Object.keys(w).length < 2) return;
+      if (Object.values(w).every((t) => t <= w[who])) events.push([sun, "weekly", 1, "add"]);
+    });
+    const shareDays = new Set(hist.shares.filter((s) => s.player === who && s.date <= cutoff).map((s) => s.date));
+    shareDays.forEach((d) => events.push([d, "postcard", 1, "add"]));
+    events.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+
+    const out = {};
+    BADGES.forEach((b) => { out[b.id] = { value: 0, level: 0, dates: [] }; });
+    events.forEach(([date, id, v, mode]) => {
+      const o = out[id], b = BADGES.find((x) => x.id === id);
+      o.value = mode === "add" ? o.value + v : Math.max(o.value, v);
+      while (o.level < b.levels.length && o.value >= b.levels[o.level]) { o.dates[o.level] = date; o.level++; }
+    });
+    // Current streak: days in a row ending today or yesterday.
+    const dates = new Set(mine.map((r) => r.date));
+    let d = dates.has(cutoff) ? cutoff : addDays(cutoff, -1), cur = 0;
+    while (dates.has(d)) { cur++; d = addDays(d, -1); }
+    out.streak.current = cur;
+    BADGES.forEach((b) => {
+      const o = out[b.id];
+      o.next = b.levels[o.level] || null;
+      const toward = b.id === "streak" ? cur : o.value;
+      o.frac = o.next ? Math.min(1, toward / o.next) : 1;
+      o.toward = toward;
+    });
+    const totals = mine.map((r) => Number(r.total));
+    out.stats = {
+      days: mine.length, first: mine.length ? mine[0].date : null, streak: cur,
+      best: totals.length ? Math.max.apply(null, totals) : 0,
+      avg: totals.length ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0,
+      last: mine.length ? mine[mine.length - 1].date : null,
+    };
+    return out;
+  }
+
+  function medal(b, level, size) {
+    const el = document.createElement("span");
+    el.className = "medal " + (level ? "t" + Math.min(level, 5) : "locked");
+    if (size) el.style.setProperty("--sz", size + "px");
+    const g = document.createElement("span"); g.className = "g"; g.textContent = b.icon; el.appendChild(g);
+    if (level) { const lv = document.createElement("span"); lv.className = "lv"; lv.textContent = ROMAN[level]; el.appendChild(lv); }
+    el.setAttribute("aria-hidden", "true");
+    return el;
+  }
+
+  // Results screen: badges earned since your last visit, and the ones you're closest to.
+  let lastBadges = null;
+  async function loadBadges() {
+    const wrap = $("badgeWrap");
+    const ok = await loadHistory();
+    flushShares();
+    if (!ok || !player || !session) { wrap.hidden = true; return; }
+    const hist = mergedHistory(), today = todayCentral();
+    const mineBefore = hist.rows.filter((r) => r.player === player && r.date < today).map((r) => r.date).sort();
+    const prevDate = mineBefore.length ? mineBefore[mineBefore.length - 1] : "0000-00-00";
+    const before = badgeData(hist, player, prevDate), after = badgeData(hist, player, today);
+    lastBadges = after;
+    const fresh = session.practice ? [] : BADGES.filter((b) => after[b.id].level > before[b.id].level);
+    const card = $("badgeNew"), list = $("badgeNewList");
+    list.innerHTML = "";
+    fresh.forEach((b) => {
+      const o = after[b.id], row = document.createElement("div");
+      row.className = "bn-item";
+      row.appendChild(medal(b, o.level, 46));
+      const t = document.createElement("div");
+      t.innerHTML = "<b></b><span></span>";
+      t.querySelector("b").textContent = b.name + " · Level " + ROMAN[o.level];
+      const n = b.levels[o.level - 1];
+      t.querySelector("span").textContent = fmt(n) + " " + unitFor(b, n);
+      row.appendChild(t);
+      row.onclick = () => openBadge(b.id, player);
+      list.appendChild(row);
+    });
+    card.hidden = !fresh.length;
+    $("badgeNewTitle").textContent = fresh.length === 1 ? "New badge!" : "New badges!";
+    // Almost there: the two badges you're closest to leveling up.
+    const near = BADGES.filter((b) => after[b.id].next && after[b.id].toward > 0)
+      .sort((a, b) => after[b.id].frac - after[a.id].frac).slice(0, 2);
+    const box = $("almostList"); box.innerHTML = "";
+    near.forEach((b) => {
+      const o = after[b.id], row = document.createElement("button");
+      row.type = "button"; row.className = "al-row";
+      row.innerHTML = '<span class="e"></span><span class="t"><b></b><small></small></span><span class="n"></span><span class="meter"><i></i></span>';
+      row.querySelector(".e").textContent = b.icon;
+      row.querySelector("b").textContent = b.name + " " + ROMAN[o.level + 1];
+      row.querySelector("small").textContent = fmt(o.next) + " " + unitFor(b, o.next);
+      row.querySelector(".n").textContent = fmt(o.toward) + "/" + fmt(o.next);
+      row.querySelector("i").style.width = Math.round(o.frac * 100) + "%";
+      row.onclick = () => openBadge(b.id, player);
+      box.appendChild(row);
+    });
+    $("almost").hidden = !near.length;
+    wrap.hidden = !fresh.length && !near.length;
+    // Streak and any new badge go into the share text.
+    let extra = "";
+    if (!session.practice) {
+      const bits = [];
+      if (after.stats.streak >= 2) bits.push("🔥" + after.stats.streak);
+      if (fresh.length) bits.push("New badge: " + fresh.map((b) => b.icon + " " + b.name + " " + ROMAN[after[b.id].level]).join(", "));
+      extra = bits.join(" · ");
+    }
+    session.shareExtra = extra;
+    buildShare();
+  }
+
+  // After a share: record it, and celebrate if it earned a Postcard level.
+  function afterShare() {
+    if (!session || session.practice || !player) return;
+    const before = lastBadges ? lastBadges.postcard.level : null;
+    noteShare(player, session.date);
+    flushShares();
+    if (!histReady) return;
+    const now = badgeData(mergedHistory(), player, todayCentral());
+    lastBadges = now;
+    const b = BADGES.find((x) => x.id === "postcard");
+    if (before !== null && now.postcard.level > before) toast(b, now.postcard.level);
+  }
+  function toast(b, level) {
+    const t = $("toast");
+    t.innerHTML = "";
+    t.appendChild(medal(b, level, 38));
+    const s = document.createElement("div");
+    s.innerHTML = "<b>New badge!</b><span></span>";
+    s.querySelector("span").textContent = b.name + " · Level " + ROMAN[level];
+    t.appendChild(s);
+    t.hidden = false; t.classList.remove("show");
+    requestAnimationFrame(() => t.classList.add("show"));
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => { t.classList.remove("show"); setTimeout(() => { t.hidden = true; }, 350); }, 3600);
+  }
+
+  // ---------- Badge shelf (a player's profile) ----------
+  let shelfFrom = null, shelfWho = null, shelfData = null;
+  async function openShelf(who) {
+    shelfWho = who;
+    const cur = ["pickScreen", "gameScreen", "doneScreen", "msgScreen"].find((s) => !$(s).hidden);
+    if (cur) shelfFrom = cur;
+    show("badgeScreen");
+    $("shelfSwitch").hidden = who !== player;
+    const head = $("shelfHead"); head.innerHTML = "";
+    const av = avatar(who); av.classList.add("big"); head.appendChild(av);
+    const t = document.createElement("div"); t.innerHTML = "<h1></h1><small></small>";
+    t.querySelector("h1").textContent = who; head.appendChild(t);
+    $("shelfGrid").innerHTML = '<div class="muted small span">Loading badges…</div>';
+    $("shelfStats").innerHTML = "";
+    if (!histReady) await loadHistory();
+    if (!histReady) {
+      $("shelfGrid").innerHTML = '<div class="muted small span">Badges are almost ready. They\'ll appear here once the scoreboard is updated.</div>';
+      t.querySelector("small").textContent = "";
+      return;
+    }
+    const d = badgeData(mergedHistory(), who, todayCentral());
+    shelfData = d;
+    const earned = BADGES.reduce((a, b) => a + d[b.id].level, 0), possible = BADGES.reduce((a, b) => a + b.levels.length, 0);
+    t.querySelector("small").textContent = (d.stats.first ? "Playing since " + prettyDate(d.stats.first, false) + " · " : "") + earned + " of " + possible + " badge levels";
+    const stats = $("shelfStats");
+    [["🔥" + d.stats.streak, "Day streak"], [fmt(d.stats.best), "Best day"], [fmt(d.stats.avg), "Average"]].forEach(([v, l]) => {
+      const s = document.createElement("div"); s.className = "stat"; s.innerHTML = "<b></b><span></span>";
+      s.querySelector("b").textContent = v; s.querySelector("span").textContent = l; stats.appendChild(s);
+    });
+    const grid = $("shelfGrid"); grid.innerHTML = "";
+    BADGES.forEach((b) => {
+      const o = d[b.id], cell = document.createElement("button");
+      cell.type = "button"; cell.className = "cell";
+      cell.appendChild(medal(b, o.level, 54));
+      const txt = document.createElement("span"); txt.className = "ct";
+      txt.innerHTML = "<b></b><small></small>";
+      txt.querySelector("b").textContent = b.name;
+      const shown = b.id === "streak" ? o.value : o.value;
+      txt.querySelector("small").textContent = o.level ? fmt(shown) + " " + unitFor(b, shown) + (b.id === "streak" ? " (best)" : "")
+        : b.id === "genius" ? "Score a perfect 1,000" : "Next: " + fmt(b.levels[0]) + " " + unitFor(b, b.levels[0]);
+      if (o.next) { const m = document.createElement("span"); m.className = "mini"; m.innerHTML = "<i></i>"; m.firstChild.style.width = Math.round(o.frac * 100) + "%"; txt.appendChild(m); }
+      cell.appendChild(txt);
+      cell.setAttribute("aria-label", b.name + (o.level ? ", level " + o.level : ", not earned yet"));
+      cell.onclick = () => openBadge(b.id, who);
+      grid.appendChild(cell);
+    });
+  }
+  $("shelfBack").onclick = () => { closeSheet(); show(shelfFrom || "doneScreen"); };
+  $("shelfSwitch").onclick = () => {
+    if (confirm("Switch player? You'll pick your name again.")) { closeSheet(); store.del("ggg:player"); player = null; setWho(); pickPlayer(); }
+  };
+
+  // One badge up close: its levels, when each was reached, and who else has it.
+  function openBadge(id, who) {
+    if (!histReady) return;
+    const b = BADGES.find((x) => x.id === id), hist = mergedHistory(), today = todayCentral();
+    const d = who === shelfWho && shelfData ? shelfData : badgeData(hist, who, today), o = d[id];
+    const sh = $("sheet");
+    $("sheetMedal").innerHTML = ""; $("sheetMedal").appendChild(medal(b, o.level, 60));
+    $("sheetName").textContent = b.name;
+    $("sheetHow").textContent = b.how;
+    const ul = $("sheetLadder"); ul.innerHTML = "";
+    b.levels.forEach((n, i) => {
+      const li = document.createElement("li");
+      li.appendChild(medal(b, i < o.level ? i + 1 : 0, 30));
+      const t = document.createElement("div"); t.innerHTML = "Level " + ROMAN[i + 1] + "<small></small>";
+      t.querySelector("small").textContent = fmt(n) + " " + unitFor(b, n);
+      li.appendChild(t);
+      const st = document.createElement("span"); st.className = "st";
+      if (i < o.level) { st.classList.add("ok"); st.textContent = o.dates[i] === today ? "Today" : prettyDate(o.dates[i], false); }
+      else if (i === o.level) st.textContent = fmt(o.toward) + "/" + fmt(n);
+      li.appendChild(st);
+      ul.appendChild(li);
+    });
+    // Who else has reached this badge.
+    const names = Array.from(new Set(hist.rows.map((r) => r.player))).filter((n) => n !== who);
+    const holders = names.filter((n) => badgeData(hist, n, today)[id].level >= Math.max(1, o.level));
+    const hb = $("sheetHolders"); hb.innerHTML = "";
+    if (holders.length) {
+      const stack = document.createElement("span"); stack.className = "stack";
+      holders.slice(0, 5).forEach((n) => stack.appendChild(avatar(n)));
+      hb.appendChild(stack);
+      const s = document.createElement("span");
+      const lvl = Math.max(1, o.level);
+      s.textContent = holders.length + (holders.length === 1 ? " other player has " : " other players have ") + (lvl > 1 ? "Level " + ROMAN[lvl] : "this badge");
+      hb.appendChild(s);
+    } else hb.textContent = o.level ? "No one else has this level yet." : "No one has earned this yet.";
+    $("sheetDim").hidden = false; sh.hidden = false;
+    requestAnimationFrame(() => { sh.classList.add("show"); $("sheetDim").classList.add("show"); });
+  }
+  function closeSheet() {
+    const sh = $("sheet");
+    sh.classList.remove("show"); $("sheetDim").classList.remove("show");
+    setTimeout(() => { sh.hidden = true; $("sheetDim").hidden = true; }, 250);
+  }
+  $("sheetDim").onclick = closeSheet;
+  $("sheetClose").onclick = closeSheet;
+
   // ---------- Leaderboard ----------
   let board = null, tab = "today";
   async function loadBoard() {
@@ -913,6 +1270,7 @@
       if (r[2]) { const s = document.createElement("span"); s.className = "sub"; s.textContent = r[2]; li.querySelector(".n").appendChild(s); }
       li.querySelector(".v").textContent = r[1];
       if (r[0] === player) li.classList.add("me");
+      li.classList.add("tap"); li.onclick = () => openShelf(r[0]);
       ul.appendChild(li);
     };
     rows.slice(0, TOP_N).forEach((r, i) => addRow(r, ranks[i]));
@@ -939,7 +1297,7 @@
     $("copied").hidden = true;
     // Open the phone's (or computer's) share sheet whenever the browser offers one.
     if (navigator.share) {
-      try { await navigator.share({ text }); return; }
+      try { await navigator.share({ text }); afterShare(); return; }
       catch (e) { if (e && e.name === "AbortError") return; } // they closed the share sheet
     }
     // No share sheet available: copy to the clipboard instead.
@@ -949,6 +1307,7 @@
       ta.select(); try { document.execCommand("copy"); } catch (e2) {} ta.remove();
     }
     $("copied").hidden = false;
+    afterShare();
   };
 
   // ---------- Past days (practice) ----------
@@ -971,9 +1330,7 @@
   $("soundBtn").onclick = () => { Feedback.toggle(); setSoundBtn(); };
   setSoundBtn();
 
-  $("whoBtn").onclick = () => {
-    if (confirm("Switch player? You'll pick your name again.")) { store.del("ggg:player"); player = null; setWho(); pickPlayer(); }
-  };
+  $("whoBtn").onclick = () => { if (player) openShelf(player); };
 
   // ---------- Start ----------
   (async function init() {
@@ -985,6 +1342,7 @@
       QUESTIONS = qs;
     } catch (e) { return message("Something went wrong", "The game files didn't load. Try refreshing."); }
     if (!player) pickPlayer(); else begin(todayCentral(), false);
+    flushShares(); // send any shares saved on this phone while the Sheet was offline or not yet updated
   })();
 
   // Exposed for testing only.

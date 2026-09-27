@@ -16,6 +16,8 @@ function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
   if (action === 'players') return json_({ players: getPlayers_() });
   if (action === 'board') return json_(computeBoard_(getRows_(), today_()));
+  // Every saved day and share, for working out badges in the game.
+  if (action === 'history') return json_({ ok: true, today: today_(), rows: getRows_(), shares: getShares_() });
   return json_({ ok: true, message: 'Good Globe Game scoreboard is running.' });
 }
 
@@ -24,6 +26,7 @@ function doPost(e) {
   lock.waitLock(10000);
   try {
     var body = JSON.parse(e.postData.contents || '{}');
+    if (body.action === 'share') return json_(saveShare_(body));
     if (body.action !== 'submit') return json_({ ok: false, error: 'Unknown action.' });
 
     var player = String(body.player || '').trim();
@@ -48,6 +51,27 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
+}
+
+// ---------- Shares (for the Postcard badge) ----------
+// One row per player per day they shared their result. Repeat shares on the same day are ignored.
+function saveShare_(body) {
+  var player = String(body.player || '').trim();
+  var date = String(body.date || '');
+  if (getPlayers_().indexOf(player) === -1) return { ok: false, error: 'That name isn\'t on the Players list.' };
+  // Shares can arrive a little late (a phone that was offline), so accept the past week.
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today_() || date < addDays_(today_(), -7)) return { ok: false, error: 'That date doesn\'t look right.' };
+  var already = getShares_().some(function (r) { return r.player === player && r.date === date; });
+  if (!already) sheet_('Shares').appendRow([new Date(), "'" + date, player]);
+  return { ok: true, duplicate: already };
+}
+function getShares_() {
+  var sh = sheet_('Shares');
+  if (sh.getLastRow() < 2) return [];
+  return sh.getRange(2, 1, sh.getLastRow() - 1, 3).getValues().map(function (r) {
+    var date = r[1] instanceof Date ? Utilities.formatDate(r[1], TZ, 'yyyy-MM-dd') : String(r[1]);
+    return { date: date, player: String(r[2]) };
+  });
 }
 
 // ---------- Leaderboard ----------
@@ -87,6 +111,7 @@ function sheet_(name) {
   if (!sh) {
     sh = ss.insertSheet(name);
     if (name === 'Players') { sh.appendRow(['Name']); sh.appendRow(['Pete']); }
+    if (name === 'Shares') sh.appendRow(['Saved at', 'Date', 'Player']);
     if (name === 'Scores') sh.appendRow(['Saved at', 'Date', 'Player', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Total', 'Q1 miles', 'Q2 miles', 'Q3 miles', 'Q4 miles', 'Q5 miles']);
     sh.setFrozenRows(1);
   }
@@ -118,4 +143,4 @@ function json_(obj) {
 }
 
 /** Run this once from the editor (select "setup" and press Run) to create the tabs. */
-function setup() { sheet_('Players'); sheet_('Scores'); }
+function setup() { sheet_('Players'); sheet_('Scores'); sheet_('Shares'); }
