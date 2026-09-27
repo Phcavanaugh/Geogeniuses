@@ -42,10 +42,15 @@
       '<path d="M39.6 54 C42 48.5 52 48.5 54.4 54" stroke="#e7b194" stroke-width="1.4" fill="none"/><path d="M65.6 54 C68 48.5 78 48.5 80.4 54" stroke="#e7b194" stroke-width="1.4" fill="none"/>' +
       // nose
       '<ellipse cx="60" cy="65.5" rx="5.8" ry="5" fill="url(#ns' + u + ')"/><ellipse cx="58.4" cy="63.8" rx="2" ry="1.4" fill="#fff" opacity=".55"/>' +
+      (o.face === "beard"
+        ? '<path d="M34.5 56 C35 75 46 88 60 88 C74 88 85 75 85.5 56 C83 64 79.5 70 74 73.5 C69 70.6 51 70.6 46 73.5 C40.5 70 37 64 34.5 56Z" fill="url(#mu' + u + ')"/>' +
+          '<path d="M40 66 C44 76 52 84 60 85" stroke="#ffc995" stroke-width="1.2" fill="none" opacity=".55"/>'
+        : '') +
+      (o.face === "none" ? '' :
       // mustache
       '<path d="M45.5 73 C47.5 68.4 54.6 67.8 60 70.4 C65.4 67.8 72.5 68.4 74.5 73 C71 74.8 65.8 73.6 60 73.8 C54.2 73.6 49 74.8 45.5 73Z" fill="url(#mu' + u + ')"/>' +
-      '<path d="M49.5 70.6 C53 69.2 56.8 69.4 59.4 70.6" stroke="#ffc995" stroke-width="1.1" fill="none" opacity=".8"/>' +
-      mouth;
+      '<path d="M49.5 70.6 C53 69.2 56.8 69.4 59.4 70.6" stroke="#ffc995" stroke-width="1.1" fill="none" opacity=".8"/>') +
+      (o.face === "none" ? '<path d="M51 71 Q60 80.5 69 71 Q60 74 51 71Z" fill="#4a2217"/><path d="M54 76 Q60 78.6 66 76 Q60 77.2 54 76Z" fill="#a8554a" opacity=".6"/>' : mouth);
   }
   function bust(u) {
     return '<rect x="51" y="76" width="18" height="16" rx="5" fill="' + SKIN_SH + '"/>' +
@@ -60,7 +65,10 @@
   const wrap = (u, inner) => '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">' + defs(u) + '<rect width="120" height="120" fill="url(#bg' + u + ')"/>' + inner + '</svg>';
   const guy = (u, o, dy) => '<g transform="translate(0 ' + (dy || 0) + ')">' + bust(u) + head(u, o) + '</g>';
   const ART = {
-    bullseye: (u) => wrap(u, guy(u, { grin: true }, 4)),
+    bullseye: (u) => wrap(u,
+      '<g><circle cx="60" cy="52" r="70" fill="#fff"/><circle cx="60" cy="52" r="60" fill="#e5484d"/><circle cx="60" cy="52" r="49" fill="#fff"/>' +
+      '<circle cx="60" cy="52" r="38" fill="#e5484d"/><circle cx="60" cy="52" r="27" fill="#fff"/><circle cx="60" cy="52" r="16" fill="#e5484d"/></g>' +
+      guy(u, { grin: true }, 6)),
     genius: (u) => wrap(u, '<g transform="translate(0 8)">' + bust(u) + head(u, { grin: false }) +
       '<g fill="rgba(210,235,255,.16)" stroke="#161b26" stroke-width="2.6"><circle cx="48" cy="54" r="8.6"/><circle cx="72" cy="54" r="8.6"/></g>' +
       '<path d="M56.6 53 Q60 50.5 63.4 53" stroke="#161b26" stroke-width="2.4" fill="none"/>' +
@@ -82,21 +90,14 @@
       '<text x="60" y="112.4" text-anchor="middle" font-family="Unbounded,Figtree,sans-serif" font-weight="800" font-size="12" fill="#9a6408">1</text>' +
       '<path d="M53.5 101.5 L56 99" stroke="#fff6cf" stroke-width="1.8" stroke-linecap="round"/></g>'),
     podium: (u) => wrap(u,
-      // the guy, small, arms up, standing on the #1 block
-      '<g transform="translate(60 0) scale(.42) translate(-60 6)">' +
-        '<path d="M44 96 L14 44" stroke="' + SHIRT + '" stroke-width="13" stroke-linecap="round"/><path d="M76 96 L106 44" stroke="' + SHIRT + '" stroke-width="13" stroke-linecap="round"/>' +
-        '<circle cx="12" cy="40" r="7.5" fill="#f8d2b6"/><circle cx="108" cy="40" r="7.5" fill="#f8d2b6"/>' +
-        '<rect x="44" y="140" width="15" height="40" rx="5" fill="' + PANTS + '"/><rect x="61" y="140" width="15" height="40" rx="5" fill="' + PANTS + '"/>' +
-        '<ellipse cx="50" cy="181" rx="11" ry="5" fill="#111827"/><ellipse cx="70" cy="181" rx="11" ry="5" fill="#111827"/>' +
-        '<rect x="51" y="76" width="18" height="16" rx="5" fill="' + SKIN_SH + '"/>' +
-        '<path d="M38 96 Q60 86 82 96 L78 146 L42 146 Z" fill="url(#sh' + u + ')"/><path d="M52 90 L60 99 L68 90Z" fill="' + SKIN_SH + '"/>' +
-        head(u, { grin: true }) + '</g>' +
       '<rect x="44" y="80" width="32" height="40" rx="3" fill="#ffc94d"/><rect x="44" y="80" width="32" height="6" rx="3" fill="#ffe08a"/>' +
-      '<rect x="16" y="92" width="28" height="28" rx="3" fill="#c9d6e6"/><rect x="16" y="92" width="28" height="5" rx="3" fill="#e6eef8"/>' +
-      '<rect x="76" y="99" width="28" height="21" rx="3" fill="#cd8a4f"/><rect x="76" y="99" width="28" height="5" rx="3" fill="#e2a574"/>' +
+      '<rect x="12" y="92" width="32" height="28" rx="3" fill="#c9d6e6"/><rect x="12" y="92" width="32" height="5" rx="3" fill="#e6eef8"/>' +
+      '<rect x="76" y="99" width="32" height="21" rx="3" fill="#cd8a4f"/><rect x="76" y="99" width="32" height="5" rx="3" fill="#e2a574"/>' +
       '<g font-family="Unbounded,Figtree,sans-serif" font-weight="800" text-anchor="middle"><text x="60" y="104" font-size="15" fill="#9a6408">1</text>' +
-      '<text x="30" y="111" font-size="12" fill="#6b7a8f">2</text><text x="90" y="115" font-size="11" fill="#7a4a22">3</text></g>' +
-      sparkle(20, 60, 5) + sparkle(100, 66, 4)),
+      '<text x="28" y="112" font-size="12" fill="#6b7a8f">2</text><text x="92" y="116" font-size="11" fill="#7a4a22">3</text></g>' +
+      // 2nd: the bearded one; 3rd: clean-shaven; 1st: the mustache, arms up
+      mini(u, 28, 92, 0.25, 'down', 'beard') + mini(u, 92, 99, 0.25, 'down', 'none') + mini(u, 60, 80, 0.27, 'up') +
+      sparkle(16, 44, 4.5) + sparkle(104, 50, 4)),
   };
 
   // ---------- Level-aware art for the four "keep playing" badges (level 1..5; 0 = not earned, drawn as level 1) ----------
@@ -108,8 +109,11 @@
       '<ellipse cx="0" cy="5" rx="3" ry="4" fill="#fff3b0"/></g>';
   }
   // Mini full-body guy (feet at the origin), arms up or one arm holding something.
-  function mini(u, x, y, k, pose) {
-    const arms = pose === "flag"
+  function mini(u, x, y, k, pose, face) {
+    const arms = pose === "down"
+      ? '<path d="M42 100 L34 140" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/><path d="M78 100 L86 140" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/>' +
+        '<circle cx="33" cy="144" r="7.5" fill="#f8d2b6"/><circle cx="87" cy="144" r="7.5" fill="#f8d2b6"/>'
+      : pose === "flag"
       ? '<path d="M44 96 L22 124" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/><path d="M76 96 L100 70" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/>' +
         '<circle cx="20" cy="127" r="7.5" fill="#f8d2b6"/><circle cx="102" cy="67" r="7.5" fill="#f8d2b6"/>'
       : '<path d="M44 96 L14 44" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/><path d="M76 96 L106 44" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/>' +
@@ -119,7 +123,7 @@
       '<ellipse cx="50" cy="181" rx="11" ry="5" fill="#111827"/><ellipse cx="70" cy="181" rx="11" ry="5" fill="#111827"/>' +
       '<rect x="51" y="76" width="18" height="16" rx="5" fill="#e9b391"/>' +
       '<path d="M38 96 Q60 86 82 96 L78 146 L42 146 Z" fill="url(#sh' + u + ')"/><path d="M52 90 L60 99 L68 90Z" fill="#e9b391"/>' +
-      head(u, { grin: true }) +
+      head(u, { grin: true, face: face }) +
       '</g>';
   }
   // A peaked cap that sits down over the hair: crown covers the top of the head, brim rests on the forehead.
@@ -128,6 +132,37 @@
       '<path d="M36 12 C44 6.5 54 5 62 5.5 C52 8 44 12 39 18Z" fill="#fff" opacity=".12"/>' +
       '<rect x="27" y="31.5" width="66" height="7.5" rx="2.5" fill="' + band + '"/>' +
       '<path d="M25 38.5 Q60 51 95 38.5 Q60 43.5 25 38.5Z" fill="' + visor + '"/>' + (badge || '');
+  }
+  // A side-view plane facing right. Level 1: small prop plane, 2: twin-prop, 3: airliner, 4: jumbo jet, 5: private jet.
+  function plane(l) {
+    const P = [
+      { L: 70, H: 9,  body: '#f4f6fa', stripe: '#e5484d', tail: '#e5484d', win: 2, prop: true },
+      { L: 84, H: 10, body: '#f4f6fa', stripe: '#3a86d6', tail: '#3a86d6', win: 4, props: true },
+      { L: 100, H: 11, body: '#f4f6fa', stripe: '#2f6fd6', tail: '#2f6fd6', win: 9, jet: 1 },
+      { L: 112, H: 14, body: '#eef3fa', stripe: '#1f4fa8', tail: '#1f4fa8', win: 13, jet: 2, hump: true },
+      { L: 104, H: 10, body: '#fbfbfd', stripe: '#d9a21b', tail: '#1b2233', win: 5, rear: true, sleek: true },
+    ][l - 1];
+    const L = P.L, H = P.H, h = H / 2, x0 = -L / 2;
+    const n = (v) => Math.round(v * 10) / 10;
+    let g = '';
+    g += '<path d="M' + n(x0 + L * .46) + ' ' + n(-h * .2) + ' L' + n(x0 + L * .64) + ' ' + n(-h * 2.4) + ' L' + n(x0 + L * .7) + ' ' + n(-h * 2.4) + ' L' + n(x0 + L * .6) + ' ' + n(-h * .2) + 'Z" fill="#c9d3e2"/>';
+    g += '<path d="M' + n(x0 + 4) + ' ' + n(-h) + ' L' + n(x0 - 2) + ' ' + n(-h * 3.2) + ' L' + n(x0 + 6) + ' ' + n(-h * 3.2) + ' L' + n(x0 + 18) + ' ' + n(-h) + 'Z" fill="' + P.tail + '"/>';
+    g += P.sleek
+      ? '<path d="M' + n(x0) + ' ' + n(-h) + ' L' + n(x0 + L - 18) + ' ' + n(-h) + ' Q' + n(x0 + L + 6) + ' ' + n(-h * .2) + ' ' + n(x0 + L + 4) + ' ' + n(h * .3) +
+        ' Q' + n(x0 + L - 10) + ' ' + n(h) + ' ' + n(x0 + L - 22) + ' ' + n(h) + ' L' + n(x0) + ' ' + n(h) + ' Q' + n(x0 - 4) + ' 0 ' + n(x0) + ' ' + n(-h) + 'Z" fill="' + P.body + '"/>'
+      : '<rect x="' + n(x0 - 2) + '" y="' + n(-h) + '" width="' + n(L - 4) + '" height="' + H + '" rx="' + n(h) + '" fill="' + P.body + '"/>' +
+        '<ellipse cx="' + n(x0 + L - 8) + '" cy="0" rx="' + n(h * 1.8) + '" ry="' + n(h) + '" fill="' + P.body + '"/>';
+    if (P.hump) g += '<path d="M' + n(x0 + L * .55) + ' ' + n(-h + .5) + ' Q' + n(x0 + L * .72) + ' ' + n(-h * 1.9) + ' ' + n(x0 + L * .9) + ' ' + n(-h * .9) + 'Z" fill="' + P.body + '"/>';
+    g += '<rect x="' + n(x0 + 2) + '" y="' + n(h * .25) + '" width="' + n(L - 12) + '" height="' + n(H * .16) + '" fill="' + P.stripe + '"/>';
+    for (let i = 0; i < P.win; i++) g += '<circle cx="' + n(x0 + L * .28 + i * (L * .5 / Math.max(1, P.win - 1))) + '" cy="' + n(-h * .25) + '" r="' + n(H * .1) + '" fill="#6d8fbf"/>';
+    g += '<path d="M' + n(x0 + L - 10) + ' ' + n(-h * .55) + ' L' + n(x0 + L - 3) + ' ' + n(-h * .5) + ' L' + n(x0 + L - 5) + ' ' + n(-h * .05) + ' L' + n(x0 + L - 11) + ' ' + n(-h * .05) + 'Z" fill="#2c3f5e"/>';
+    g += '<path d="M' + n(x0 + L * .42) + ' ' + n(h * .2) + ' L' + n(x0 + L * .56) + ' ' + n(h * 2.8) + ' L' + n(x0 + L * .64) + ' ' + n(h * 2.8) + ' L' + n(x0 + L * .6) + ' ' + n(h * .2) + 'Z" fill="#dfe6f0"/>';
+    const eng = (x, y, w) => '<rect x="' + n(x) + '" y="' + n(y) + '" width="' + n(w) + '" height="' + n(H * .38) + '" rx="' + n(H * .19) + '" fill="#8fa0b8"/>';
+    if (P.prop) g += '<ellipse cx="' + n(x0 + L + 2) + '" cy="0" rx="1.4" ry="' + n(H * .95) + '" fill="#2c3f5e" opacity=".7"/>';
+    if (P.props) g += eng(x0 + L * .5, h * 1.1, L * .12) + '<ellipse cx="' + n(x0 + L * .63) + '" cy="' + n(h * 1.48) + '" rx="1.2" ry="' + n(H * .6) + '" fill="#2c3f5e" opacity=".7"/>';
+    if (P.jet) g += eng(x0 + L * .5, h * 1.2, L * .14) + (P.jet > 1 ? eng(x0 + L * .44, h * 2, L * .13) : '');
+    if (P.rear) g += eng(x0 + 10, -h * 1.5, L * .16);
+    return g;
   }
   const EXTRA = {
     // On a Roll: holding up a torch; the flame grows each level, and at Level V his hair's on fire too.
@@ -150,11 +185,13 @@
       const stickers = [['#e5484d', 16, 92], ['#3ecf7a', 30, 100], ['#ffc94d', 20, 104], ['#8a63d2', 34, 90], ['#3a86d6', 26, 96]].slice(0, l)
         .map(([c, x, y], i) => i % 2 ? '<rect x="' + (x - 4) + '" y="' + (y - 3) + '" width="8" height="6" rx="1.5" fill="' + c + '" transform="rotate(' + (i * 17 - 20) + ' ' + x + ' ' + y + ')"/>'
           : '<circle cx="' + x + '" cy="' + y + '" r="4" fill="' + c + '" stroke="#fff" stroke-width="1"/>').join('');
-      const plane = l >= 5
-        ? '<path d="M78 16 L104 10 L108 12 L98 16 L108 22 L104 22 L94 18 L80 20Z" fill="#e8eef6"/><path d="M40 22 Q60 18 78 18" stroke="#fff" stroke-width="1.6" opacity=".45" fill="none"/>'
-        : l >= 4 ? '<path d="M84 18 L100 14 L102 15 L96 18 L102 22 L100 22 L94 19 L86 20Z" fill="#e8eef6"/>' : '';
-      return wrap(u, plane + guy(u, { grin: true }, 8) +
-        '<g transform="translate(0 8)">' + cap('#1f2a44', '#10151f', '#10151f',
+      // His plane, behind him and climbing, gets nicer at every level.
+      const planeG = (l >= 5 ? '<path d="M-4 34 Q12 30 26 27" stroke="#fff" stroke-width="3" opacity=".35" fill="none" stroke-linecap="round"/>' : '') +
+        '<g transform="translate(60 21) rotate(-7) scale(' + [0.95, 0.88, 0.8, 0.76, 0.84][l - 1] + ')">' + plane(l) + '</g>' +
+        (l >= 5 ? sparkle(104, 40, 4.5) + sparkle(14, 44, 3.5) : '') +
+        (l === 4 ? sparkle(104, 20, 4) : '');
+      return wrap(u, planeG + '<g transform="translate(9 28) scale(.85)">' + guy(u, { grin: true }, 0) +
+        cap('#1f2a44', '#10151f', '#10151f',
           '<path d="M51 20 L57.5 22 L60 17 L62.5 22 L69 20 L62.5 25.5 L57.5 25.5Z" fill="#ffc94d"/>') + '</g>' +
         '<g transform="rotate(-6 26 98)"><rect x="6" y="80" width="40" height="32" rx="5" fill="#b5652b"/><rect x="6" y="80" width="40" height="6" rx="3" fill="#cf7c3c"/>' +
         '<path d="M19 80 L19 74 L33 74 L33 80" stroke="#6b3d18" stroke-width="3" fill="none"/>' + stickers + '</g>');
