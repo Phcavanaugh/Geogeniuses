@@ -336,3 +336,5 @@ p.muted{margin:0 16px 16px}
 .bp-row b{font:800 14px/1.2 var(--mono);word-break:break-word}
 .bp-next{padding:7px 12px 9px;font-size:12px;color:#5b4a2a}
 @media (prefers-reduced-motion:reduce){.sent-stamp.go{animation:none;opacity:1}}
+.new-best.quiet{background:rgba(255,255,255,.06);border-color:var(--line-2)}
+.new-best.quiet b{color:var(--ink-2)}

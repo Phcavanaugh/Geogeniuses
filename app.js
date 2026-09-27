@@ -925,7 +925,7 @@
       how: "Score a perfect 100 on a question by landing within about 10 miles." },
     { id: "pb",       icon: "📈", name: "Personal Best", levels: [1, 3, 5, 10, 25], unit: ["new best day", "new best days"],
       names: ["Base Camp", "Ridge", "Summit", "Above the Clouds", "Everest"],
-      how: "Beat your own best daily score." },
+      how: "Beat your best score from the previous 30 days. Great days roll off after a month, so there's always a new target." },
     { id: "postcard", icon: "📮", name: "Postcard",      levels: [1, 10, 30, 100, 365], unit: ["day shared", "days shared"],
       names: ["Pen Pal", "Correspondent", "Town Crier", "Influencer", "Legend"],
       how: "Share your result with Share result. One share a day counts." },
@@ -1003,7 +1003,10 @@
       const bulls = (r.scores || []).filter((s, i) => Number(s) === MAX_PTS[i]).length;
       if (bulls) events.push([r.date, "bullseye", bulls, "add"]);
       if (Number(r.total) >= DAY_MAX) events.push([r.date, "genius", 1, "add"]);
-      if (best >= 0 && r.total > best) events.push([r.date, "pb", 1, "add"]);
+      // Personal Best: beat your best score from the previous 30 days.
+      const windowStart = addDays(r.date, -30);
+      const recent = mine.filter((o) => o.date < r.date && o.date >= windowStart).map((o) => Number(o.total));
+      if (recent.length && Number(r.total) > Math.max.apply(null, recent)) events.push([r.date, "pb", 1, "add"]);
       best = Math.max(best, r.total);
       run = prev && addDays(prev, 1) === r.date ? run + 1 : 1; prev = r.date;
       events.push([r.date, "streak", run, "max"]);
@@ -1130,10 +1133,20 @@
       const before = mine.filter((r) => r.date < session.date).map((r) => Number(r.total));
       const todayRow = mine.find((r) => r.date === session.date);
       const oldBest = before.length ? Math.max.apply(null, before) : 0;
-      if (todayRow && oldBest > 0 && Number(todayRow.total) > oldBest) {
+      const recent = mine.filter((r) => r.date < session.date && r.date >= addDays(session.date, -30)).map((r) => Number(r.total));
+      const old30 = recent.length ? Math.max.apply(null, recent) : 0;
+      const t = todayRow ? Number(todayRow.total) : 0;
+      if (todayRow && oldBest > 0 && t > oldBest) {
+        nb.className = "new-best";
         nb.innerHTML = "<b>New best!</b> <s></s> → <strong></strong>";
         nb.querySelector("s").textContent = fmt(oldBest);
-        nb.querySelector("strong").textContent = fmt(todayRow.total);
+        nb.querySelector("strong").textContent = fmt(t);
+        nb.hidden = false;
+      } else if (todayRow && old30 > 0 && t > old30) {
+        nb.className = "new-best quiet";
+        nb.innerHTML = "<b>Best in 30 days</b> <s></s> → <strong></strong>";
+        nb.querySelector("s").textContent = fmt(old30);
+        nb.querySelector("strong").textContent = fmt(t);
         nb.hidden = false;
       }
     }
