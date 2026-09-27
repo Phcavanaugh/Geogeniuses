@@ -4,38 +4,44 @@
   function defs(u) {
     return '<defs>' +
       '<radialGradient id="bg' + u + '" cx="50%" cy="30%" r="75%"><stop offset="0" stop-color="#2d5a8f"/><stop offset="1" stop-color="#0d1f38"/></radialGradient>' +
-      '<radialGradient id="sk' + u + '" cx="45%" cy="38%" r="70%"><stop offset="0" stop-color="#ffe8d6"/><stop offset=".7" stop-color="#f8d2b6"/><stop offset="1" stop-color="#eeb998"/></radialGradient>' +
-      '<linearGradient id="hr' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f48a45"/><stop offset="1" stop-color="#d9591f"/></linearGradient>' +
+      '<radialGradient id="sk' + u + '" cx="45%" cy="38%" r="70%"><stop offset="0" stop-color="#ffeadb"/><stop offset=".75" stop-color="#fbd9c3"/><stop offset="1" stop-color="#f1c2a3"/></radialGradient>' +
+      '<linearGradient id="hr' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7a054"/><stop offset=".6" stop-color="#ee8337"/><stop offset="1" stop-color="#d9651f"/></linearGradient>' +
+      '<radialGradient id="ir' + u + '" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#b8792e"/><stop offset="1" stop-color="#6a3a12"/></radialGradient>' +
+      '<radialGradient id="ns' + u + '" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#fbd9c2"/><stop offset="1" stop-color="#eeb999"/></radialGradient>' +
+      '<linearGradient id="mu' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f28c46"/><stop offset="1" stop-color="#d9601f"/></linearGradient>' +
       '<linearGradient id="sh' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b7ee6"/><stop offset="1" stop-color="#2458ad"/></linearGradient>' +
       '</defs>';
   }
-  // Head centered at x=60, top of hair ~18, chin ~82.
+  // Head centered at x=60: hair top ~12, chin ~86. Proportions follow the familiar emoji look:
+  // a full, rounded head, thick side-swept hair, big brown eyes, button nose, wide mustache.
   function head(u, o) {
     o = o || {};
-    const eyes = o.closed
-      ? '<path d="M42 54 Q48 50 54 54" stroke="#5a3418" stroke-width="2.6" fill="none" stroke-linecap="round"/><path d="M66 54 Q72 50 78 54" stroke="#5a3418" stroke-width="2.6" fill="none" stroke-linecap="round"/>'
-      : '<ellipse cx="48" cy="54" rx="6.2" ry="5.2" fill="#fff"/><ellipse cx="72" cy="54" rx="6.2" ry="5.2" fill="#fff"/>' +
-        '<circle cx="48.6" cy="54.4" r="3.9" fill="#8a5220"/><circle cx="72.6" cy="54.4" r="3.9" fill="#8a5220"/>' +
-        '<circle cx="48.6" cy="54.4" r="2" fill="#2a170a"/><circle cx="72.6" cy="54.4" r="2" fill="#2a170a"/>' +
-        '<circle cx="50" cy="52.8" r="1.2" fill="#fff"/><circle cx="74" cy="52.8" r="1.2" fill="#fff"/>';
     const mouth = o.grin
-      ? '<path d="M52 74 Q60 81 68 74 Q60 77 52 74Z" fill="#5a2a1a"/><path d="M54.5 74.6 Q60 77 65.5 74.6 L65 75.6 Q60 77.6 55 75.6Z" fill="#fff"/>'
-      : '<path d="M54 74 Q60 78 66 74 Q60 75.6 54 74Z" fill="#6a3120"/>';
-    return '<ellipse cx="35" cy="57" rx="5" ry="7" fill="' + SKIN_SH + '"/><ellipse cx="85" cy="57" rx="5" ry="7" fill="' + SKIN_SH + '"/>' +
-      '<ellipse cx="35.5" cy="57" rx="2.4" ry="4" fill="#dc9f7c"/><ellipse cx="84.5" cy="57" rx="2.4" ry="4" fill="#dc9f7c"/>' +
-      '<path d="M36 46 C36 30 46 23 60 23 C74 23 84 30 84 46 L84 58 C84 73 73 83 60 83 C47 83 36 73 36 58 Z" fill="url(#sk' + u + ')"/>' +
-      // hair: side part on his right (our left), swept across
-      '<path d="M34 52 C30 30 42 16 61 16 C80 16 91 28 86 52 C85 44 83 38 79 34 C72 36 62 35 55 31 C50 36 42 40 37 41 C35 44 34.5 48 34 52Z" fill="url(#hr' + u + ')"/>' +
-      '<path d="M44 28 C52 20 68 18 78 24 C70 23 60 25 52 31 C49 30 46 29 44 28Z" fill="#fbb07a" opacity=".55"/>' +
-      '<path d="M55 31 C58 26 60 22 58 17" stroke="#c24f1a" stroke-width="1.6" fill="none" opacity=".7"/>' +
+      ? '<path d="M52 76.5 Q60 83 68 76.5 Q60 79 52 76.5Z" fill="#5b2a1c"/>'
+      : '<path d="M53 76.5 Q60 81 67 76.5 Q60 78.4 53 76.5Z" fill="#5b2a1c"/>';
+    return '<ellipse cx="32.5" cy="58" rx="5.2" ry="7.5" fill="#f3c7a8"/><ellipse cx="87.5" cy="58" rx="5.2" ry="7.5" fill="#f3c7a8"/>' +
+      '<ellipse cx="33.2" cy="58" rx="2.4" ry="4.4" fill="#e3a987"/><ellipse cx="86.8" cy="58" rx="2.4" ry="4.4" fill="#e3a987"/>' +
+      '<path d="M33 48 C33 29 45 19 60 19 C75 19 87 29 87 48 L87 58 C87 76 75 87 60 87 C45 87 33 76 33 58 Z" fill="url(#sk' + u + ')"/>' +
+      '<path d="M36 66 C40 80 50 86 60 86 C70 86 80 80 84 66 C80 76 71 82 60 82 C49 82 40 76 36 66Z" fill="#eab596" opacity=".45"/>' +
+      // hair: thick, parted on his right, swept across
+      '<path d="M31 55 C26 30 40 12 61 12 C83 12 95 28 89 55 C88.5 46 86.5 40 83 36 C75 36.5 64 34 56 27.5 C50.5 33.5 42.5 37.5 35.5 38.5 C33 43 31.5 49 31 55Z" fill="url(#hr' + u + ')"/>' +
+      '<path d="M41 25 C50 16 68 14 80 21 C72 20.5 62 22.5 55 27 C50 26.5 45 26 41 25Z" fill="#ffb27a" opacity=".6"/>' +
+      '<path d="M56 27.5 C60 23 62 18 60 13" stroke="#c65218" stroke-width="1.8" fill="none" opacity=".6"/>' +
+      '<path d="M83 36 C86 40 88 46 89 55" stroke="#c65218" stroke-width="1.4" fill="none" opacity=".5"/>' +
       // brows
-      '<rect x="41" y="42" width="13" height="3.6" rx="1.8" fill="#d8642c" transform="rotate(-6 47 44)"/><rect x="66" y="42" width="13" height="3.6" rx="1.8" fill="#d8642c" transform="rotate(6 73 44)"/>' +
-      eyes +
-      '<ellipse cx="60" cy="63" rx="4.6" ry="4" fill="#f1bf9f"/><ellipse cx="59" cy="61.8" rx="1.8" ry="1.3" fill="#fff" opacity=".5"/>' +
-      '<circle cx="42" cy="65" r="4.5" fill="#f59c86" opacity=".25"/><circle cx="78" cy="65" r="4.5" fill="#f59c86" opacity=".25"/>' +
+      '<path d="M39.5 45.5 C42.5 41.5 50 40.8 54.5 43 L54 46 C49.5 44.6 43.5 45 40.5 47.5Z" fill="#e0712e"/>' +
+      '<path d="M80.5 45.5 C77.5 41.5 70 40.8 65.5 43 L66 46 C70.5 44.6 76.5 45 79.5 47.5Z" fill="#e0712e"/>' +
+      // eyes
+      '<ellipse cx="47" cy="55" rx="7.4" ry="6.2" fill="#fff"/><ellipse cx="73" cy="55" rx="7.4" ry="6.2" fill="#fff"/>' +
+      '<circle cx="47.6" cy="55.6" r="4.9" fill="url(#ir' + u + ')"/><circle cx="72.4" cy="55.6" r="4.9" fill="url(#ir' + u + ')"/>' +
+      '<circle cx="47.6" cy="55.6" r="2.3" fill="#1f1209"/><circle cx="72.4" cy="55.6" r="2.3" fill="#1f1209"/>' +
+      '<circle cx="49.4" cy="53.6" r="1.5" fill="#fff"/><circle cx="74.2" cy="53.6" r="1.5" fill="#fff"/>' +
+      '<path d="M39.6 54 C42 48.5 52 48.5 54.4 54" stroke="#e7b194" stroke-width="1.4" fill="none"/><path d="M65.6 54 C68 48.5 78 48.5 80.4 54" stroke="#e7b194" stroke-width="1.4" fill="none"/>' +
+      // nose
+      '<ellipse cx="60" cy="65.5" rx="5.8" ry="5" fill="url(#ns' + u + ')"/><ellipse cx="58.4" cy="63.8" rx="2" ry="1.4" fill="#fff" opacity=".55"/>' +
       // mustache
-      '<path d="M46.5 71.5 C49 66.5 55.5 66 60 68.4 C64.5 66 71 66.5 73.5 71.5 C70 73 66 71.8 60 71.8 C54 71.8 50 73 46.5 71.5Z" fill="#e0692c"/>' +
-      '<path d="M50 69.5 C53 68 57 68.2 59.5 69.4" stroke="#f59a5e" stroke-width="1.2" fill="none" opacity=".8"/>' +
+      '<path d="M43.5 74 C45.5 67.5 54 66.4 60 69.6 C66 66.4 74.5 67.5 76.5 74 C72.5 76.4 66.5 74.6 60 74.8 C53.5 74.6 47.5 76.4 43.5 74Z" fill="url(#mu' + u + ')"/>' +
+      '<path d="M48 70.8 C52 68.8 56.5 69 59.4 70.6" stroke="#ffb27a" stroke-width="1.2" fill="none" opacity=".75"/>' +
       mouth;
   }
   function bust(u) {
