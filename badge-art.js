@@ -122,6 +122,13 @@
       head(u, { grin: true }) +
       '</g>';
   }
+  // A peaked cap that sits down over the hair: crown covers the top of the head, brim rests on the forehead.
+  function cap(crown, band, visor, badge) {
+    return '<path d="M27.5 38 C26.5 13 41 3.5 60 3.5 C79 3.5 93.5 13 92.5 38 Z" fill="' + crown + '"/>' +
+      '<path d="M36 12 C44 6.5 54 5 62 5.5 C52 8 44 12 39 18Z" fill="#fff" opacity=".12"/>' +
+      '<rect x="27" y="31.5" width="66" height="7.5" rx="2.5" fill="' + band + '"/>' +
+      '<path d="M25 38.5 Q60 51 95 38.5 Q60 43.5 25 38.5Z" fill="' + visor + '"/>' + (badge || '');
+  }
   const EXTRA = {
     // On a Roll: holding up a torch; the flame grows each level, and at Level V his hair's on fire too.
     streak: (u, l) => {
@@ -147,9 +154,8 @@
         ? '<path d="M78 16 L104 10 L108 12 L98 16 L108 22 L104 22 L94 18 L80 20Z" fill="#e8eef6"/><path d="M40 22 Q60 18 78 18" stroke="#fff" stroke-width="1.6" opacity=".45" fill="none"/>'
         : l >= 4 ? '<path d="M84 18 L100 14 L102 15 L96 18 L102 22 L100 22 L94 19 L86 20Z" fill="#e8eef6"/>' : '';
       return wrap(u, plane + guy(u, { grin: true }, 8) +
-        '<g transform="translate(0 8)"><path d="M34 34 C34 16 46 9 60 9 C74 9 86 16 86 34 Z" fill="#1f2a44"/>' +
-        '<rect x="33" y="29" width="54" height="6" rx="2" fill="#10151f"/><path d="M30 35 Q60 44 90 35 Q60 39 30 35Z" fill="#10151f"/>' +
-        '<path d="M52 20 L58 22 L60 18 L62 22 L68 20 L62 25 L58 25Z" fill="#ffc94d"/></g>' +
+        '<g transform="translate(0 8)">' + cap('#1f2a44', '#10151f', '#10151f',
+          '<path d="M51 20 L57.5 22 L60 17 L62.5 22 L69 20 L62.5 25.5 L57.5 25.5Z" fill="#ffc94d"/>') + '</g>' +
         '<g transform="rotate(-6 26 98)"><rect x="6" y="80" width="40" height="32" rx="5" fill="#b5652b"/><rect x="6" y="80" width="40" height="6" rx="3" fill="#cf7c3c"/>' +
         '<path d="M19 80 L19 74 L33 74 L33 80" stroke="#6b3d18" stroke-width="3" fill="none"/>' + stickers + '</g>');
     },
@@ -179,8 +185,7 @@
         '<g transform="rotate(-5 60 50)"><rect x="12" y="8" width="100" height="62" rx="4" fill="#f6ecd6"/><path d="M62 14 L62 64" stroke="#d9c9a6" stroke-width="1.4"/>' +
         '<g stroke="#d9c9a6" stroke-width="1.4"><path d="M68 50 L104 50"/><path d="M68 58 L104 58"/></g></g>' + stamps +
         guy(u, { grin: true }, 18) +
-        '<g transform="translate(0 18)"><path d="M36 30 C36 16 46 10 60 10 C74 10 84 16 84 30 Z" fill="#2f4f86"/><rect x="35" y="25" width="50" height="6" rx="2" fill="#223a64"/>' +
-        '<path d="M30 31 Q60 40 90 31 Q60 35 30 31Z" fill="#1b2d4f"/><rect x="55" y="15" width="10" height="7" rx="1.5" fill="#ffc94d"/></g>' +
+        '<g transform="translate(0 18)">' + cap('#2f4f86', '#223a64', '#1b2d4f', '<rect x="55" y="17" width="10" height="7" rx="1.5" fill="#ffc94d"/>') + '</g>' +
         '<path d="M40 108 L86 138" stroke="#8a5a2b" stroke-width="7"/><rect x="72" y="104" width="30" height="22" rx="4" fill="#a86b34"/>' +
         '<path d="M76 104 L87 112 L98 104" stroke="#fff" stroke-width="1.6" fill="#f6ecd6"/>');
     },
