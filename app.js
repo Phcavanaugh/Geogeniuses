@@ -793,7 +793,7 @@
     const cLon = g ? (g[0] + ans[0]) / 2 : ans[0];
     const yA = mercY(ans[1]), yG = g ? mercY(g[1]) : yA, cY = (yA + yG) / 2;
     const dLon = g ? Math.abs(g[0] - ans[0]) / 360 : 0, dY = Math.abs(yA - yG);
-    let z = 7;
+    let z = 10;
     while (z > 1 && (dLon * 256 * Math.pow(2, z) > w * 0.72 || dY * 256 * Math.pow(2, z) > h * 0.62)) z--;
     const W = 256 * Math.pow(2, z);
     const cx = ((cLon + 180) / 360) * W, cy = cY * W, tlx = cx - w / 2, tly = cy - h / 2;
@@ -831,7 +831,13 @@
       el.style.left = p[0] + "px"; el.style.top = p[1] + "px";
       box.appendChild(el);
     };
-    if (g) place(g, "#ff6b3d");
+    if (g) {
+      // Your guess: a white dot with an orange ring, so the answer pin can never hide it.
+      const p = proj(g), dot = document.createElement("div");
+      dot.className = "mm-guess"; dot.style.left = p[0] + "px"; dot.style.top = p[1] + "px";
+      dot.title = "Your guess";
+      box.appendChild(dot);
+    }
     place(ans, "#3ecf7a");
   }
 
@@ -1047,11 +1053,67 @@
     return out;
   }
 
+  // ---- Badge art: the perfect-score emoji, dressed up. Laid out in hundredths of the emoji's size,
+  // measured from the iPhone emoji (a head from 7 to 93 down, eyes at 54 down and 35 / 65 across).
+  const SKIN_SH = "#e3b597", SKIN = "#f4d4bb", SHIRT = "#2f6fd6", SHIRT_DK = "#2458ad", PANTS = "#1f2a44";
+  function sparkle(x, y, r) {
+    return '<path d="M' + x + " " + (y - r) + " L" + (x + r * .28) + " " + (y - r * .28) + " L" + (x + r) + " " + y + " L" + (x + r * .28) + " " + (y + r * .28) +
+      " L" + x + " " + (y + r) + " L" + (x - r * .28) + " " + (y + r * .28) + " L" + (x - r) + " " + y + " L" + (x - r * .28) + " " + (y - r * .28) + 'Z" fill="#fff3b0"/>';
+  }
+  const layer = (inner, front) => '<svg class="fl ' + (front ? "front" : "back") + '" viewBox="-80 -30 260 290">' + inner + "</svg>";
+  const fig = (fs, top, back, front) => '<span class="fig" style="font-size:' + fs + "cqw;top:" + top + '%">' + layer(back || "") +
+    '<span class="em">' + PERFECT_EMOJI + "</span>" + layer(front || "", true) + "</span>";
+  const BUST = '<rect x="38" y="80" width="24" height="26" rx="6" fill="' + SKIN_SH + '"/>' +
+    '<path d="M-14 160 C-12 114 16 99 50 99 C84 99 112 114 114 160 Z" fill="' + SHIRT + '"/>' +
+    '<path d="M-14 160 C-12 128 0 112 16 106 L18 160Z" fill="' + SHIRT_DK + '" opacity=".55"/>' +
+    '<path d="M39 99 L50 113 L61 99 Z" fill="' + SKIN_SH + '"/>';
+  const BADGE_ART = {
+    bullseye: () => fig(58, 8, BUST),
+    genius: () => fig(56, 13, BUST,
+      '<g fill="rgba(210,235,255,.14)" stroke="#161b26" stroke-width="3.4"><circle cx="34.5" cy="54" r="10.5"/><circle cx="64.5" cy="54" r="10.5"/></g>' +
+      '<path d="M45 52 Q49.5 48.5 54 52" stroke="#161b26" stroke-width="3" fill="none"/>' +
+      '<path d="M24 51 L13 47" stroke="#161b26" stroke-width="3"/><path d="M75 51 L86 47" stroke="#161b26" stroke-width="3"/>' +
+      '<path d="M28 49 L31 46" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"/><path d="M58 49 L61 46" stroke="#fff" stroke-width="2" stroke-linecap="round" opacity=".85"/>' +
+      '<path d="M20 12 Q50 26 80 12 L80 1 Q50 13 20 1Z" fill="#1b2233"/>' +
+      '<path d="M50 -16 L100 3 L50 20 L0 3 Z" fill="#232c42"/><path d="M50 -16 L100 3 L50 11 L0 3 Z" fill="#2e3a58"/>' +
+      '<circle cx="50" cy="2" r="3.2" fill="#ffc94d"/><path d="M50 2 Q78 5 90 8 L90 30" stroke="#ffc94d" stroke-width="2.8" fill="none"/>' +
+      '<path d="M85 29 L95 29 L93 42 L87 42Z" fill="#ffc94d"/>' + sparkle(-24, 60, 8) + sparkle(122, 70, 6)),
+    weekly: () => fig(54, 20, BUST,
+      '<g transform="rotate(-7 50 0)"><path d="M20 16 L17 -18 L34 -2 L50 -28 L66 -2 L83 -18 L80 16 Z" fill="#ffc94d" stroke="#c98a12" stroke-width="2.6" stroke-linejoin="round"/>' +
+      '<rect x="18" y="9" width="64" height="11" rx="3" fill="#f2b21f" stroke="#c98a12" stroke-width="2.6"/>' +
+      '<circle cx="50" cy="14.5" r="4.2" fill="#e5484d"/><circle cx="33" cy="14.5" r="3.2" fill="#3a86d6"/><circle cx="67" cy="14.5" r="3.2" fill="#3ecf7a"/>' +
+      '<circle cx="17" cy="-18" r="4" fill="#fff3b0"/><circle cx="50" cy="-28" r="4.4" fill="#fff3b0"/><circle cx="83" cy="-18" r="4" fill="#fff3b0"/>' +
+      '<path d="M30 0 L34 -10" stroke="#fff6cf" stroke-width="2.6" stroke-linecap="round" opacity=".8"/></g>' + sparkle(-22, 30, 7) + sparkle(120, 38, 5.5)),
+    champ: () => fig(54, 6, BUST,
+      '<path d="M34 100 L47 131 L52 127 L42 98Z" fill="#e5484d"/><path d="M66 100 L53 131 L48 127 L58 98Z" fill="#3a86d6"/>' +
+      '<circle cx="50" cy="139" r="14" fill="#ffc94d" stroke="#c98a12" stroke-width="3"/><circle cx="50" cy="139" r="9.5" fill="none" stroke="#e8a21a" stroke-width="2"/>' +
+      '<text x="50" y="145" text-anchor="middle" font-family="Unbounded,Figtree,sans-serif" font-weight="800" font-size="16" fill="#9a6408">1</text>' +
+      '<path d="M41 131 L44 128" stroke="#fff6cf" stroke-width="2.4" stroke-linecap="round"/>'),
+    podium: () => '<svg class="ov" viewBox="0 0 120 120">' +
+      '<rect x="42" y="70" width="36" height="50" rx="3" fill="#ffc94d"/><rect x="42" y="70" width="36" height="6" rx="3" fill="#ffe08a"/>' +
+      '<rect x="14" y="84" width="28" height="36" rx="3" fill="#c9d6e6"/><rect x="14" y="84" width="28" height="5" rx="3" fill="#e6eef8"/>' +
+      '<rect x="78" y="93" width="28" height="27" rx="3" fill="#cd8a4f"/><rect x="78" y="93" width="28" height="5" rx="3" fill="#e2a574"/>' +
+      '<g font-family="Unbounded,Figtree,sans-serif" font-weight="800" text-anchor="middle"><text x="60" y="95" font-size="16" fill="#9a6408">1</text>' +
+      '<text x="28" y="104" font-size="12" fill="#6b7a8f">2</text><text x="92" y="111" font-size="11" fill="#7a4a22">3</text></g>' +
+      sparkle(20, 50, 5) + sparkle(100, 58, 4) + "</svg>" +
+      fig(26, 4,
+        '<path d="M30 108 L2 60" stroke="' + SHIRT + '" stroke-width="15" stroke-linecap="round"/><path d="M70 108 L98 60" stroke="' + SHIRT + '" stroke-width="15" stroke-linecap="round"/>' +
+        '<circle cx="0" cy="55" r="9" fill="' + SKIN + '"/><circle cx="100" cy="55" r="9" fill="' + SKIN + '"/>' +
+        '<rect x="31" y="160" width="17" height="54" rx="5" fill="' + PANTS + '"/><rect x="52" y="160" width="17" height="54" rx="5" fill="' + PANTS + '"/>' +
+        '<ellipse cx="38" cy="215" rx="13" ry="6" fill="#111827"/><ellipse cx="62" cy="215" rx="13" ry="6" fill="#111827"/>' +
+        '<rect x="40" y="82" width="20" height="22" rx="5" fill="' + SKIN_SH + '"/>' +
+        '<path d="M22 104 Q50 94 78 104 L74 166 L26 166 Z" fill="' + SHIRT + '"/><path d="M41 99 L50 110 L59 99Z" fill="' + SKIN_SH + '"/>'),
+  };
+
   function medal(b, level, size) {
     const el = document.createElement("span");
     el.className = "medal " + (level ? "t" + Math.min(level, 5) : "locked");
     if (size) el.style.setProperty("--sz", size + "px");
-    const g = document.createElement("span"); g.className = "g"; g.textContent = b.icon; el.appendChild(g);
+    if (BADGE_ART[b.id]) {
+      const art = document.createElement("span"); art.className = "art"; art.innerHTML = BADGE_ART[b.id](); el.appendChild(art);
+    } else {
+      const g = document.createElement("span"); g.className = "g"; g.textContent = b.icon; el.appendChild(g);
+    }
     if (level) { const lv = document.createElement("span"); lv.className = "lv"; lv.textContent = ROMAN[level]; el.appendChild(lv); }
     el.setAttribute("aria-hidden", "true");
     return el;
@@ -1250,6 +1312,7 @@
     catch (e) { $("boardList").innerHTML = '<li class="muted">Couldn\'t load the leaderboard.</li>'; }
   }
   const TOP_N = 10;
+  let showAll = false;
   function renderBoard() {
     if (!board) return;
     const ul = $("boardList"); ul.innerHTML = "";
@@ -1273,16 +1336,22 @@
       li.classList.add("tap"); li.onclick = () => openShelf(r[0]);
       ul.appendChild(li);
     };
-    rows.slice(0, TOP_N).forEach((r, i) => addRow(r, ranks[i]));
+    const limit = showAll ? rows.length : TOP_N;
+    rows.slice(0, limit).forEach((r, i) => addRow(r, ranks[i]));
     const mine = rows.findIndex((r) => r[0] === player);
-    if (mine >= TOP_N) {
+    if (mine >= limit) {
       const gap = document.createElement("li"); gap.className = "gap"; gap.textContent = "⋯"; ul.appendChild(gap);
       addRow(rows[mine], ranks[mine]);
     }
     const count = rows.length + (rows.length === 1 ? " player" : " players");
     const you = mine >= 0 ? "" : (tab === "streak" ? " · Play today to start a streak" : " · You're not on this board yet");
     $("boardNote").textContent = note + " · " + count + you;
+    const more = $("boardMore");
+    more.hidden = rows.length <= TOP_N;
+    more.textContent = showAll ? "Show top " + TOP_N : "Show all " + rows.length + " players";
+    more.setAttribute("aria-expanded", showAll ? "true" : "false");
   }
+  $("boardMore").onclick = () => { showAll = !showAll; renderBoard(); };
   document.querySelectorAll(".tab").forEach((b) => {
     b.onclick = () => {
       tab = b.dataset.tab;
