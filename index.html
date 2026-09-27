@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=22">
+<link rel="stylesheet" href="style.css?v=24">
 </head>
 <body>
 <div id="app">
@@ -71,11 +71,13 @@
     <div class="summary">
       <div id="sTitle" class="day"></div>
       <div class="stotal"><strong id="sTotal"></strong><span id="sMax"></span></div>
+      <div id="newBest" class="new-best" hidden></div>
       <div id="sEmoji" class="semoji"></div>
       <div id="sNote" class="muted small"></div>
     </div>
     <div id="badgeWrap" class="badge-wrap" hidden>
       <div id="badgeNew" class="earned" hidden><h3 id="badgeNewTitle">New badges!</h3><div id="badgeNewList" class="bn-list"></div></div>
+      <div id="streakNudge" class="nudge" hidden></div>
       <div id="almost" class="almost" hidden><div class="lbl">Almost there</div><div id="almostList" class="al-list"></div></div>
     </div>
     <ol id="sList" class="slist"></ol>
@@ -85,6 +87,7 @@
     </div>
     <div class="share-wrap">
       <button id="shareBtn" class="primary">Share result</button>
+      <div id="sentStamp" class="sent-stamp" hidden aria-hidden="true">Postcard sent ✓</div>
       <div id="copied" class="muted small" hidden>Copied! Paste it wherever you want to share it.</div>
     </div>
     <div class="board">
@@ -130,17 +133,18 @@
     <button id="sheetClose" class="sheet-x" type="button" aria-label="Close">✕</button>
     <div class="shead"><span id="sheetMedal"></span><div><h3 id="sheetName"></h3><p id="sheetHow"></p></div></div>
     <ol id="sheetLadder" class="ladder"></ol>
+    <div id="sheetExtra" hidden></div>
     <div id="sheetHolders" class="holders"></div>
   </div>
   <div id="toast" class="toast" hidden role="status"></div>
 
   <div id="demo" class="demo" hidden>Demo mode — scores are only saved on this device.</div>
 </div>
-<script src="config.js?v=22"></script>
+<script src="config.js?v=24"></script>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
-<script src="badge-art.js?v=22"></script>
-<script src="app.js?v=22"></script>
+<script src="badge-art.js?v=24"></script>
+<script src="app.js?v=24"></script>
 </body>
 </html>

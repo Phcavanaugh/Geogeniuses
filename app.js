@@ -916,14 +916,18 @@
   // without touching the Google Sheet script.
   const BADGES = [
     { id: "streak",   icon: "🔥", name: "On a Roll",     levels: [3, 7, 30, 100, 365], unit: ["day in a row", "days in a row"],
+      names: ["Warming Up", "Heating Up", "On Fire", "Blazing", "Inferno"],
       how: "Play days in a row. Your longest run counts, so a missed day never takes a level away." },
     { id: "flyer",    icon: "🧳", name: "Frequent Flyer", levels: [5, 25, 50, 100, 365], unit: ["day played", "days played"],
+      names: ["Economy", "Premium", "Business", "First Class", "Private Jet"],
       how: "Play the daily puzzle. Every day counts, in a row or not." },
     { id: "bullseye", icon: "🎯", name: "Bullseye",      levels: [1, 10, 50, 100, 250], unit: ["perfect answer", "perfect answers"],
       how: "Score a perfect 100 on a question by landing within about 10 miles." },
     { id: "pb",       icon: "📈", name: "Personal Best", levels: [1, 3, 5, 10, 25], unit: ["new best day", "new best days"],
+      names: ["Base Camp", "Ridge", "Summit", "Above the Clouds", "Everest"],
       how: "Beat your own best daily score." },
     { id: "postcard", icon: "📮", name: "Postcard",      levels: [1, 10, 30, 100, 365], unit: ["day shared", "days shared"],
+      names: ["Pen Pal", "Correspondent", "Town Crier", "Influencer", "Legend"],
       how: "Share your result with Share result. One share a day counts." },
     { id: "champ",    icon: "🥇", name: "Daily Champ",   levels: [1, 5, 25, 100], unit: ["win", "wins"],
       how: "Finish 1st for the day, with at least 2 players. Ties count for everyone tied. Days count once they're over." },
@@ -935,6 +939,8 @@
       how: "Score a perfect 1,000 in a day." },
   ];
   const ROMAN = ["", "I", "II", "III", "IV", "V"];
+  // "Heating Up" for badges with named levels, "Level II" for the rest.
+  const lvlName = (b, n) => (b.names ? b.names[n - 1] : "Level " + ROMAN[n]);
   const unitFor = (b, n) => b.unit[n === 1 ? 0 : 1];
 
   let HIST = null;        // { rows, shares } from the Sheet (or this device in demo mode)
@@ -1060,7 +1066,7 @@
     el.className = "medal " + (level ? "t" + Math.min(level, 5) : "locked");
     if (size) el.style.setProperty("--sz", size + "px");
     if (window.GUY_ART && window.GUY_ART[b.id]) {
-      const art = document.createElement("span"); art.className = "art"; art.innerHTML = window.GUY_ART[b.id]("b" + (++artId)); el.appendChild(art);
+      const art = document.createElement("span"); art.className = "art"; art.innerHTML = window.GUY_ART[b.id]("b" + (++artId), level); el.appendChild(art);
     } else {
       const g = document.createElement("span"); g.className = "g"; g.textContent = b.icon; el.appendChild(g);
     }
@@ -1090,7 +1096,7 @@
       row.appendChild(medal(b, o.level, 46));
       const t = document.createElement("div");
       t.innerHTML = "<b></b><span></span>";
-      t.querySelector("b").textContent = b.name + " · Level " + ROMAN[o.level];
+      t.querySelector("b").textContent = b.name + " · " + lvlName(b, o.level);
       const n = b.levels[o.level - 1];
       t.querySelector("span").textContent = fmt(n) + " " + unitFor(b, n);
       row.appendChild(t);
@@ -1108,7 +1114,7 @@
       row.type = "button"; row.className = "al-row";
       row.innerHTML = '<span class="e"></span><span class="t"><b></b><small></small></span><span class="n"></span><span class="meter"><i></i></span>';
       row.querySelector(".e").textContent = b.icon;
-      row.querySelector("b").textContent = b.name + " " + ROMAN[o.level + 1];
+      row.querySelector("b").textContent = b.name + " · " + lvlName(b, o.level + 1);
       row.querySelector("small").textContent = fmt(o.next) + " " + unitFor(b, o.next);
       row.querySelector(".n").textContent = fmt(o.toward) + "/" + fmt(o.next);
       row.querySelector("i").style.width = Math.round(o.frac * 100) + "%";
@@ -1116,13 +1122,32 @@
       box.appendChild(row);
     });
     $("almost").hidden = !near.length;
-    wrap.hidden = !fresh.length && !near.length;
+    // A new personal best: show the old best crossed out.
+    const nb = $("newBest");
+    nb.hidden = true;
+    if (!session.practice) {
+      const mine = hist.rows.filter((r) => r.player === player);
+      const before = mine.filter((r) => r.date < session.date).map((r) => Number(r.total));
+      const todayRow = mine.find((r) => r.date === session.date);
+      const oldBest = before.length ? Math.max.apply(null, before) : 0;
+      if (todayRow && oldBest > 0 && Number(todayRow.total) > oldBest) {
+        nb.innerHTML = "<b>New best!</b> <s></s> → <strong></strong>";
+        nb.querySelector("s").textContent = fmt(oldBest);
+        nb.querySelector("strong").textContent = fmt(todayRow.total);
+        nb.hidden = false;
+      }
+    }
+    // Keep the streak alive: a nudge once you're 7+ days in.
+    const nudge = $("streakNudge"), st = after.stats.streak;
+    nudge.hidden = session.practice || st < 7 || session.date !== today;
+    nudge.textContent = "🔥 " + st + " days in a row. Come back tomorrow for day " + (st + 1) + ".";
+    wrap.hidden = !fresh.length && !near.length && nudge.hidden;
     // Streak and any new badge go into the share text.
     let extra = "";
     if (!session.practice) {
       const bits = [];
       if (after.stats.streak >= 2) bits.push("🔥" + after.stats.streak);
-      if (fresh.length) bits.push("New badge: " + fresh.map((b) => b.icon + " " + b.name + " " + ROMAN[after[b.id].level]).join(", "));
+      if (fresh.length) bits.push("New badge: " + fresh.map((b) => b.icon + " " + b.name + " · " + lvlName(b, after[b.id].level)).join(", "));
       extra = bits.join(" · ");
     }
     session.shareExtra = extra;
@@ -1135,6 +1160,8 @@
     const before = lastBadges ? lastBadges.postcard.level : null;
     noteShare(player, session.date);
     flushShares();
+    const sent = $("sentStamp");
+    sent.hidden = false; sent.classList.remove("go"); void sent.offsetWidth; sent.classList.add("go");
     if (!histReady) return;
     const now = badgeData(mergedHistory(), player, todayCentral());
     lastBadges = now;
@@ -1147,7 +1174,7 @@
     t.appendChild(medal(b, level, 38));
     const s = document.createElement("div");
     s.innerHTML = "<b>New badge!</b><span></span>";
-    s.querySelector("span").textContent = b.name + " · Level " + ROMAN[level];
+    s.querySelector("span").textContent = b.name + " · " + lvlName(b, level);
     t.appendChild(s);
     t.hidden = false; t.classList.remove("show");
     requestAnimationFrame(() => t.classList.add("show"));
@@ -1220,7 +1247,8 @@
     b.levels.forEach((n, i) => {
       const li = document.createElement("li");
       li.appendChild(medal(b, i < o.level ? i + 1 : 0, 30));
-      const t = document.createElement("div"); t.innerHTML = "Level " + ROMAN[i + 1] + "<small></small>";
+      const t = document.createElement("div"); t.innerHTML = "<span></span><small></small>";
+      t.querySelector("span").textContent = "Level " + ROMAN[i + 1] + (b.names ? " · " + b.names[i] : "");
       t.querySelector("small").textContent = fmt(n) + " " + unitFor(b, n);
       li.appendChild(t);
       const st = document.createElement("span"); st.className = "st";
@@ -1242,6 +1270,18 @@
       s.textContent = holders.length + (holders.length === 1 ? " other player has " : " other players have ") + (lvl > 1 ? "Level " + ROMAN[lvl] : "this badge");
       hb.appendChild(s);
     } else hb.textContent = o.level ? "No one else has this level yet." : "No one has earned this yet.";
+    const ex = $("sheetExtra"); ex.innerHTML = ""; ex.hidden = true;
+    if (id === "flyer") {
+      const seat = o.level ? b.names[o.level - 1] : "Standby";
+      ex.innerHTML = '<div class="bp"><div class="bp-top"><span>GeoGeniuses Air</span><span>✈</span></div><div class="bp-row">' +
+        '<div><small>Passenger</small><b class="bp-who"></b></div><div><small>Days flown</small><b class="bp-days"></b></div><div><small>Seat</small><b class="bp-seat"></b></div></div>' +
+        '<div class="bp-next"></div></div>';
+      ex.querySelector(".bp-who").textContent = who;
+      ex.querySelector(".bp-days").textContent = fmt(o.value);
+      ex.querySelector(".bp-seat").textContent = seat;
+      ex.querySelector(".bp-next").textContent = o.next ? "Next upgrade: " + b.names[o.level] + " at " + fmt(o.next) + " days" : "Top tier. Enjoy the jet.";
+      ex.hidden = false;
+    }
     $("sheetDim").hidden = false; sh.hidden = false;
     requestAnimationFrame(() => { sh.classList.add("show"); $("sheetDim").classList.add("show"); });
   }

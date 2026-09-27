@@ -314,3 +314,25 @@ p.muted{margin:0 16px 16px}
 .medal .art svg{display:block;width:100%;height:100%}
 .medal .lv{z-index:3}
 .medal.locked .art{filter:grayscale(1) brightness(.55);opacity:.5}
+
+/* Level-name extras */
+.new-best{display:inline-flex;align-items:center;gap:8px;align-self:flex-start;margin-top:2px;padding:5px 11px;border-radius:999px;
+  background:rgba(62,207,122,.12);border:1px solid rgba(62,207,122,.45);font-size:13.5px;color:var(--ink-2)}
+.new-best[hidden],.nudge[hidden],#sheetExtra[hidden]{display:none}
+.new-best b{color:var(--green)}
+.new-best s{color:var(--muted)}
+.new-best strong{font:800 14px/1 var(--display);color:var(--ink)}
+.nudge{border-radius:14px;padding:10px 12px;background:linear-gradient(90deg,rgba(255,107,61,.18),rgba(255,201,77,.08));border:1px solid rgba(255,138,99,.35);font-size:13.5px;font-weight:600}
+.share-wrap{position:relative}
+.sent-stamp{position:absolute;right:14px;top:-18px;z-index:5;padding:5px 10px;border:2.5px solid #3ecf7a;border-radius:8px;color:#3ecf7a;
+  font:800 12px/1 var(--display);letter-spacing:.04em;text-transform:uppercase;background:rgba(5,10,20,.85);transform:rotate(-8deg);opacity:0;pointer-events:none}
+.sent-stamp[hidden]{display:none}
+.sent-stamp.go{animation:stamp 2.6s ease-out forwards}
+@keyframes stamp{0%{opacity:0;transform:rotate(-8deg) scale(2.2)}12%{opacity:1;transform:rotate(-8deg) scale(.92)}18%{transform:rotate(-8deg) scale(1)}80%{opacity:1}100%{opacity:0;transform:rotate(-8deg) scale(1)}}
+.bp{border-radius:14px;overflow:hidden;background:#f6ecd6;color:#1f2a44}
+.bp-top{display:flex;justify-content:space-between;padding:7px 12px;background:#2f6fd6;color:#fff;font:800 12px/1.2 var(--display);letter-spacing:.02em}
+.bp-row{display:grid;grid-template-columns:1.3fr 1fr 1.2fr;gap:8px;padding:9px 12px 6px;border-bottom:2px dashed #d9c9a6}
+.bp-row small{display:block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#7a6a4a}
+.bp-row b{font:800 14px/1.2 var(--mono);word-break:break-word}
+.bp-next{padding:7px 12px 9px;font-size:12px;color:#5b4a2a}
+@media (prefers-reduced-motion:reduce){.sent-stamp.go{animation:none;opacity:1}}

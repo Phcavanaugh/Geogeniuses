@@ -98,5 +98,93 @@
       '<text x="30" y="111" font-size="12" fill="#6b7a8f">2</text><text x="90" y="115" font-size="11" fill="#7a4a22">3</text></g>' +
       sparkle(20, 60, 5) + sparkle(100, 66, 4)),
   };
+
+  // ---------- Level-aware art for the four "keep playing" badges (level 1..5; 0 = not earned, drawn as level 1) ----------
+  const lv = (l) => Math.max(1, Math.min(5, l || 1));
+  function flame(x, y, k) {
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ')">' +
+      '<path d="M0 -26 C8 -16 14 -8 11 2 C9 9 4 12 0 12 C-4 12 -9 9 -11 2 C-14 -8 -6 -12 -3 -20 C-2 -14 1 -12 2 -12 C3 -17 1 -22 0 -26Z" fill="#ff6b3d"/>' +
+      '<path d="M0 -14 C5 -8 8 -3 6 3 C5 7 2 9 0 9 C-2 9 -5 7 -6 3 C-7 -3 -3 -6 -1 -10 C0 -7 1 -6 2 -6 C2 -9 1 -12 0 -14Z" fill="#ffc94d"/>' +
+      '<ellipse cx="0" cy="5" rx="3" ry="4" fill="#fff3b0"/></g>';
+  }
+  // Mini full-body guy (feet at the origin), arms up or one arm holding something.
+  function mini(u, x, y, k, pose) {
+    const arms = pose === "flag"
+      ? '<path d="M44 96 L22 124" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/><path d="M76 96 L100 70" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/>' +
+        '<circle cx="20" cy="127" r="7.5" fill="#f8d2b6"/><circle cx="102" cy="67" r="7.5" fill="#f8d2b6"/>'
+      : '<path d="M44 96 L14 44" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/><path d="M76 96 L106 44" stroke="#2f6fd6" stroke-width="13" stroke-linecap="round"/>' +
+        '<circle cx="12" cy="40" r="7.5" fill="#f8d2b6"/><circle cx="108" cy="40" r="7.5" fill="#f8d2b6"/>';
+    return '<g transform="translate(' + x + ' ' + y + ') scale(' + k + ') translate(-60 -186)">' + arms +
+      '<rect x="44" y="140" width="15" height="40" rx="5" fill="#1f2a44"/><rect x="61" y="140" width="15" height="40" rx="5" fill="#1f2a44"/>' +
+      '<ellipse cx="50" cy="181" rx="11" ry="5" fill="#111827"/><ellipse cx="70" cy="181" rx="11" ry="5" fill="#111827"/>' +
+      '<rect x="51" y="76" width="18" height="16" rx="5" fill="#e9b391"/>' +
+      '<path d="M38 96 Q60 86 82 96 L78 146 L42 146 Z" fill="url(#sh' + u + ')"/><path d="M52 90 L60 99 L68 90Z" fill="#e9b391"/>' +
+      head(u, { grin: true }) +
+      '</g>';
+  }
+  const EXTRA = {
+    // On a Roll: holding up a torch; the flame grows each level, and at Level V his hair's on fire too.
+    streak: (u, l) => {
+      l = lv(l);
+      const k = 0.62 + 0.16 * l;
+      return wrap(u,
+        '<g transform="translate(-8 6)">' + bust(u) +
+        '<path d="M84 104 L98 74" stroke="url(#sh' + u + ')" stroke-width="14" stroke-linecap="round"/>' +
+        head(u, { grin: true }) +
+        '<path d="M100 76 L106 44" stroke="#7a4a22" stroke-width="5" stroke-linecap="round"/><path d="M100 50 L112 50 L108 58 L102 58Z" fill="#b78a3a"/>' +
+        '<circle cx="99" cy="74" r="6.5" fill="#f8d2b6"/>' +
+        flame(106, 46 - 2 * l, k) +
+        (l >= 5 ? flame(44, 14, .55) + flame(60, 8, .7) + flame(76, 14, .55) : '') + '</g>' +
+        (l >= 3 ? sparkle(16, 40, 4 + l) : ''));
+    },
+    // Frequent Flyer: pilot cap and a suitcase that picks up a sticker each level; a plane (then a jet) at the top levels.
+    flyer: (u, l) => {
+      l = lv(l);
+      const stickers = [['#e5484d', 16, 92], ['#3ecf7a', 30, 100], ['#ffc94d', 20, 104], ['#8a63d2', 34, 90], ['#3a86d6', 26, 96]].slice(0, l)
+        .map(([c, x, y], i) => i % 2 ? '<rect x="' + (x - 4) + '" y="' + (y - 3) + '" width="8" height="6" rx="1.5" fill="' + c + '" transform="rotate(' + (i * 17 - 20) + ' ' + x + ' ' + y + ')"/>'
+          : '<circle cx="' + x + '" cy="' + y + '" r="4" fill="' + c + '" stroke="#fff" stroke-width="1"/>').join('');
+      const plane = l >= 5
+        ? '<path d="M78 16 L104 10 L108 12 L98 16 L108 22 L104 22 L94 18 L80 20Z" fill="#e8eef6"/><path d="M40 22 Q60 18 78 18" stroke="#fff" stroke-width="1.6" opacity=".45" fill="none"/>'
+        : l >= 4 ? '<path d="M84 18 L100 14 L102 15 L96 18 L102 22 L100 22 L94 19 L86 20Z" fill="#e8eef6"/>' : '';
+      return wrap(u, plane + guy(u, { grin: true }, 8) +
+        '<g transform="translate(0 8)"><path d="M34 34 C34 16 46 9 60 9 C74 9 86 16 86 34 Z" fill="#1f2a44"/>' +
+        '<rect x="33" y="29" width="54" height="6" rx="2" fill="#10151f"/><path d="M30 35 Q60 44 90 35 Q60 39 30 35Z" fill="#10151f"/>' +
+        '<path d="M52 20 L58 22 L60 18 L62 22 L68 20 L62 25 L58 25Z" fill="#ffc94d"/></g>' +
+        '<g transform="rotate(-6 26 98)"><rect x="6" y="80" width="40" height="32" rx="5" fill="#b5652b"/><rect x="6" y="80" width="40" height="6" rx="3" fill="#cf7c3c"/>' +
+        '<path d="M19 80 L19 74 L33 74 L33 80" stroke="#6b3d18" stroke-width="3" fill="none"/>' + stickers + '</g>');
+    },
+    // Personal Best: climbing a mountain; each level puts him higher, and at Level V he plants the flag on the summit.
+    pb: (u, l) => {
+      l = lv(l);
+      const spots = [[34, 108], [44, 90], [52, 72], [58, 56], [61, 44]];
+      const [x, y] = spots[l - 1];
+      return wrap(u,
+        '<path d="M-6 124 L62 40 L128 124Z" fill="#3b5a86"/><path d="M62 40 L128 124 L92 124Z" fill="#2c4468"/>' +
+        '<path d="M62 40 L52 53 L57 51 L62 56 L67 51 L72 53Z" fill="#eef4fb"/>' +
+        '<path d="M28 116 Q46 104 42 94 Q40 84 50 76 Q58 70 58 62 Q58 52 61 44" stroke="#fff" stroke-width="1.4" stroke-dasharray="2 3" fill="none" opacity=".5"/>' +
+        (l >= 4 ? '<g fill="#fff" opacity=".85"><ellipse cx="22" cy="66" rx="16" ry="5"/><ellipse cx="34" cy="62" rx="10" ry="5"/><ellipse cx="96" cy="74" rx="18" ry="5"/><ellipse cx="86" cy="70" rx="9" ry="4.5"/></g>' : '') +
+        mini(u, x, y, 0.2, l >= 5 ? 'flag' : 'up') +
+        (l >= 5 ? '<path d="M' + (x + 8.4) + ' ' + (y - 2) + ' L' + (x + 8.4) + ' ' + (y - 34) + '" stroke="#6b4a2a" stroke-width="1.8"/><path d="M' + (x + 8.4) + ' ' + (y - 34) + ' L' + (x + 24) + ' ' + (y - 29) + ' L' + (x + 8.4) + ' ' + (y - 24) + 'Z" fill="#e5484d"/>' : '') +
+        (l >= 5 ? sparkle(30, 20, 5) + sparkle(96, 26, 4) : ''));
+    },
+    // Postcard: a mail carrier in front of a postcard; stamps and postmarks pile up by level.
+    postcard: (u, l) => {
+      l = lv(l);
+      const stamp = (x, y, c, r) => '<g transform="rotate(' + r + ' ' + x + ' ' + y + ')"><rect x="' + (x - 8) + '" y="' + (y - 10) + '" width="16" height="20" fill="#fff" stroke="#fff" stroke-width="2" stroke-dasharray="1.6 1.6"/>' +
+        '<rect x="' + (x - 6) + '" y="' + (y - 8) + '" width="12" height="16" fill="' + c + '"/><circle cx="' + x + '" cy="' + (y - 1) + '" r="3" fill="#fff" opacity=".7"/></g>';
+      const stamps = [[98, 22, '#e5484d', 6], [80, 20, '#3a86d6', -8], [88, 38, '#3ecf7a', 12]].slice(0, Math.min(3, l)).map((a) => stamp(...a)).join('') +
+        (l >= 4 ? '<g stroke="#5b6b82" stroke-width="1.6" fill="none" opacity=".8"><circle cx="30" cy="24" r="10"/><path d="M42 20 Q48 16 54 20 T66 20 M42 26 Q48 22 54 26 T66 26"/></g>' : '') +
+        (l >= 5 ? stamp(98, 22, '#ffc94d', 6) + sparkle(108, 46, 4) : '');
+      return wrap(u,
+        '<g transform="rotate(-5 60 50)"><rect x="12" y="8" width="100" height="62" rx="4" fill="#f6ecd6"/><path d="M62 14 L62 64" stroke="#d9c9a6" stroke-width="1.4"/>' +
+        '<g stroke="#d9c9a6" stroke-width="1.4"><path d="M68 50 L104 50"/><path d="M68 58 L104 58"/></g></g>' + stamps +
+        guy(u, { grin: true }, 18) +
+        '<g transform="translate(0 18)"><path d="M36 30 C36 16 46 10 60 10 C74 10 84 16 84 30 Z" fill="#2f4f86"/><rect x="35" y="25" width="50" height="6" rx="2" fill="#223a64"/>' +
+        '<path d="M30 31 Q60 40 90 31 Q60 35 30 31Z" fill="#1b2d4f"/><rect x="55" y="15" width="10" height="7" rx="1.5" fill="#ffc94d"/></g>' +
+        '<path d="M40 108 L86 138" stroke="#8a5a2b" stroke-width="7"/><rect x="72" y="104" width="30" height="22" rx="4" fill="#a86b34"/>' +
+        '<path d="M76 104 L87 112 L98 104" stroke="#fff" stroke-width="1.6" fill="#f6ecd6"/>');
+    },
+  };
+  Object.keys(EXTRA).forEach((k) => { ART[k] = EXTRA[k]; });
   root.GUY_ART = ART;
 })(typeof window !== "undefined" ? window : globalThis);
