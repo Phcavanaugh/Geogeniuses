@@ -4,7 +4,7 @@
   function defs(u) {
     return '<defs>' +
       '<radialGradient id="bg' + u + '" cx="50%" cy="30%" r="75%"><stop offset="0" stop-color="#2d5a8f"/><stop offset="1" stop-color="#0d1f38"/></radialGradient>' +
-      '<radialGradient id="sk' + u + '" cx="45%" cy="38%" r="70%"><stop offset="0" stop-color="#ffeadb"/><stop offset=".75" stop-color="#fbd9c3"/><stop offset="1" stop-color="#f1c2a3"/></radialGradient>' +
+      '<radialGradient id="sk' + u + '" cx="45%" cy="38%" r="70%"><stop offset="0" stop-color="#ffeadc"/><stop offset=".8" stop-color="#fcdfcb"/><stop offset="1" stop-color="#f6d0b6"/></radialGradient>' +
       '<linearGradient id="hr' + u + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f9b764"/><stop offset=".55" stop-color="#f09a45"/><stop offset="1" stop-color="#e07d2c"/></linearGradient>' +
       '<radialGradient id="ir' + u + '" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#8cc4f0"/><stop offset=".6" stop-color="#4a8fd4"/><stop offset="1" stop-color="#2a5d9c"/></radialGradient>' +
       '<radialGradient id="ns' + u + '" cx="45%" cy="40%" r="60%"><stop offset="0" stop-color="#fbd9c2"/><stop offset="1" stop-color="#eeb999"/></radialGradient>' +
@@ -17,18 +17,20 @@
   function head(u, o) {
     o = o || {};
     const mouth = o.grin
-      ? '<path d="M52.5 76 Q60 83.5 67.5 76 Q60 78.2 52.5 76Z" fill="#4a2217"/><path d="M55.5 79.6 Q60 81.6 64.5 79.6 Q60 80.6 55.5 79.6Z" fill="#a8554a" opacity=".6"/>'
-      : '<path d="M53 76.5 Q60 81 67 76.5 Q60 78.4 53 76.5Z" fill="#5b2a1c"/>';
+      ? '<path d="M52.6 73.2 Q60 81.6 67.4 73.2 Q60 75.4 52.6 73.2Z" fill="#4a2217"/><path d="M55.6 77.6 Q60 79.8 64.4 77.6 Q60 78.6 55.6 77.6Z" fill="#a8554a" opacity=".6"/>'
+      : '<path d="M53.4 73.2 Q60 79.2 66.6 73.2 Q60 75.2 53.4 73.2Z" fill="#4a2217"/>';
     return '<ellipse cx="32.5" cy="58" rx="5.2" ry="7.5" fill="#f3c7a8"/><ellipse cx="87.5" cy="58" rx="5.2" ry="7.5" fill="#f3c7a8"/>' +
       '<ellipse cx="33.2" cy="58" rx="2.4" ry="4.4" fill="#e3a987"/><ellipse cx="86.8" cy="58" rx="2.4" ry="4.4" fill="#e3a987"/>' +
       '<path d="M33 48 C33 29 45 19 60 19 C75 19 87 29 87 48 L87 58 C87 76 75 87 60 87 C45 87 33 76 33 58 Z" fill="url(#sk' + u + ')"/>' +
-      '<path d="M36 66 C40 80 50 86 60 86 C70 86 80 80 84 66 C80 76 71 82 60 82 C49 82 40 76 36 66Z" fill="#eab596" opacity=".45"/>' +
-      // hair: thick, parted on his right, swept across
-      '<path d="M30 56 C24.5 29 37 9 60 9 C84 9 96.5 27 90 56 C89 46.5 86.5 40.5 83 37.5 C73.5 39 59.5 37.5 48.5 31.5 C44.5 36 39 39.2 35 40.8 C32.6 45.6 31 50.6 30 56Z" fill="url(#hr' + u + ')"/>' +
-      '<path d="M35 40.8 C39 39.2 44.5 36 48.5 31.5 C59.5 37.5 73.5 39 83 37.5 C80 36 74 35 70 34.6 C61 34 54 31.5 48 27 C44 32 39.5 36.5 35 40.8Z" fill="#d9731f" opacity=".45"/>' +
-      '<path d="M35 33 C40 19 58 12.5 80 20 C67 19.8 54 24.5 45.5 34.5 C41.5 34.6 38 34 35 33Z" fill="#ffd28e" opacity=".6"/>' +
-      '<path d="M49 31 C52 26 56 21.5 62 18" stroke="#d9711f" stroke-width="1.6" fill="none" opacity=".7"/>' +
-      '<path d="M82.5 37.5 C86 41 88 47 89 56" stroke="#d06a20" stroke-width="1.4" fill="none" opacity=".5"/>' +
+      // hair: parted firmly on the left, one big swoop across to the right, hugging the sides of the head
+      '<path d="M30 56 C24 30 37 8.5 61 8.5 C85 8.5 97.5 28 90 56 C89.3 59.6 86.9 60 86.2 56.6 C86.4 50 85.6 44.5 83.6 40.6 C75 36.6 60 33.4 45.6 31.2 C43.4 31 41.6 31.4 40.2 32.6 C37.8 36 36.4 40 35.6 44 C34.8 48.4 34.2 53 33.8 56.6 C33.1 60 30.7 59.6 30 56 Z" fill="url(#hr' + u + ')"/>' +
+      // shading under the swoop, where it lifts off the forehead
+      '<path d="M40.2 32.6 C41.6 31.4 43.4 31 45.6 31.2 C60 33.4 75 36.6 83.6 40.6 C84.4 42.2 85 44 85.4 46 C77 41 62 37.4 47 35.4 C44.4 35 42 34.2 40.2 32.6Z" fill="#cf6a1c" opacity=".5"/>' +
+      // the swoop's highlight, running from the part across the top
+      '<path d="M42 27 C50 15 70 11 87 25 C74 19.5 59 20.5 46 30 C44.6 29.2 43.2 28.2 42 27Z" fill="#ffd497" opacity=".65"/>' +
+      '<path d="M50 30.2 C60 24 72 23.4 84 30.4" stroke="#ffc57a" stroke-width="1.4" fill="none" opacity=".6"/>' +
+      // the part itself, low on the left
+      '<path d="M40.4 32 C40.6 25 42.6 17.5 47 11.5" stroke="#c45f16" stroke-width="1.7" fill="none" stroke-linecap="round" opacity=".75"/>' +
       // brows
       '<path d="M40 45 C43 41.2 50 40.6 54.5 42.6 L54.2 44.8 C49.6 43.4 43.8 43.8 40.8 46.6Z" fill="#e8843a"/>' +
       '<path d="M80 45 C77 41.2 70 40.6 65.5 42.6 L65.8 44.8 C70.4 43.4 76.2 43.8 79.2 46.6Z" fill="#e8843a"/>' +
