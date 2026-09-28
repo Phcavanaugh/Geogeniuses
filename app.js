@@ -523,7 +523,75 @@
     el.style.background = AV_COLORS[h % AV_COLORS.length];
     el.textContent = (String(name).trim()[0] || "?").toUpperCase();
     el.setAttribute("aria-hidden", "true");
+    const t = tierMap[name];
+    if (t && t.tier) el.classList.add("tier-" + t.tier.id);
     return el;
+  }
+
+  // ---------- Player tiers, from each player's all-time average (3+ games needed) ----------
+  const TIERS = [
+    { id: "diamond", name: "Diamond", min: 950 },
+    { id: "platinum", name: "Platinum", min: 900 },
+    { id: "gold", name: "Gold", min: 850 },
+    { id: "silver", name: "Silver", min: 800 },
+    { id: "bronze", name: "Bronze", min: 700 },
+    { id: "lead", name: "Lead", min: 600 },
+    { id: "coal", name: "Coal", min: 0 },
+  ];
+  const TIER_MIN_GAMES = 3;
+  let tierMap = {};
+  function computeTiers(rows, cutoff) {
+    const by = {}, seen = new Set();
+    rows.forEach((r) => {
+      const k = r.player + "|" + r.date;
+      if (seen.has(k) || r.date > cutoff) return;
+      seen.add(k); (by[r.player] = by[r.player] || []).push(Number(r.total));
+    });
+    const out = {};
+    Object.keys(by).forEach((n) => {
+      const list = by[n], avg = Math.round(list.reduce((a, b) => a + b, 0) / list.length);
+      out[n] = { avg, games: list.length, tier: list.length >= TIER_MIN_GAMES ? TIERS.find((t) => avg >= t.min) : null };
+    });
+    return out;
+  }
+  function gem(tier, size) {
+    const g = document.createElement("span");
+    g.className = "gem " + (tier ? "tier-" + tier.id : "unranked");
+    if (size) g.style.setProperty("--g", size + "px");
+    g.setAttribute("aria-hidden", "true");
+    return g;
+  }
+  // Recolor names everywhere once the history is in.
+  function refreshTiers() {
+    if (!histReady) return;
+    tierMap = computeTiers(mergedHistory().rows, todayCentral());
+    setWho();
+    if (board) { renderPodium(board.today); renderBoard(); }
+  }
+  function openTiers(who) {
+    const me = tierMap[who] || { avg: 0, games: 0, tier: null };
+    $("sheetMedal").innerHTML = ""; $("sheetMedal").appendChild(gem(me.tier, 54));
+    $("sheetName").textContent = me.tier ? me.tier.name + " tier" : "Unranked";
+    $("sheetHow").textContent = "Tiers come from your all-time average score. Play at least " + TIER_MIN_GAMES +
+      " games to get one. Your tier moves up or down as your average changes.";
+    const ul = $("sheetLadder"); ul.innerHTML = "";
+    TIERS.forEach((t, i) => {
+      const li = document.createElement("li");
+      if (me.tier && me.tier.id === t.id) li.classList.add("here");
+      li.appendChild(gem(t, 26));
+      const d = document.createElement("div"); d.innerHTML = "<span></span><small></small>";
+      d.querySelector("span").textContent = t.name;
+      d.querySelector("small").textContent = i === 0 ? "950 or more" : t.min === 0 ? "Under 600" : fmt(t.min) + " to " + fmt(TIERS[i - 1].min - 1);
+      li.appendChild(d);
+      const st = document.createElement("span"); st.className = "st ok"; st.textContent = me.tier && me.tier.id === t.id ? (who === player ? "You" : who) : "";
+      li.appendChild(st);
+      ul.appendChild(li);
+    });
+    $("sheetExtra").hidden = true;
+    $("sheetHolders").textContent = me.games ? (who === player ? "Your" : who + "'s") + " all-time average: " + fmt(me.avg) + " over " + me.games + (me.games === 1 ? " game" : " games") : "No games yet.";
+    const sh = $("sheet");
+    $("sheetDim").hidden = false; sh.hidden = false;
+    requestAnimationFrame(() => { sh.classList.add("show"); $("sheetDim").classList.add("show"); });
   }
   function setWho() {
     const b = $("whoBtn");
@@ -1152,10 +1220,28 @@
       }
     }
     // Keep the streak alive: a nudge once you're 7+ days in.
+    // Tier change since your last game
+    refreshTiers();
+    const tn = $("tierNote"); tn.hidden = true;
+    if (!session.practice && session.date === today) {
+      const beforeT = computeTiers(hist.rows.filter((r) => r.date < session.date), prevDate)[player];
+      const nowT = tierMap[player];
+      const bi = beforeT && beforeT.tier ? TIERS.indexOf(beforeT.tier) : 99, ni = nowT && nowT.tier ? TIERS.indexOf(nowT.tier) : 99;
+      if (nowT && nowT.tier && ni !== bi) {
+        tn.innerHTML = "";
+        tn.appendChild(gem(nowT.tier, 22));
+        const sp = document.createElement("span");
+        sp.textContent = (ni < bi ? (bi === 99 ? "You're ranked: " : "Promoted to ") : "Down to ") + nowT.tier.name + ". Your average is " + fmt(nowT.avg) + ".";
+        tn.appendChild(sp);
+        tn.className = "tier-note " + (ni < bi ? "up" : "down");
+        tn.onclick = () => openTiers(player);
+        tn.hidden = false;
+      }
+    }
     const nudge = $("streakNudge"), st = after.stats.streak;
     nudge.hidden = session.practice || st < 7 || session.date !== today;
     nudge.textContent = "🔥 " + st + " days in a row. Come back tomorrow for day " + (st + 1) + ".";
-    wrap.hidden = !fresh.length && !near.length && nudge.hidden;
+    wrap.hidden = !fresh.length && !near.length && nudge.hidden && tn.hidden;
     // The share text stays simple: date, emojis, score and the link. No badges or streaks.
   }
 
@@ -1209,6 +1295,16 @@
     }
     const d = badgeData(mergedHistory(), who, todayCentral());
     shelfData = d;
+    refreshTiers();
+    const hv = avatar(who); hv.classList.add("big"); head.replaceChild(hv, head.firstChild);
+    const tinfo = tierMap[who], chip = document.createElement("button");
+    chip.type = "button"; chip.className = "tier-chip";
+    chip.appendChild(gem(tinfo && tinfo.tier, 14));
+    const ct = document.createElement("span");
+    ct.textContent = tinfo && tinfo.tier ? tinfo.tier.name + " · avg " + fmt(tinfo.avg) : "Unranked · play " + TIER_MIN_GAMES + " games to get a tier";
+    chip.appendChild(ct);
+    chip.onclick = () => openTiers(who);
+    t.appendChild(chip);
     const earned = BADGES.reduce((a, b) => a + d[b.id].level, 0), possible = BADGES.reduce((a, b) => a + b.levels.length, 0);
     t.querySelector("small").textContent = (d.stats.first ? "Playing since " + prettyDate(d.stats.first, false) + " · " : "") + earned + " of " + possible + " badge levels";
     const stats = $("shelfStats");
@@ -1330,6 +1426,8 @@
       li.innerHTML = '<span class="rank"></span><span class="n"></span><span class="v"></span>';
       li.querySelector(".rank").textContent = rank;
       li.querySelector(".n").textContent = r[0];
+      const tt = tierMap[r[0]];
+      if (tt && tt.tier) { const gm = gem(tt.tier, 12); gm.title = tt.tier.name; li.querySelector(".n").appendChild(gm); }
       li.insertBefore(avatar(r[0]), li.querySelector(".n"));
       if (r[2]) { const s = document.createElement("span"); s.className = "sub"; s.textContent = r[2]; li.querySelector(".n").appendChild(s); }
       li.querySelector(".v").textContent = r[1];
@@ -1412,6 +1510,7 @@
       QUESTIONS = qs;
     } catch (e) { return message("Something went wrong", "The game files didn't load. Try refreshing."); }
     if (!player) pickPlayer(); else begin(todayCentral(), false);
+    loadHistory().then((ok) => { if (ok) refreshTiers(); });
     flushShares(); // send any shares saved on this phone while the Sheet was offline or not yet updated
   })();
 

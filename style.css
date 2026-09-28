@@ -343,3 +343,27 @@ p.muted{margin:0 16px 16px}
 .ladder li{grid-template-columns:40px 1fr auto}
 .medal.preview{opacity:.6;filter:saturate(.8)}
 .medal .lock{position:absolute;right:-4px;bottom:-4px;z-index:4;font-size:12px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.6))}
+
+/* ---------- Player tiers ---------- */
+.gem{--g:14px;display:inline-block;width:var(--g);height:var(--g);flex:none;border-radius:22%;transform:rotate(45deg) scale(.82);vertical-align:middle;
+  background:var(--tg);box-shadow:inset 0 0 0 1px rgba(255,255,255,.35),0 0 calc(var(--g)*.5) var(--tglow,transparent)}
+.board-list .n .gem{margin-left:7px;transform:rotate(45deg) scale(.82) translateY(-1px)}
+.gem.unranked{--tg:transparent;box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.35)}
+.tier-diamond{--tg:linear-gradient(135deg,#e8fbff,#7fdcff 55%,#38b6f0);--tglow:rgba(127,220,255,.7);--tr:#8fe3ff}
+.tier-platinum{--tg:linear-gradient(135deg,#ffffff,#d6dde8 50%,#9aa6b8);--tglow:rgba(214,221,232,.45);--tr:#dfe5ee}
+.tier-gold{--tg:linear-gradient(135deg,#fff0b0,#ffc94d 50%,#d99a12);--tglow:rgba(255,201,77,.5);--tr:#ffc94d}
+.tier-silver{--tg:linear-gradient(135deg,#f4f7fb,#b9c4d2 55%,#8593a6);--tr:#b9c4d2}
+.tier-bronze{--tg:linear-gradient(135deg,#f3c294,#cd8a4f 55%,#8f5424);--tr:#cd8a4f}
+.tier-lead{--tg:linear-gradient(135deg,#a3adb8,#6b7580 55%,#454c55);--tr:#7c8691}
+.tier-coal{--tg:radial-gradient(circle at 60% 65%,#ff7a2e 0 12%,transparent 30%),linear-gradient(135deg,#4a4a4f,#1c1c20);--tr:#3a3a40}
+.av[class*="tier-"]{box-shadow:0 0 0 2px var(--space),0 0 0 3.5px var(--tr)}
+.av.tier-diamond{box-shadow:0 0 0 2px var(--space),0 0 0 3.5px var(--tr),0 0 10px rgba(127,220,255,.7)}
+.prof .av.big[class*="tier-"]{box-shadow:0 0 0 2px var(--space),0 0 0 4.5px var(--tr)}
+.step .av[class*="tier-"]{box-shadow:0 0 0 2px var(--space),0 0 0 3.5px var(--tr)}
+.tier-chip{display:inline-flex;align-items:center;gap:8px;margin-top:6px;padding:5px 11px 5px 9px;border-radius:999px;border:1px solid var(--line-2);
+  background:rgba(255,255,255,.06);color:var(--ink);font-size:12.5px;font-weight:600}
+.tier-note{display:flex;align-items:center;gap:12px;border-radius:14px;padding:11px 13px;font-size:14px;font-weight:600;cursor:pointer;
+  background:rgba(255,255,255,.05);border:1px solid var(--line-2)}
+.tier-note[hidden]{display:none}
+.tier-note.up{background:linear-gradient(90deg,rgba(127,220,255,.16),rgba(255,255,255,.03));border-color:rgba(143,227,255,.45)}
+.ladder li.here{background:rgba(255,255,255,.06);border-radius:10px}
