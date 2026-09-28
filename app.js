@@ -1251,7 +1251,13 @@
     const ul = $("sheetLadder"); ul.innerHTML = "";
     b.levels.forEach((n, i) => {
       const li = document.createElement("li");
-      li.appendChild(medal(b, i < o.level ? i + 1 : 0, 30));
+      // Levels not reached yet show their real art, faded, with a lock, so you can see what you're chasing.
+      const m = medal(b, i + 1, 34);
+      if (i >= o.level) {
+        m.classList.add("preview");
+        const lk = document.createElement("span"); lk.className = "lock"; lk.textContent = "🔒"; m.appendChild(lk);
+      }
+      li.appendChild(m);
       const t = document.createElement("div"); t.innerHTML = "<span></span><small></small>";
       t.querySelector("span").textContent = "Level " + ROMAN[i + 1] + (b.names ? " · " + b.names[i] : "");
       t.querySelector("small").textContent = fmt(n) + " " + unitFor(b, n);
