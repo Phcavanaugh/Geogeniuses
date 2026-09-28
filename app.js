@@ -908,7 +908,7 @@
     const b = session.shareBase;
     session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
       "\n" + b.emojis + " · " + fmt(b.total) + "/" + fmt(DAY_MAX) +
-      (session.shareExtra ? "\n" + session.shareExtra : "") + "\n" + location.origin + location.pathname;
+      "\n" + location.origin + location.pathname;
   }
 
   // ---------- Badges ----------
@@ -1156,16 +1156,7 @@
     nudge.hidden = session.practice || st < 7 || session.date !== today;
     nudge.textContent = "🔥 " + st + " days in a row. Come back tomorrow for day " + (st + 1) + ".";
     wrap.hidden = !fresh.length && !near.length && nudge.hidden;
-    // Streak and any new badge go into the share text.
-    let extra = "";
-    if (!session.practice) {
-      const bits = [];
-      if (after.stats.streak >= 2) bits.push("🔥" + after.stats.streak);
-      if (fresh.length) bits.push("New badge: " + fresh.map((b) => b.icon + " " + b.name + " · " + lvlName(b, after[b.id].level)).join(", "));
-      extra = bits.join(" · ");
-    }
-    session.shareExtra = extra;
-    buildShare();
+    // The share text stays simple: date, emojis, score and the link. No badges or streaks.
   }
 
   // After a share: record it, and celebrate if it earned a Postcard level.
