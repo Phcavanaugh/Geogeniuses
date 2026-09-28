@@ -165,19 +165,62 @@
     return g;
   }
   const EXTRA = {
-    // On a Roll: holding up a torch; the flame grows each level, and at Level V his hair's on fire too.
+    // On a Roll: every level turns up the heat. 1 a match on a cool night, 2 a torch at dusk, 3 flames rising around him,
+    // 4 a wall of fire, embers and shades, 5 an inferno: white-hot sky, wings of fire, hair ablaze.
     streak: (u, l) => {
       l = lv(l);
-      const k = 0.62 + 0.16 * l;
-      return wrap(u,
-        '<g transform="translate(-8 6)">' + bust(u) +
+      const skies = [
+        ['#24406a', '#0d1f38', '#0a1628'],
+        ['#7a4a6e', '#3a2346', '#1c1430'],
+        ['#ffb04a', '#d9541f', '#6b1c0e'],
+        ['#ff7a2e', '#c42a16', '#4a0a0a'],
+        ['#fffbe0', '#ffc247', '#e8421b'],
+      ][l - 1];
+      const sky = '<defs><radialGradient id="sky' + u + '" cx="50%" cy="' + (l >= 3 ? 70 : 30) + '%" r="80%"><stop offset="0" stop-color="' + skies[0] + '"/>' +
+        '<stop offset=".55" stop-color="' + skies[1] + '"/><stop offset="1" stop-color="' + skies[2] + '"/></radialGradient></defs>' +
+        '<rect width="120" height="120" fill="url(#sky' + u + ')"/>';
+      let back = '';
+      // stars on the cool nights
+      if (l <= 2) back += [[14, 18], [30, 10], [96, 14], [108, 34], [20, 40], [84, 8]].map(([x, y], i) => '<circle cx="' + x + '" cy="' + y + '" r="' + (i % 2 ? 0.9 : 1.3) + '" fill="#fff" opacity=".7"/>').join('');
+      // wings of fire at Inferno
+      if (l >= 5) back += '<g opacity=".95">' +
+        '<path d="M52 70 C30 60 10 44 2 16 C14 30 22 34 30 34 C20 24 18 14 20 2 C30 22 42 34 54 44Z" fill="#ff6b3d"/>' +
+        '<path d="M68 70 C90 60 110 44 118 16 C106 30 98 34 90 34 C100 24 102 14 100 2 C90 22 78 34 66 44Z" fill="#ff6b3d"/>' +
+        '<path d="M52 66 C36 58 22 46 16 28 C26 38 34 40 42 40 C36 32 34 24 36 16 C42 30 48 38 56 46Z" fill="#ffc94d"/>' +
+        '<path d="M68 66 C84 58 98 46 104 28 C94 38 86 40 78 40 C84 32 86 24 84 16 C78 30 72 38 64 46Z" fill="#ffc94d"/></g>';
+      // a wall of fire behind him from On Fire up
+      if (l >= 3) {
+        const k = [0, 0, 0.9, 1.35, 1.6][l - 1];
+        [[4, 124], [22, 128], [40, 126], [60, 130], [80, 126], [98, 128], [116, 124]].forEach(([x, y], i) => {
+          back += flame(x, y - (i % 2 ? 4 : 0), k * (i % 3 === 1 ? 1.15 : 1));
+        });
+        back += flame(14, 96, (l >= 4 ? 1.1 : 0.95) * k) + flame(106, 98, (l >= 4 ? 1.1 : 0.85) * k);
+        if (l >= 4) back += flame(30, 74, 0.8 * k);
+      }
+      // what he's holding
+      const hold = l === 1
+        ? '<path d="M99 76 L103 52" stroke="#e8d3a8" stroke-width="2.6" stroke-linecap="round"/><circle cx="103.2" cy="51" r="2.6" fill="#b83a2a"/>' + flame(103.4, 49, 0.32)
+        : '<path d="M100 76 L106 44" stroke="#7a4a22" stroke-width="5" stroke-linecap="round"/><path d="M100 50 L112 50 L108 58 L102 58Z" fill="#b78a3a"/>' +
+          flame(106, 46 - 2 * l, [0, 0.62, 0.9, 1.15, 1.35][l - 1]);
+      // shades from Blazing up
+      const shades = l >= 4
+        ? '<g><path d="M38 50 L57 50 Q57 61 47.5 61 Q38 61 38 52Z" fill="#141a26"/><path d="M63 50 L82 50 L82 52 Q82 61 72.5 61 Q63 61 63 50Z" fill="#141a26"/>' +
+          '<path d="M56 51.5 Q60 49.5 64 51.5" stroke="#141a26" stroke-width="2.4" fill="none"/><path d="M36 51 L32 49" stroke="#141a26" stroke-width="2.2"/><path d="M84 51 L88 49" stroke="#141a26" stroke-width="2.2"/>' +
+          '<path d="M41 53 L46 53" stroke="#ff9a3c" stroke-width="1.6" stroke-linecap="round" opacity=".8"/><path d="M66 53 L71 53" stroke="#ff9a3c" stroke-width="1.6" stroke-linecap="round" opacity=".8"/></g>'
+        : '';
+      // embers
+      let embers = '';
+      if (l >= 3) {
+        const pts = [[12, 30], [26, 54], [100, 22], [110, 58], [88, 36], [18, 72], [34, 20], [106, 80], [8, 50], [94, 10]];
+        pts.slice(0, [0, 0, 4, 7, 10][l - 1]).forEach(([x, y], i) => { embers += '<circle cx="' + x + '" cy="' + y + '" r="' + (1 + (i % 3) * 0.5) + '" fill="' + (i % 2 ? '#ffe08a' : '#ff9a3c') + '"/>'; });
+      }
+      return '<svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">' + defs(u) + sky + back +
+        '<g transform="translate(-8 ' + (l >= 5 ? 10 : 6) + ')">' + bust(u) +
         '<path d="M84 104 L98 74" stroke="url(#sh' + u + ')" stroke-width="14" stroke-linecap="round"/>' +
-        head(u, { grin: true }) +
-        '<path d="M100 76 L106 44" stroke="#7a4a22" stroke-width="5" stroke-linecap="round"/><path d="M100 50 L112 50 L108 58 L102 58Z" fill="#b78a3a"/>' +
+        head(u, { grin: true }) + shades + hold +
         '<circle cx="99" cy="74" r="6.5" fill="#f8d2b6"/>' +
-        flame(106, 46 - 2 * l, k) +
-        (l >= 5 ? flame(44, 14, .55) + flame(60, 8, .7) + flame(76, 14, .55) : '') + '</g>' +
-        (l >= 3 ? sparkle(16, 40, 4 + l) : ''));
+        (l >= 5 ? flame(44, 14, .7) + flame(60, 6, .95) + flame(76, 14, .7) + flame(52, 10, .5) + flame(68, 10, .5) : '') + '</g>' +
+        embers + (l >= 4 ? sparkle(106, 16, 5) : '') + (l >= 5 ? sparkle(14, 14, 5) : '') + '</svg>';
     },
     // Frequent Flyer: pilot cap and a suitcase that picks up a sticker each level; a plane (then a jet) at the top levels.
     flyer: (u, l) => {
