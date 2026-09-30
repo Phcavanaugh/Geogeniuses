@@ -368,3 +368,10 @@ p.muted{margin:0 16px 16px}
 .tier-note[hidden]{display:none}
 .tier-note.up{background:linear-gradient(90deg,rgba(127,220,255,.16),rgba(255,255,255,.03));border-color:rgba(143,227,255,.45)}
 .ladder li.here{background:rgba(255,255,255,.06);border-radius:10px}
+
+/* Someone else's game on their profile */
+.their[hidden]{display:none}
+.their .review{margin:0 18px}
+.their-note{margin:0 18px;color:var(--muted);font-size:14px}
+.their-note:empty{display:none}
+.rev-dist i{color:var(--muted);font-style:normal;font-size:12.5px}

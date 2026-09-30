@@ -92,6 +92,7 @@
       return r.json();
     },
     async history() { const r = await fetch(API + "?action=history"); return r.json(); },
+    async day(who, date) { const r = await fetch(API + "?action=day&player=" + encodeURIComponent(who) + "&date=" + encodeURIComponent(date)); return r.json(); },
     async share(p) {
       const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "share" }, p)) });
       return r.json();
@@ -113,9 +114,13 @@
     async submit(p) {
       const rows = store.get("ggg:demo:rows") || [];
       if (rows.some((r) => r.player === p.player && r.date === p.date)) return { ok: true, duplicate: true };
-      rows.push({ date: p.date, player: p.player, total: p.total, scores: p.scores });
+      rows.push({ date: p.date, player: p.player, total: p.total, scores: p.scores, miles: p.miles, guesses: p.guesses });
       store.set("ggg:demo:rows", rows);
       return { ok: true };
+    },
+    async day(who, date) {
+      const r = (store.get("ggg:demo:rows") || []).find((x) => x.player === who && x.date === date);
+      return r ? { ok: true, player: who, date, scores: r.scores, total: r.total, miles: r.miles || [], guesses: r.guesses || null } : { ok: false };
     },
   };
 
@@ -820,7 +825,7 @@
     if (!session.practice && g.length >= 5 && !session.progress.submitted) {
       $("sNote").textContent = "Saving your score…";
       try {
-        const res = await api.submit({ player, date: session.date, scores, total, miles: g.map((x) => x.miles) });
+        const res = await api.submit({ player, date: session.date, scores, total, miles: g.map((x) => x.miles), guesses: g.map((x) => [x.lon, x.lat]) });
         if (res && res.ok) {
           session.progress.submitted = true; store.set(session.key, session.progress);
           $("sNote").textContent = res.duplicate ? "You'd already played today — your first score stands." : "Score saved.";
@@ -910,12 +915,19 @@
   }
 
   function renderReview(scores) {
-    const wrap = $("review"), g = session.progress.guesses;
+    const g = session.progress.guesses;
+    buildCards($("review"), session.qs, scores, g.map((x) => x ? { lon: x.lon, lat: x.lat, miles: x.miles } : null), { idPrefix: "rev" });
+  }
+  // Review cards: clue, map with the guess and the answer, distance and the fun fact.
+  // guesses[i] is { lon, lat, miles } (lon/lat may be missing), or null. opts.who names someone else.
+  function buildCards(wrap, qs, scores, guesses, opts) {
+    opts = opts || {};
     wrap.innerHTML = "";
-    session.qs.forEach((q, i) => {
-      const x = g[i], pts = scores[i];
+    qs.forEach((q, i) => {
+      const x = guesses[i], pts = scores[i];
       const card = document.createElement("article");
-      card.className = "rev"; card.id = "rev" + i;
+      card.className = "rev";
+      if (opts.idPrefix) card.id = opts.idPrefix + i;
       const t = pts != null ? tierFor(pts, MAX_PTS[i]) : "none";
       card.innerHTML =
         '<div class="rev-head"><span class="rev-q"></span><span class="rev-x"></span><span class="rev-where"></span><span class="rev-score"><span class="rev-mark"></span><b></b></span></div>' +
@@ -930,16 +942,50 @@
       card.querySelector(".rev-clue").textContent = q.clue;
       card.querySelector(".rev-ans").textContent = q.answer;
       const dist = card.querySelector(".rev-dist");
-      if (x) {
-        dist.innerHTML = "You were <b></b> from the answer.";
+      const hasPin = x && x.lon != null && x.lat != null;
+      if (x && x.miles != null) {
+        dist.innerHTML = (opts.who ? "<span></span> was " : "You were ") + "<b></b> from the answer." + (hasPin ? "" : " <i>(Guess location wasn't saved.)</i>");
+        if (opts.who) dist.querySelector("span").textContent = opts.who;
         dist.querySelector("b").textContent = fmt(x.miles) + (x.miles === 1 ? " mile" : " miles");
-      } else dist.textContent = "Played on another device.";
+      } else dist.textContent = opts.who ? "Guess wasn't saved for this question." : "Played on another device.";
       card.querySelector(".rev-fact").textContent = q.fact;
       const mm = card.querySelector(".mm");
-      mm.setAttribute("aria-label", "Map of " + q.answer + (x ? " with your guess" : ""));
+      mm.setAttribute("aria-label", "Map of " + q.answer + (hasPin ? " with the guess" : ""));
       wrap.appendChild(card);
-      miniMap(mm, [q.lon, q.lat], x ? [x.lon, x.lat] : null).catch(() => {});
+      miniMap(mm, [q.lon, q.lat], hasPin ? [x.lon, x.lat] : null).catch(() => {});
     });
+  }
+
+  // ---------- Someone's game on their profile ----------
+  // Shows their most recent day. For today's game you have to finish yours first (no spoilers).
+  async function showTheirGame(who) {
+    const box = $("theirGame"), cards = $("theirCards"), note = $("theirNote"), title = $("theirTitle");
+    cards.innerHTML = ""; note.textContent = ""; box.hidden = true;
+    if (!who || who === player || !histReady) return;
+    const today = todayCentral();
+    const days = mergedHistory().rows.filter((r) => r.player === who).map((r) => r.date).sort();
+    if (!days.length) return;
+    const date = days[days.length - 1], idx = daysBetween(START, date);
+    if (idx < 0 || idx >= QUESTIONS.length) return;
+    box.hidden = false;
+    title.textContent = date === today ? who + "'s game today" : who + "'s last game · " + prettyDate(date, true);
+    if (date === today) {
+      const mine = store.get("ggg:v1:" + player + ":" + today);
+      const done = (mine && mine.guesses && mine.guesses.length >= 5) || (board && (board.today || []).some((r) => r.name === player));
+      if (!done) { note.textContent = "Finish today's game to see " + who + "'s guesses."; return; }
+    }
+    note.textContent = "Loading…";
+    let d = null;
+    try { d = await api.day(who, date); } catch (e) {}
+    if (shelfWho !== who) return; // they opened someone else meanwhile
+    if (!d || !d.ok) { note.textContent = "Couldn't load " + who + "'s game."; return; }
+    note.textContent = "";
+    const gs = (d.scores || []).map((_, i) => ({
+      lon: d.guesses && d.guesses[i] ? d.guesses[i][0] : null,
+      lat: d.guesses && d.guesses[i] ? d.guesses[i][1] : null,
+      miles: d.miles && d.miles[i] != null ? d.miles[i] : null,
+    }));
+    buildCards(cards, QUESTIONS[idx], d.scores || [], gs, { who });
   }
 
   // The total counts up from zero when you've just finished; otherwise it just shows.
@@ -1281,6 +1327,7 @@
     if (cur) shelfFrom = cur;
     show("badgeScreen");
     $("shelfSwitch").hidden = who !== player;
+    $("theirGame").hidden = true;
     const head = $("shelfHead"); head.innerHTML = "";
     const av = avatar(who); av.classList.add("big"); head.appendChild(av);
     const t = document.createElement("div"); t.innerHTML = "<h1></h1><small></small>";
@@ -1295,6 +1342,7 @@
     }
     const d = badgeData(mergedHistory(), who, todayCentral());
     shelfData = d;
+    showTheirGame(who);
     refreshTiers();
     const hv = avatar(who); hv.classList.add("big"); head.replaceChild(hv, head.firstChild);
     const tinfo = tierMap[who], chip = document.createElement("button");

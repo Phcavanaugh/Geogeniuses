@@ -20,6 +20,8 @@ function doGet(e) {
   if (action === 'board') return raw_(cached_('board:' + today_(), function () { return computeBoard_(getRows_(), today_()); }));
   // Every saved day and share, for working out badges in the game.
   if (action === 'history') return raw_(cached_('history', function () { return { ok: true, rows: getRows_(), shares: getShares_() }; }));
+  // One player's game for one day, including where they tapped (for their profile).
+  if (action === 'day') return json_(getDay_(String(e.parameter.player || ''), String(e.parameter.date || '')));
   return json_({ ok: true, message: 'Good Globe Game scoreboard is running.' });
 }
 
@@ -46,7 +48,14 @@ function doPost(e) {
 
     if (hasScore_(player, date)) return json_({ ok: true, duplicate: true });
 
-    sheet_('Scores').appendRow([new Date(), "'" + date, player].concat(scores).concat([total]).concat(miles));
+    // Where they tapped, as [[lon, lat], ...] for the five questions.
+    var guesses = '';
+    if (Array.isArray(body.guesses) && body.guesses.length === 5 && body.guesses.every(function (p) {
+      return Array.isArray(p) && p.length === 2 && Math.abs(p[0]) <= 360 && Math.abs(p[1]) <= 90;
+    })) guesses = JSON.stringify(body.guesses.map(function (p) { return [Math.round(p[0] * 1e4) / 1e4, Math.round(p[1] * 1e4) / 1e4]; }));
+    var sc = sheet_('Scores');
+    if (sc.getRange(1, 15).getValue() === '') sc.getRange(1, 15).setValue('Guesses');
+    sc.appendRow([new Date(), "'" + date, player].concat(scores).concat([total]).concat(miles).concat([guesses]));
     bust_();
     return json_({ ok: true });
   } catch (err) {
@@ -158,7 +167,7 @@ function sheet_(name) {
     sh = ss.insertSheet(name);
     if (name === 'Players') { sh.appendRow(['Name']); sh.appendRow(['Pete']); }
     if (name === 'Shares') sh.appendRow(['Saved at', 'Date', 'Player']);
-    if (name === 'Scores') sh.appendRow(['Saved at', 'Date', 'Player', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Total', 'Q1 miles', 'Q2 miles', 'Q3 miles', 'Q4 miles', 'Q5 miles']);
+    if (name === 'Scores') sh.appendRow(['Saved at', 'Date', 'Player', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Total', 'Q1 miles', 'Q2 miles', 'Q3 miles', 'Q4 miles', 'Q5 miles', 'Guesses']);
     sh.setFrozenRows(1);
   }
   return sh;
@@ -170,6 +179,24 @@ function getPlayers_() {
     .map(function (r) { return String(r[0]).trim(); })
     .filter(function (n) { return n; });
 }
+// One saved day for one player: scores, miles and guess locations (if they were saved).
+function getDay_(player, date) {
+  var sh = sheet_('Scores');
+  if (!player || !date || sh.getLastRow() < 2) return { ok: false };
+  var keys = sh.getRange(2, 2, sh.getLastRow() - 1, 2).getValues();
+  for (var i = 0; i < keys.length; i++) {
+    var d = keys[i][0] instanceof Date ? Utilities.formatDate(keys[i][0], TZ, 'yyyy-MM-dd') : String(keys[i][0]);
+    if (d !== date || String(keys[i][1]) !== player) continue;
+    var width = Math.max(14, Math.min(15, sh.getLastColumn()));
+    var r = sh.getRange(i + 2, 1, 1, width).getValues()[0];
+    var guesses = null;
+    try { if (r[14]) guesses = JSON.parse(r[14]); } catch (err) { guesses = null; }
+    return { ok: true, player: player, date: date, scores: r.slice(3, 8).map(Number), total: Number(r[8]),
+      miles: r.slice(9, 14).map(function (m) { return m === '' ? null : Number(m); }), guesses: guesses };
+  }
+  return { ok: false };
+}
+
 // Quick duplicate check that reads only the date and player columns.
 function hasScore_(player, date) {
   var sh = sheet_('Scores');
