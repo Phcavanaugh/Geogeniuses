@@ -14,10 +14,12 @@ var MAX_TOTAL = 1000;
 
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
-  if (action === 'players') return json_({ players: getPlayers_() });
-  if (action === 'board') return json_(computeBoard_(getRows_(), today_()));
+  // Answers come from a cache that's cleared whenever a score, share or player is saved,
+  // so the Sheet is only read again after something changes.
+  if (action === 'players') return raw_(cached_('players', function () { return { players: getPlayers_() }; }, 600));
+  if (action === 'board') return raw_(cached_('board:' + today_(), function () { return computeBoard_(getRows_(), today_()); }));
   // Every saved day and share, for working out badges in the game.
-  if (action === 'history') return json_({ ok: true, today: today_(), rows: getRows_(), shares: getShares_() });
+  if (action === 'history') return raw_(cached_('history', function () { return { ok: true, rows: getRows_(), shares: getShares_() }; }));
   return json_({ ok: true, message: 'Good Globe Game scoreboard is running.' });
 }
 
@@ -27,6 +29,7 @@ function doPost(e) {
   try {
     var body = JSON.parse(e.postData.contents || '{}');
     if (body.action === 'share') return json_(saveShare_(body));
+    if (body.action === 'addPlayer') return json_(addPlayer_(body));
     if (body.action !== 'submit') return json_({ ok: false, error: 'Unknown action.' });
 
     var player = String(body.player || '').trim();
@@ -41,10 +44,10 @@ function doPost(e) {
     var badScore = scores.some(function (s, i) { return !(s >= 0 && s <= caps[i]); });
     if (scores.length !== 5 || badScore || total > MAX_TOTAL) return json_({ ok: false, error: 'That score doesn\'t look right.' });
 
-    var already = getRows_().some(function (r) { return r.player === player && r.date === date; });
-    if (already) return json_({ ok: true, duplicate: true });
+    if (hasScore_(player, date)) return json_({ ok: true, duplicate: true });
 
     sheet_('Scores').appendRow([new Date(), "'" + date, player].concat(scores).concat([total]).concat(miles));
+    bust_();
     return json_({ ok: true });
   } catch (err) {
     return json_({ ok: false, error: 'Server error: ' + err });
@@ -62,8 +65,51 @@ function saveShare_(body) {
   // Shares can arrive a little late (a phone that was offline), so accept the past week.
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > today_() || date < addDays_(today_(), -7)) return { ok: false, error: 'That date doesn\'t look right.' };
   var already = getShares_().some(function (r) { return r.player === player && r.date === date; });
-  if (!already) sheet_('Shares').appendRow([new Date(), "'" + date, player]);
+  if (!already) { sheet_('Shares').appendRow([new Date(), "'" + date, player]); bust_(); }
   return { ok: true, duplicate: already };
+}
+
+// ---------- New players (the Join button) ----------
+function addPlayer_(body) {
+  var name = String(body.name || '').replace(/\s+/g, ' ').trim();
+  if (!/^[A-Za-z\u00C0-\u00FF0-9 .'-]{1,20}$/.test(name)) return { ok: false, error: 'Use letters, numbers and spaces only (up to 20 characters).' };
+  var taken = getPlayers_().some(function (n) { return n.toLowerCase() === name.toLowerCase(); });
+  if (taken) return { ok: false, taken: true };
+  sheet_('Players').appendRow([name]);
+  bust_();
+  return { ok: true, name: name };
+}
+
+// ---------- Cache ----------
+// Google's cache holds up to 100 KB per entry, so bigger answers are split into pieces.
+var CACHE_TTL = 21600; // 6 hours, the longest Google allows
+var CHUNK = 80000;
+function cached_(key, build, ttl) {
+  var cache = CacheService.getScriptCache();
+  var n = Number(cache.get(key + ':n') || 0);
+  if (n > 0) {
+    var keys = [];
+    for (var i = 0; i < n; i++) keys.push(key + ':' + i);
+    var got = cache.getAll(keys), parts = [];
+    for (var j = 0; j < n; j++) { if (got[keys[j]] == null) { parts = null; break; } parts.push(got[keys[j]]); }
+    if (parts) return parts.join('');
+  }
+  var str = JSON.stringify(build());
+  var count = Math.max(1, Math.ceil(str.length / CHUNK)), obj = {};
+  for (var k = 0; k < count; k++) obj[key + ':' + k] = str.substr(k * CHUNK, CHUNK);
+  obj[key + ':n'] = String(count);
+  try { cache.putAll(obj, ttl || CACHE_TTL); } catch (e) { /* too big to cache: still answer */ }
+  return str;
+}
+// Clear the cache after anything is saved (the pieces left behind are simply ignored).
+function bust_() {
+  var cache = CacheService.getScriptCache();
+  cache.removeAll(['players:n', 'history:n', 'board:' + today_() + ':n']);
+}
+// Editing the Sheet by hand (adding a player, fixing a score) clears the cache too.
+function onEdit(e) { bust_(); }
+function raw_(str) {
+  return ContentService.createTextOutput(str).setMimeType(ContentService.MimeType.JSON);
 }
 function getShares_() {
   var sh = sheet_('Shares');
@@ -123,6 +169,17 @@ function getPlayers_() {
   return sh.getRange(2, 1, sh.getLastRow() - 1, 1).getValues()
     .map(function (r) { return String(r[0]).trim(); })
     .filter(function (n) { return n; });
+}
+// Quick duplicate check that reads only the date and player columns.
+function hasScore_(player, date) {
+  var sh = sheet_('Scores');
+  if (sh.getLastRow() < 2) return false;
+  var vals = sh.getRange(2, 2, sh.getLastRow() - 1, 2).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    var d = vals[i][0] instanceof Date ? Utilities.formatDate(vals[i][0], TZ, 'yyyy-MM-dd') : String(vals[i][0]);
+    if (d === date && String(vals[i][1]) === player) return true;
+  }
+  return false;
 }
 function getRows_() {
   var sh = sheet_('Scores');
