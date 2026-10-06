@@ -62,5 +62,5 @@ Before you start, unzip `good-globe-game.zip` somewhere easy to find, like your 
 - **What it is:** a second daily game in the `geograbber` folder. It uses the same Players list and the same Apps Script web app as GeoGeniuses, so nobody signs in again.
 - **Where its data goes:** the script adds two tabs on its own the first time someone plays: **GeoGrabber** (one row per player per day) and **GeoGrabber profiles** (each player's coins, skins, power-ups and badges).
 - **Launch day:** `GRAB_START_DATE` in config.js is Plat No. 1. The GeoGrabber card on the score page stays hidden until that day.
-- **Practice options:** hidden on the live site. To bring back every option (modes, real places, twists), add `window.GRAB_SHOW_OPTIONS = true;` to config.js.
+- **Practice options:** every option (modes, real places, twists) is on. To hide them, set `GRAB_SHOW_OPTIONS` to `false` in config.js.
 - **One run a day:** a run is saved as soon as it starts, so quitting or closing the page still counts as that day's run.
