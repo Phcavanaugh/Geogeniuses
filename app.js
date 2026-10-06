@@ -1462,8 +1462,8 @@
       const played = !!mine;
       card.classList.toggle("played", played);
       $("grabNew").hidden = played; $("grabMine").hidden = !played;
-      $("grabEyebrow").textContent = played ? "GeoGrabber · Plat No. " + plat : (plat <= 7 ? "New daily game" : "Today's GeoGrabber");
-      $("grabMeta").textContent = played ? "" : "Plat No. " + plat + " · one run a day";
+      $("grabEyebrow").textContent = played ? "GeoGrabber · Day " + plat : (plat <= 7 ? "New daily game" : "Today's GeoGrabber");
+      $("grabMeta").textContent = played ? "" : "Day " + plat + " · one run a day";
       $("grabMeta").hidden = played;
       const btn = $("grabBtn");
       btn.firstChild.textContent = played ? "See the GeoGrabber board" : "Play today's GeoGrabber";

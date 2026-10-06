@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="GeoGrabber">
 <link rel="icon" type="image/svg+xml" href="../icon.svg">
 <link rel="apple-touch-icon" href="../apple-touch-icon.png">
-<script src="../config.js?v=38"></script>
+<script src="../config.js?v=39"></script>
 <title>GeoGrabber</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -318,10 +318,10 @@ details>summary::-webkit-details-marker{display:none}
   </section>
 
   <section class="card daily" aria-labelledby="dailyTitle">
-    <canvas id="preview" width="132" height="132" aria-label="Today's plat map"></canvas>
+    <canvas id="preview" width="132" height="132" aria-label="Today's map"></canvas>
     <div class="daily-body">
-      <div class="eyebrow" id="platNo">Daily plat</div>
-      <div class="h2" id="dailyTitle">Today's plat</div>
+      <div class="eyebrow" id="platNo">Daily map</div>
+      <div class="h2" id="dailyTitle">Today's map</div>
       <div class="spec" id="spec"></div>
       <div class="twist" id="twistTag" hidden><b id="twistName"></b><span id="twistDesc"></span></div>
       <div class="daily-cta" id="dailyCta"></div>
@@ -435,7 +435,7 @@ details>summary::-webkit-details-marker{display:none}
       <div class="eyebrow" id="resEyebrow">Run over</div>
       <div class="h2" id="resTitle">Cut off</div>
       <div class="big mono" id="resPct">0%</div>
-      <div class="muted" id="resBigLbl">Peak share of the plat</div>
+      <div class="muted" id="resBigLbl">Peak share of the map</div>
       <div class="stats" id="resStats"></div>
       <div class="muted" id="resNote"></div>
       <div class="res-badges" id="resBadges" hidden></div>
@@ -463,6 +463,7 @@ function todayKey(){
 }
 function keyParts(k){const [y,m,d]=k.split('-').map(Number);return [y,m,d];}
 function keyAdd(k,n){const [y,m,d]=keyParts(k);return new Date(Date.UTC(y,m-1,d+n)).toISOString().slice(0,10);}
+function prelaunch(){return !!GRAB_START&&S.today<GRAB_START;}
 function platNo(k){const [y,m,d]=keyParts(k);return Math.round((Date.UTC(y,m-1,d)-EPOCH)/864e5)+1;}
 function keyLabel(k){const [y,m,d]=keyParts(k);return new Date(Date.UTC(y,m-1,d)).toLocaleDateString('en-US',{weekday:'long',month:'short',day:'numeric',timeZone:'UTC'});}
 function untilNext(){
@@ -1711,9 +1712,9 @@ function tornSheet(W,seed){
 }
 function mapTitle(){
   if(G.place)return {t:G.place.n,s:G.place.us?'State survey':'National survey'};
-  if(G.daily)return {t:`Daily Plat No. ${platNo(S.today)}`,s:keyLabel(S.today)};
-  if(G.opts&&G.opts.map==='daily')return {t:`Daily Plat No. ${platNo(S.today)}`,s:'Practice copy'};
-  return {t:'Practice Plat',s:'Uncharted ground'};
+  if(G.daily)return {t:`GeoGrabber · Day ${platNo(S.today)}`,s:keyLabel(S.today)};
+  if(G.opts&&G.opts.map==='daily')return {t:prelaunch()?'GeoGrabber · Preview':`GeoGrabber · Day ${platNo(S.today)}`,s:'Practice copy'};
+  return {t:'Practice Map',s:'Uncharted ground'};
 }
 function buildBase(T){
   const W=G.W,S=G.S,px=W*S;
@@ -2408,7 +2409,7 @@ function drawMini(T){
 
 /* ---------- badges ---------- */
 const BADGES=[
-  {id:'surveyor',icon:'🗺️',name:'Surveyor',levels:[1,7,30,100,365],unit:['daily played','dailies played'],names:['Apprentice','Field Hand','Surveyor','Chief Surveyor','Royal Geographer'],how:'Play the daily plat. Every day counts, in a row or not.'},
+  {id:'surveyor',icon:'🗺️',name:'Surveyor',levels:[1,7,30,100,365],unit:['daily played','dailies played'],names:['Apprentice','Field Hand','Surveyor','Chief Surveyor','Royal Geographer'],how:'Play the daily map. Every day counts, in a row or not.'},
   {id:'streak',icon:'🔥',name:'On a Roll',levels:[3,7,30,100,365],unit:['day in a row','days in a row'],names:['Warming Up','Heating Up','On Fire','Blazing','Inferno'],how:'Play the daily days in a row. Your longest run counts, so a missed day never takes a level away.'},
   {id:'champ',icon:'🥇',name:'Daily Champ',levels:[1,5,25,100],unit:['daily win','daily wins'],how:'Finish 1st on the daily board, on days with at least 2 players. Ties count for everyone tied. Days count once they are over.'},
   {id:'baron',icon:'🏰',name:'Land Baron',levels:[10,25,50,75,100],unit:['% of a map','% of a map'],names:['Homesteader','Squire','Baron','Duke','Emperor'],how:'Hold this much of the map at once, in any run.'},
@@ -2548,15 +2549,15 @@ function endGame(reason){
   S.profile.coins+=coins;if(peak>S.profile.best)S.profile.best=peak;
   const BR=recordRun(runFacts(win,false));saveProfile();
   if(G.daily)writeMyScore({pct:peak,kills:p.kills,status:'done',power:G.power||null,twist:G.twist||null,at:Date.now(),secs:Math.round(G.t)});
-  $('#resEyebrow').textContent=G.daily?`Daily plat No. ${platNo(S.today)}`:'Practice · Classic';
+  $('#resEyebrow').textContent=G.daily?`Daily map · Day ${platNo(S.today)}`:'Practice · Classic';
   if(G.place)$('#resEyebrow').textContent+=' · '+G.place.n;
   if(G.twistObj)$('#resEyebrow').textContent+=' · '+G.twistObj.name;
-  $('#resTitle').textContent=reason==='last'?'Last one standing':win?'You own the whole plat':reason==='time'?"Time's up":reason==='quit'?'Run ended':G.deathBy?`Cut off by ${G.deathBy}`:G.edgeKO?'Caught by the closing edge':'Run over';
-  $('#resPct').textContent=peak.toFixed(1)+'%';$('#resBigLbl').textContent='Peak share of the plat';
+  $('#resTitle').textContent=reason==='last'?'Last one standing':win?'You own the whole map':reason==='time'?"Time's up":reason==='quit'?'Run ended':G.deathBy?`Cut off by ${G.deathBy}`:G.edgeKO?'Caught by the closing edge':'Run over';
+  $('#resPct').textContent=peak.toFixed(1)+'%';$('#resBigLbl').textContent='Peak share of the map';
   const st=$('#resStats');st.innerHTML='';
   for(const [k,v] of [['Final',share(1).toFixed(1)+'%'],['Cut off',p.kills],['Coins',`+${coins}`],['Time',`${Math.floor(G.t/60)}:${String(Math.floor(G.t%60)).padStart(2,'0')}`]]){
     const d=document.createElement('div');const b=document.createElement('b');b.textContent=v;d.append(b,k);st.append(d);}
-  $('#resNote').textContent=reason==='last'?'Every rival is out. +100 bonus coins.'+(G.daily?' Your peak goes on the board.':''):win?(G.daily?'100% on the daily. That one goes on the board. +100 bonus coins.':'Every inch of land is yours. +100 bonus coins.'):G.daily?(S.db?'Saved to today\'s board. Come back tomorrow for a new plat.':'Saved on this device. Come back tomorrow for a new plat.'):'Practice runs don\'t count on the board.';
+  $('#resNote').textContent=reason==='last'?'Every rival is out. +100 bonus coins.'+(G.daily?' Your peak goes on the board.':''):win?(G.daily?'100% on the daily. That one goes on the board. +100 bonus coins.':'Every inch of land is yours. +100 bonus coins.'):G.daily?(S.db?'Saved to today\'s board. Come back tomorrow for a new map.':'Saved on this device. Come back tomorrow for a new map.'):'Practice runs don\'t count on the board.';
   if(X.note)$('#resNote').textContent+=' '+X.note;
   const acts=$('#resActions');acts.innerHTML='';
   const back=button('Back to home',win||G.daily?'btn primary':'btn',()=>quitToLobby());
@@ -2738,25 +2739,27 @@ function renderLobby(){
   const newDay=todayKey();if(newDay!==S.today){S.today=newDay;}
   $('#coinCount').textContent=S.profile.coins;$('#coinCount2').textContent=S.profile.coins;
   const cfg=drawPreview();
-  $('#platNo').textContent=`Daily plat · No. ${platNo(S.today)}`;
+  $('#platNo').textContent=prelaunch()?`Preview · Day 1 starts ${keyLabel(GRAB_START)}`:`Daily map · Day ${platNo(S.today)}`;
   $('#dailyTitle').textContent=keyLabel(S.today);
   $('#spec').textContent=`${cfg.size}×${cfg.size} · ${cfg.bots} rivals · ${cfg.ponds} ponds · 3:00`;
   {const tw=twistById(dailyTwist(S.today));$('#twistTag').hidden=!tw;if(tw){$('#twistName').textContent='Twist: '+tw.name;$('#twistDesc').textContent=tw.desc;}}
   const cta=$('#dailyCta');cta.innerHTML='';
-  const mine=myToday();
-  if(mine){
+  const mine=prelaunch()?null:myToday();
+  if(prelaunch()){
+    cta.append(button("Try today's map · practice",'btn primary big',()=>startGame(false,{...OPT_DEF,map:'daily',twist:'today'})));
+  }else if(mine){
     const box=document.createElement('div');box.className='played';
     const b=document.createElement('b');b.className='mono';b.textContent=(mine.pct||0).toFixed(1)+'%';
     const m=document.createElement('span');m.className='muted';
     const rank=todayRank();
-    m.textContent=(mine.status==='playing'?'Run interrupted, this score stands. ':'Your claim today. ')+(rank?`Rank ${rank[0]} of ${rank[1]}. `:'')+`Next plat in ${untilNext()}.`;
+    m.textContent=(mine.status==='playing'?'Run interrupted, this score stands. ':'Your claim today. ')+(rank?`Rank ${rank[0]} of ${rank[1]}. `:'')+`Next map in ${untilNext()}.`;
     box.append(b,m);cta.append(box);
   }else if(SITE&&!S.uid){
     cta.append(button('Pick your name to play','btn primary big',()=>openNamePanel()));
   }else if(S.boardState==='loading'){
     const b=button('Loading the board…','btn primary',()=>{});b.disabled=true;cta.append(b);
   }else{
-    cta.append(button("Play today's plat · one run",'btn primary big',()=>startGame(true)));
+    cta.append(button("Play today's map · one run",'btn primary big',()=>startGame(true)));
     // (one-run rule is shown on the button)
   }
   renderChips();renderBoard();renderBadgeStrip();
@@ -2803,7 +2806,7 @@ async function renderBoard(){
     rows=Object.entries(S.scores).map(([uid,doc])=>{let sum=0,n=0;for(const k of keys){const e=doc&&doc.days&&doc.days[k];if(e){sum+=e.pct||0;n++;}}return {uid,doc,sum,n};})
       .filter(r=>r.n>0).sort((a,b)=>b.sum-a.sum).map(r=>({uid:r.uid,doc:r.doc,main:r.sum.toFixed(1),sub:`${r.n}/7 days`}));
   }
-  if(!rows.length){box.innerHTML=`<div class="empty">${S.tab==='today'?'No one has played today\'s plat yet. Be the first.':'No daily runs in the last week yet.'}</div>`;return;}
+  if(!rows.length){box.innerHTML=`<div class="empty">${S.tab==='today'?'No one has played today\'s map yet. Be the first.':'No daily runs in the last week yet.'}</div>`;return;}
   let profiles={};
   if(S.user){try{profiles=await S.user.profiles(rows.map(r=>r.uid));}catch(e){}}
   box.innerHTML='';
