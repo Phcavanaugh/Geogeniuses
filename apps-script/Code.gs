@@ -22,6 +22,9 @@ function doGet(e) {
   if (action === 'history') return raw_(cached_('history', function () { return { ok: true, rows: getRows_(), shares: getShares_() }; }));
   // One player's game for one day, including where they tapped (for their profile).
   if (action === 'day') return json_(getDay_(String(e.parameter.player || ''), String(e.parameter.date || '')));
+  // GeoGrabber: the last 60 days of daily runs, and one player's coins/skins/badges.
+  if (action === 'grabBoard') return raw_(cached_('grab:' + today_(), function () { return { ok: true, today: today_(), rows: getGrabRows_(addDays_(today_(), -60)) }; }));
+  if (action === 'grabProfile') return json_(getGrabProfile_(String(e.parameter.player || '')));
   return json_({ ok: true, message: 'Good Globe Game scoreboard is running.' });
 }
 
@@ -32,6 +35,8 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents || '{}');
     if (body.action === 'share') return json_(saveShare_(body));
     if (body.action === 'addPlayer') return json_(addPlayer_(body));
+    if (body.action === 'grabSubmit') return json_(grabSubmit_(body));
+    if (body.action === 'grabSaveProfile') return json_(grabSaveProfile_(body));
     if (body.action !== 'submit') return json_({ ok: false, error: 'Unknown action.' });
 
     var player = String(body.player || '').trim();
@@ -113,7 +118,7 @@ function cached_(key, build, ttl) {
 // Clear the cache after anything is saved (the pieces left behind are simply ignored).
 function bust_() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['players:n', 'history:n', 'board:' + today_() + ':n']);
+  cache.removeAll(['players:n', 'history:n', 'board:' + today_() + ':n', 'grab:' + today_() + ':n']);
 }
 // Editing the Sheet by hand (adding a player, fixing a score) clears the cache too.
 function onEdit(e) { bust_(); }
@@ -167,6 +172,8 @@ function sheet_(name) {
     sh = ss.insertSheet(name);
     if (name === 'Players') { sh.appendRow(['Name']); sh.appendRow(['Pete']); }
     if (name === 'Shares') sh.appendRow(['Saved at', 'Date', 'Player']);
+    if (name === GRAB) sh.appendRow(['Saved at', 'Date', 'Player', 'Land %', 'Rivals cut', 'Status', 'Power-up', 'Twist', 'Seconds', 'Played at']);
+    if (name === GRAB_PROFILES) sh.appendRow(['Player', 'Updated', 'Coins', 'Profile (coins, skins, power-ups, badges)']);
     if (name === 'Scores') sh.appendRow(['Saved at', 'Date', 'Player', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Total', 'Q1 miles', 'Q2 miles', 'Q3 miles', 'Q4 miles', 'Q5 miles', 'Guesses']);
     sh.setFrozenRows(1);
   }
@@ -227,4 +234,81 @@ function json_(obj) {
 }
 
 /** Run this once from the editor (select "setup" and press Run) to create the tabs. */
-function setup() { sheet_('Players'); sheet_('Scores'); sheet_('Shares'); }
+function setup() { sheet_('Players'); sheet_('Scores'); sheet_('Shares'); sheet_(GRAB); sheet_(GRAB_PROFILES); }
+
+// ---------- GeoGrabber (geogeniuses.win/geograbber) ----------
+// One row per player per day. A run is saved as "playing" when it starts and updated when it ends,
+// so leaving mid-run still counts as that day's one run. A finished run is never overwritten.
+var GRAB = 'GeoGrabber';
+var GRAB_PROFILES = 'GeoGrabber profiles';
+function grabSubmit_(body) {
+  var player = String(body.player || '').trim();
+  var date = String(body.date || '');
+  var e = body.entry || {};
+  if (getPlayers_().indexOf(player) === -1) return { ok: false, error: 'That name isn\'t on the Players list.' };
+  if (date !== today_()) return { ok: false, error: 'Only today\'s plat counts for the board.' };
+  var pct = Number(e.pct), kills = Number(e.kills || 0), secs = Number(e.secs || 0), at = Number(e.at || 0);
+  var status = e.status === 'done' ? 'done' : 'playing';
+  if (!(pct >= 0 && pct <= 100) || !(kills >= 0 && kills <= 99) || !(secs >= 0 && secs <= 3600)) return { ok: false, error: 'That score doesn\'t look right.' };
+  var row = [new Date(), "'" + date, player, Math.round(pct * 10) / 10, Math.round(kills), status,
+    String(e.power || '').slice(0, 20), String(e.twist || '').slice(0, 20), Math.round(secs), at ? new Date(at) : ''];
+  var sh = sheet_(GRAB), n = sh.getLastRow() - 1;
+  if (n > 0) {
+    var keys = sh.getRange(2, 2, n, 5).getValues();
+    for (var i = keys.length - 1; i >= 0; i--) {
+      var d = keys[i][0] instanceof Date ? Utilities.formatDate(keys[i][0], TZ, 'yyyy-MM-dd') : String(keys[i][0]);
+      if (d !== date || String(keys[i][1]) !== player) continue;
+      if (String(keys[i][4]) === 'done') return { ok: true, duplicate: true };
+      if (status === 'playing' && pct < Number(keys[i][2])) return { ok: true, duplicate: true };
+      if (!row[9]) row[9] = sh.getRange(i + 2, 10).getValue();
+      sh.getRange(i + 2, 1, 1, row.length).setValues([row]);
+      bust_();
+      return { ok: true, updated: true };
+    }
+  }
+  sh.appendRow(row);
+  bust_();
+  return { ok: true };
+}
+function getGrabRows_(since) {
+  var sh = sheet_(GRAB);
+  if (sh.getLastRow() < 2) return [];
+  var out = [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, 10).getValues().forEach(function (r) {
+    var date = r[1] instanceof Date ? Utilities.formatDate(r[1], TZ, 'yyyy-MM-dd') : String(r[1]);
+    if (date < since) return;
+    out.push({ date: date, player: String(r[2]), pct: Number(r[3]) || 0, kills: Number(r[4]) || 0, status: String(r[5]),
+      power: String(r[6] || '') || null, twist: String(r[7] || '') || null, secs: Number(r[8]) || 0,
+      at: r[9] instanceof Date ? r[9].getTime() : (r[0] instanceof Date ? r[0].getTime() : 0) });
+  });
+  return out;
+}
+function getGrabProfile_(player) {
+  if (!player) return { ok: false };
+  var sh = sheet_(GRAB_PROFILES);
+  if (sh.getLastRow() < 2) return { ok: true, profile: null };
+  var vals = sh.getRange(2, 1, sh.getLastRow() - 1, 4).getValues();
+  for (var i = 0; i < vals.length; i++) {
+    if (String(vals[i][0]) !== player) continue;
+    try { return { ok: true, profile: JSON.parse(vals[i][3]) }; } catch (err) { return { ok: true, profile: null }; }
+  }
+  return { ok: true, profile: null };
+}
+function grabSaveProfile_(body) {
+  var player = String(body.player || '').trim();
+  if (getPlayers_().indexOf(player) === -1) return { ok: false, error: 'That name isn\'t on the Players list.' };
+  var str = JSON.stringify(body.profile || {});
+  if (str.length > 45000) return { ok: false, error: 'Profile is too big.' };
+  var coins = Number((body.profile || {}).coins) || 0;
+  var sh = sheet_(GRAB_PROFILES), n = sh.getLastRow() - 1;
+  if (n > 0) {
+    var names = sh.getRange(2, 1, n, 1).getValues();
+    for (var i = 0; i < names.length; i++) {
+      if (String(names[i][0]) !== player) continue;
+      sh.getRange(i + 2, 1, 1, 4).setValues([[player, new Date(), coins, str]]);
+      return { ok: true };
+    }
+  }
+  sh.appendRow([player, new Date(), coins, str]);
+  return { ok: true };
+}

@@ -54,3 +54,13 @@ Before you start, unzip `good-globe-game.zip` somewhere easy to find, like your 
 - **Esri key (optional, recommended):** create a free account at developers.arcgis.com, make an API key with the *Basemaps* privilege, restrict it to your github.io address, and paste it into `GGG_ESRI_KEY` in config.js.
 - **Honor system:** anyone with the link could technically pick someone else's name. Only the first play of the day counts, and scores can only be submitted for today.
 - **The question bank** is in `questions.json` and covers 90 days from the start date. When it's time for more, send me the file and I'll extend it.
+
+---
+
+## GeoGrabber (geogeniuses.win/geograbber)
+
+- **What it is:** a second daily game in the `geograbber` folder. It uses the same Players list and the same Apps Script web app as GeoGeniuses, so nobody signs in again.
+- **Where its data goes:** the script adds two tabs on its own the first time someone plays: **GeoGrabber** (one row per player per day) and **GeoGrabber profiles** (each player's coins, skins, power-ups and badges).
+- **Launch day:** `GRAB_START_DATE` in config.js is Plat No. 1. The GeoGrabber card on the score page stays hidden until that day.
+- **Practice options:** hidden on the live site. To bring back every option (modes, real places, twists), add `window.GRAB_SHOW_OPTIONS = true;` to config.js.
+- **One run a day:** a run is saved as soon as it starts, so quitting or closing the page still counts as that day's run.
