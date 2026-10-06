@@ -407,3 +407,23 @@ p.muted{margin:0 16px 16px}
 .grab-card.played .gc-top{align-items:center}
 .grab-card.played{box-shadow:0 0 24px rgba(255,201,77,.12)}
 @media (prefers-reduced-motion:reduce){.grab-card::before{animation:none;display:none}}
+
+/* ---------- GeoGrabber invitation after today's score ---------- */
+.gp-dim{position:fixed;inset:0;background:rgba(2,6,14,.7);z-index:50;opacity:0;transition:opacity .3s}
+.gp-dim.show{opacity:1}
+.gp-dim[hidden],.gp[hidden]{display:none}
+.gp{position:fixed;left:50%;top:50%;z-index:51;width:min(340px,calc(100% - 32px));transform:translate(-50%,-46%) scale(.94);opacity:0;
+  transition:transform .35s cubic-bezier(.2,1.3,.4,1),opacity .25s;padding:22px 20px 14px;border-radius:26px;text-align:center;overflow:hidden;
+  background:linear-gradient(165deg,rgba(255,201,77,.22),rgba(255,201,77,0) 55%),#0d1a2e;border:1.5px solid rgba(255,201,77,.6);box-shadow:0 0 50px rgba(255,201,77,.25),0 24px 60px rgba(0,0,0,.6)}
+.gp.show{transform:translate(-50%,-50%) scale(1);opacity:1}
+.gp::before{content:"";position:absolute;inset:-40% -60%;background:linear-gradient(105deg,transparent 42%,rgba(255,255,255,.1) 50%,transparent 58%);animation:sheen 4.2s ease-in-out infinite;pointer-events:none}
+.gp-art{position:relative;display:block;width:168px;height:168px;margin:0 auto 14px;border-radius:24px;border:1px solid rgba(255,255,255,.14);animation:gpBob 3s ease-in-out infinite}
+@keyframes gpBob{0%,100%{transform:translateY(0) rotate(-1deg)}50%{transform:translateY(-5px) rotate(1deg)}}
+.gp-title{position:relative;margin:8px 0 6px;font:800 24px/1.1 var(--display);letter-spacing:-.03em;color:#fff}
+.gp-body{position:relative;margin:0 0 4px;font-size:15px;line-height:1.4;color:var(--ink-2)}
+.gp-body b{color:#fff}
+.gp-who{justify-content:center;margin:10px 0 0}
+.gp .gc-btn{margin-top:16px}
+.gp-later{position:relative;margin-top:6px;width:100%;height:44px;border:0;background:none;color:var(--muted);font:600 14.5px/1 var(--body)}
+.gp-later:hover{color:var(--ink)}
+@media (prefers-reduced-motion:reduce){.gp,.gp-dim{transition:none}.gp-art,.gp::before{animation:none}}

@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=39">
+<link rel="stylesheet" href="style.css?v=40">
 </head>
 <body>
 <div id="app">
@@ -158,15 +158,25 @@
     <div id="sheetExtra" hidden></div>
     <div id="sheetHolders" class="holders"></div>
   </div>
+  <div id="gpDim" class="gp-dim" hidden></div>
+  <div id="grabPop" class="gp" hidden role="dialog" aria-modal="true" aria-labelledby="gpTitle" aria-describedby="gpBody">
+    <img class="gp-art" src="geograbber/painter.jpg" width="168" height="168" alt="The GeoGenius guy painting a spinning globe">
+    <div id="gpEyebrow" class="gc-eyebrow">New daily game</div>
+    <h2 id="gpTitle" class="gp-title">Got 3 more minutes?</h2>
+    <p id="gpBody" class="gp-body">Try <b>GeoGrabber</b>: paint the map and steal your friends' turf. One run a day.</p>
+    <div id="gpWho" class="gc-who gp-who" hidden></div>
+    <a id="gpGo" class="gc-btn" href="geograbber/">Play GeoGrabber<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+    <button id="gpLater" class="gp-later" type="button">Maybe later</button>
+  </div>
   <div id="toast" class="toast" hidden role="status"></div>
 
   <div id="demo" class="demo" hidden>Demo mode — scores are only saved on this device.</div>
 </div>
-<script src="config.js?v=39"></script>
+<script src="config.js?v=40"></script>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
-<script src="badge-art.js?v=39"></script>
-<script src="app.js?v=39"></script>
+<script src="badge-art.js?v=40"></script>
+<script src="app.js?v=40"></script>
 </body>
 </html>

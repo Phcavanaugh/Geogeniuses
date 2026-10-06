@@ -1489,14 +1489,53 @@
       card.hidden = false;
     };
     set(null, []);
-    if (!API) return;
-    try {
-      const res = await (await fetch(API + "?action=grabBoard")).json();
-      const rows = (res.rows || []).filter((r) => r.date === today)
-        .sort((a, b) => (b.pct || 0) - (a.pct || 0) || (b.kills || 0) - (a.kills || 0) || (a.at || 0) - (b.at || 0));
-      set(rows.find((r) => r.player === player) || null, rows);
-    } catch (e) { /* the card still links to the game */ }
+    let mine = null, rows = [];
+    if (API) {
+      try {
+        const res = await (await fetch(API + "?action=grabBoard")).json();
+        rows = (res.rows || []).filter((r) => r.date === today)
+          .sort((a, b) => (b.pct || 0) - (a.pct || 0) || (b.kills || 0) - (a.kills || 0) || (a.at || 0) - (b.at || 0));
+        mine = rows.find((r) => r.player === player) || null;
+        set(mine, rows);
+      } catch (e) { /* the card still links to the game */ }
+    }
+    if (!mine) askGrab(plat, rows.map((r) => r.player));
   }
+
+  // Once a day, after today's score, invite people who haven't played GeoGrabber yet.
+  const GRAB_ASK_KEY = "ggg:grabAsk";
+  function askGrab(day, others) {
+    const today = todayCentral();
+    if (!session || session.practice || session.date !== today) return;
+    if (store.get(GRAB_ASK_KEY) === today) return;
+    setTimeout(() => {
+      if ($("doneScreen").hidden || !$("sheet").hidden || !$("grabPop").hidden) return;
+      store.set(GRAB_ASK_KEY, today);
+      $("gpEyebrow").textContent = day <= 7 ? "New daily game · Day " + day : "GeoGrabber · Day " + day;
+      const who = $("gpWho"); who.innerHTML = "";
+      who.hidden = !others.length;
+      if (others.length) {
+        const stack = document.createElement("span"); stack.className = "stack";
+        others.slice(0, 3).forEach((n) => stack.appendChild(avatar(n)));
+        const t = document.createElement("span"), names = others.slice(0, 2), more = others.length - names.length;
+        t.textContent = (more > 0 ? names.join(", ") + " and " + more + (more === 1 ? " other" : " others") : names.join(" and ")) + (others.length === 1 ? " has" : " have") + " played today";
+        who.append(stack, t);
+      }
+      const pop = $("grabPop"), dim = $("gpDim");
+      pop.hidden = false; dim.hidden = false;
+      requestAnimationFrame(() => { pop.classList.add("show"); dim.classList.add("show"); });
+      $("gpGo").focus();
+    }, 1800);
+  }
+  function closeGrabAsk() {
+    const pop = $("grabPop"), dim = $("gpDim");
+    if (pop.hidden) return;
+    pop.classList.remove("show"); dim.classList.remove("show");
+    setTimeout(() => { pop.hidden = true; dim.hidden = true; }, 260);
+  }
+  $("gpLater").onclick = closeGrabAsk;
+  $("gpDim").onclick = closeGrabAsk;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeGrabAsk(); });
 
   async function loadBoard() {
     $("boardList").innerHTML = '<li class="muted">Loading…</li>';
