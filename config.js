@@ -10,4 +10,4 @@ window.GGG_START_DATE = "2026-09-24";
 
 // 3. GeoGrabber (geogeniuses.win/geograbber): the day of Plat No. 1, as YYYY-MM-DD (Central time).
 //    The GeoGrabber card on the score page stays hidden until this day.
-window.GRAB_START_DATE = "2026-10-06";
+window.GRAB_START_DATE = "2026-10-05";
