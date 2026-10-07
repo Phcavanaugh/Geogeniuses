@@ -783,7 +783,7 @@ function startGame(daily,opts){
     rng:rngFrom(seed+':ai'),t:0,cd:3.2,over:false,peak:0,claimable,power,daily,flash:null,parts:[],last:0,miniT:0,
     tiles:{},theme:null,themeT:0,terrDirty:true,floods:[],floats:[],stains:[],drops:[],shake:0,rt:0,view:null,terr:[],pondPath:null,items:[],itemT:2,zoom:1,
     opts,mode:opts.mode,itemsMode:twist==='frenzy'?'lots':twist==='bare'?'none':opts.items,held:new Float64Array(64),
-    twist,twistObj:twistById(twist),mg:0,place,target:daily?'none':opts.target,bounty:0,bountyNext:4,bountyCoins:0,bountyCount:0,landmark:null,shrinkNext:30,shrinkWarned:false,edgeKO:false,
+    twist,twistObj:twistById(twist),mg:0,place,target:daily?'none':opts.target,bounty:0,bountyNext:4,bountyCoins:0,bountyCount:0,landmarks:[],shrinkNext:30,shrinkWarned:false,edgeKO:false,
     timeLimit:daily?DAILY_SECONDS:opts.mode==='flag'?(opts.clock==='none'?180:+opts.clock):(opts.clock==='none'?0:+opts.clock)};
   {const pp=buildPaths(i=>G.blocked[i]?1:0,1,true,place?4:2);G.pondPath=pp[1]||new Path2D();G.pondEdge=pp.edges[1]||new Path2D();}
   G.S=Math.max(4,Math.min(8,Math.floor(1800/W)));G.lastOwner=null;G.torn=tornSheet(W,seed);
@@ -809,10 +809,21 @@ function startGame(daily,opts){
   $('.hud-of').textContent=G.mode==='flag'?'time with the flag':twist==='gold'?'of the land value is yours':'of the land is yours';
   $('#mini').hidden=twist==='fog';
   if(G.target==='landmark'||G.target==='both'){
-    let lx,ly,name;
-    if(place){lx=place.cx*F+1.5;ly=place.cy*F+1.5;name=place.cap;}
-    else{const c=nearestFree(W*(.3+G.rng()*.4),W*(.3+G.rng()*.4));lx=c[0];ly=c[1];name='Landmark';}
-    const c=nearestFree(lx,ly);G.landmark={x:c[0],y:c[1],name};
+    // five landmarks, spread out; holding one when the run ends adds its value to your score
+    const LM=[[25,place?place.cap:'Grand Monument'],[20,'Lighthouse'],[15,'Observatory'],[10,'Old Mill'],[5,'Wishing Well']];
+    const far=(x,y,d)=>G.landmarks.every(L=>Math.hypot(L.x-x,L.y-y)>=d);
+    for(const [val,name] of LM){
+      let best=null;
+      for(let tries=0;tries<60&&!best;tries++){
+        let lx,ly;
+        if(val===25&&place&&!tries){lx=place.cx*F+1.5;ly=place.cy*F+1.5;}
+        else{lx=W*(.12+G.rng()*.76);ly=W*(.12+G.rng()*.76);}
+        const c=nearestFree(lx,ly);if(!c)continue;
+        if(G.owner[Math.floor(c[1])*W+Math.floor(c[0])])continue; // not inside anyone's starting turf
+        if(far(c[0],c[1],W*(tries<40?.2:.1)))best=c;
+      }
+      if(best)G.landmarks.push({x:best[0],y:best[1],name,val});
+    }
   }
   $('#cdTip').textContent=[place?place.n:'',G.twistObj?`${G.twistObj.name}: ${G.twistObj.desc}`:''].filter(Boolean).join(' · ')||'Drag, point, or use the arrow keys';
   if(power)saveProfile();
@@ -1515,7 +1526,7 @@ function updateHud(){
     if(G.peak-pct>.5)C('','',`Peak ${G.peak.toFixed(1)}%`);
   }
   if(p.kills)C('','✕',`${p.kills} cut off`);
-  if(G.landmark){const o=G.owner[Math.floor(G.landmark.y)*G.W+Math.floor(G.landmark.x)];C(o===1?'green':'gold','★',`${G.landmark.name}: ${o===1?'yours':o?entById(o).name+"'s":'open'}`);}
+  if(G.landmarks.length){const h=landmarksHeld();C(h.n?'green':'gold','★',`Landmarks ${h.n}/${G.landmarks.length}`+(h.n?` · +${h.val}%`:''));}
   if(G.bounty)C('gold','◎',`Wanted: ${entById(G.bounty).name}`);
   if(G.twist==='shrink'&&G.mg<maxMargin()){const n=Math.max(0,Math.ceil(G.shrinkNext-G.t));C(n<=5?'red':'','',`Edge in ${n}s`);}
   if(p.shield)C('','◯','Shield');
@@ -1687,9 +1698,9 @@ function render(dt){
   drawEffects(dt);
   // brush-stroke trails
   for(const e of G.ents)if(e.alive&&e.pts.length)drawTrail(e);
-  if(G.landmark){ // landmark pin
-    const L=G.landmark,o=G.owner[Math.floor(L.y)*W+Math.floor(L.x)],col=o?entById(o).color:'#ffffff';
-    ctx.save();ctx.translate(L.x,L.y);
+  for(const L of G.landmarks){ // landmark pins: bigger pin for a bigger prize
+    const o=G.owner[Math.floor(L.y)*W+Math.floor(L.x)],col=o?entById(o).color:'#ffffff',sc=.8+L.val/50;
+    ctx.save();ctx.translate(L.x,L.y);ctx.scale(sc,sc);
     ctx.fillStyle='rgba(10,20,30,.3)';ctx.beginPath();ctx.ellipse(0,.3,1.6,.55,0,0,Math.PI*2);ctx.fill();
     ctx.strokeStyle='#ffffff';ctx.lineWidth=.5;ctx.fillStyle='#10151f';ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-1.1,-2.2);ctx.arc(0,-2.6,1.25,Math.PI*.82,Math.PI*.18);ctx.closePath();ctx.stroke();ctx.fill();
     ctx.fillStyle=col;ctx.beginPath();for(let k=0;k<10;k++){const r=k%2?.38:.85,a=-Math.PI/2+k*Math.PI/5;ctx.lineTo(Math.cos(a)*r,-2.6+Math.sin(a)*r);}ctx.closePath();ctx.fill();
@@ -1746,7 +1757,7 @@ function render(dt){
      const wanted=G.bounty===e.id,text=(wanted?'★ ':'')+(e.isPlayer?'You':e.name)+(e.styleName?` · ${e.styleName}`:'');
      const d=Math.hypot(sx-G.headSX,sy-G.headSY),a=e.isPlayer||wanted?1:Math.max(.35,Math.min(1,1.6-d/far));
      labs.push({x:sx,y:sy,text,w:ctx.measureText(text).width,col:wanted?'#ffd98a':'#ffffff',a,pri:e.isPlayer?0:wanted?1:2+d});}
-   if(G.landmark){const L=G.landmark,sx=ox+L.x*cs,sy=oy+(L.y-4.2)*cs;if(sx>-80&&sy>-20&&sx<w+80&&sy<h+20){const text='★ '+L.name;labs.push({x:sx,y:sy,text,w:ctx.measureText(text).width,col:'#ffd98a',a:1,pri:1.5});}}
+   for(const L of G.landmarks){const sx=ox+L.x*cs,sy=oy+(L.y-2.6-(.8+L.val/50)*1.6)*cs;if(sx>-80&&sy>-20&&sx<w+80&&sy<h+20){const o=G.owner[Math.floor(L.y)*G.W+Math.floor(L.x)];const text=`★ ${L.val}%`+(o===1?' ✓':'');labs.push({x:sx,y:sy,text,w:ctx.measureText(text).width,col:o===1?'#9ff0b8':'#ffd98a',a:1,pri:1.5});}}
    labs.sort((p,q)=>p.pri-q.pri);const placed=[];
    for(const l of labs){
      for(let k=0;k<6;k++){const hit=placed.find(q=>Math.abs(q.x-l.x)<(q.w+l.w)/2+4&&Math.abs(q.y-l.y)<14);if(!hit)break;l.y=hit.y-15;}
@@ -2157,7 +2168,7 @@ function drawMini(T){
     d[i*4]=c[0];d[i*4+1]=c[1];d[i*4+2]=c[2];d[i*4+3]=255;}
   const off=drawMini.off||(drawMini.off=document.createElement('canvas'));off.width=off.height=W;off.getContext('2d').putImageData(img,0,0);
   mctx.imageSmoothingEnabled=true;mctx.clearRect(0,0,112,112);mctx.drawImage(off,0,0,112,112);
-  if(G.landmark){mctx.fillStyle='#ffd98a';mctx.strokeStyle='#10151f';mctx.lineWidth=1.2;mctx.beginPath();mctx.rect(G.landmark.x/W*112-3,G.landmark.y/W*112-3,6,6);mctx.fill();mctx.stroke();}
+  for(const L of G.landmarks){const r=2+L.val/10;mctx.fillStyle='#ffd98a';mctx.strokeStyle='#10151f';mctx.lineWidth=1.2;mctx.beginPath();mctx.rect(L.x/W*112-r,L.y/W*112-r,r*2,r*2);mctx.fill();mctx.stroke();}
   if(G.bounty){const b=entById(G.bounty);if(b.alive){mctx.strokeStyle='#ffc94d';mctx.lineWidth=1.6;mctx.beginPath();mctx.arc(b.x/W*112,b.y/W*112,4.5,0,Math.PI*2);mctx.stroke();}}
   for(const it of G.items){mctx.fillStyle=ITEM_TYPES.find(x=>x.id===it.type).color;mctx.beginPath();mctx.arc(it.x/W*112,it.y/W*112,2.5,0,Math.PI*2);mctx.fill();}
   if(G.mode==='flag'){const f=G.flag;mctx.fillStyle='#ffc94d';mctx.strokeStyle='#10151f';mctx.lineWidth=1.5;mctx.beginPath();mctx.arc(f.x/W*112,f.y/W*112,4,0,Math.PI*2);mctx.fill();mctx.stroke();}
@@ -2592,7 +2603,7 @@ const BADGES=[
   {id:'conquer',icon:'👑',name:'Conqueror',levels:[1,5,25,100],unit:['win','wins'],how:'Own the whole map, or be the last one standing.'},
   {id:'flag',icon:'🚩',name:'Flag Bearer',levels:[1,5,25,100],unit:['Flag rush win','Flag rush wins'],how:'Hold the flag at the buzzer in Flag rush, or have held it longest if it is loose.'},
   {id:'bounty',icon:'🎯',name:'Bounty Hunter',levels:[1,10,50,200],unit:['bounty','bounties'],how:'Cut off the wanted rival when Targets includes a bounty.'},
-  {id:'capital',icon:'📍',name:'Capital Gains',levels:[1,10,50,200],unit:['landmark held','landmarks held'],how:'Hold the landmark (the capital on real places) when the run ends.'},
+  {id:'capital',icon:'📍',name:'Capital Gains',levels:[1,10,50,200],unit:['landmark held','landmarks held'],how:'Hold landmarks when a run ends (Targets: Landmarks in practice). Each one held counts.'},
   {id:'globe',icon:'🌍',name:'Globetrotter',levels:[3,10,20,37],unit:['place played','places played'],how:'Play on real countries and states. Each place counts once.'},
   {id:'twist',icon:'🌀',name:'Twist Collector',levels:[3,6,9],unit:['twist tried','twists tried'],how:'Play runs with different twists, in the daily or in practice.'},
   {id:'keeper',icon:'⏱️',name:'Flag Keeper',levels:[1,10,60,300],unit:['minute with the flag','minutes with the flag'],how:'Total time holding the flag in Flag rush.'},
@@ -2641,7 +2652,7 @@ function medal(b,level,size){
 function recordRun(o){
   const before=badgeData(),st=S.profile.stats;
   st.runs++;st.cuts+=o.cuts;st.best=Math.max(st.best,o.peak);st.landSum=Math.round((st.landSum+o.peak)*10)/10;
-  if(o.win)st.wins++;if(o.flagWin)st.flagWins++;st.bounties+=o.bounties;if(o.landmark)st.landmarks++;
+  if(o.win)st.wins++;if(o.flagWin)st.flagWins++;st.bounties+=o.bounties;st.landmarks+=(+o.landmark||0);
   if(o.place&&!st.places.includes(o.place))st.places.push(o.place);
   if(o.twist&&!st.twists.includes(o.twist))st.twists.push(o.twist);
   st.topMph=Math.max(st.topMph,o.mph||0);st.flagSecs+=o.flagSecs||0;st.goldFields+=o.goldFields||0;
@@ -2657,8 +2668,8 @@ function goldHeld(){
   return n;
 }
 function runFacts(win,flagWin){
-  const lm=G.landmark&&G.owner[Math.floor(G.landmark.y)*G.W+Math.floor(G.landmark.x)]===1&&G.player.alive;
-  return {cuts:G.player.kills,peak:Math.round(G.peak*10)/10,win,flagWin,bounties:G.bountyCount||0,landmark:!!lm,
+  const lm=G.player.alive?landmarksHeld().n:0;
+  return {cuts:G.player.kills,peak:Math.round(G.peak*10)/10,win,flagWin,bounties:G.bountyCount||0,landmark:lm,
     place:G.place?G.place.n:null,twist:G.twist||null,mph:G.maxMph||0,daily:G.daily,
     flagSecs:G.mode==='flag'?Math.floor(G.held[1]):0,goldFields:goldHeld()};
 }
@@ -2727,7 +2738,8 @@ function endGame(reason){
   if(G.place)$('#resEyebrow').textContent+=' · '+G.place.n;
   if(G.twistObj)$('#resEyebrow').textContent+=' · '+G.twistObj.name;
   $('#resTitle').textContent=reason==='last'?'Last one standing':win?'You own the whole map':reason==='time'?"Time's up":reason==='quit'?'Run ended':G.deathBy?`Cut off by ${G.deathBy}`:G.edgeKO?'Caught by the closing edge':'Run over';
-  $('#resPct').textContent=peak.toFixed(1)+'%';$('#resBigLbl').textContent='Peak share of the map';
+  if(X.bonus){$('#resPct').textContent=Math.min(100,peak+X.bonus).toFixed(1)+'%';$('#resBigLbl').textContent=`Peak share ${peak.toFixed(1)}% + landmarks ${X.bonus}%`;}
+  else{$('#resPct').textContent=peak.toFixed(1)+'%';$('#resBigLbl').textContent='Peak share of the map';}
   const st=$('#resStats');st.innerHTML='';
   for(const [k,v] of [['Final',share(1).toFixed(1)+'%'],['Cut off',p.kills],['Coins',`+${coins}`],['Time',`${Math.floor(G.t/60)}:${String(Math.floor(G.t%60)).padStart(2,'0')}`]]){
     const d=document.createElement('div');const b=document.createElement('b');b.textContent=v;d.append(b,k);st.append(d);}
@@ -2757,13 +2769,19 @@ function drawConfetti(dt){
     if(c.y>h+20){c.y=-20;c.vy=80+Math.random()*120;}
     ctx.save();ctx.translate(c.x,c.y);ctx.rotate(c.r);ctx.fillStyle=c.c;ctx.fillRect(-c.s/2,-c.s/4,c.s,c.s/2);ctx.restore();}
 }
+function landmarksHeld(){
+  const out={n:0,val:0,names:[]};
+  for(const L of G.landmarks)if(G.owner[Math.floor(L.y)*G.W+Math.floor(L.x)]===1){out.n++;out.val+=L.val;out.names.push(`${L.name} ${L.val}%`);}
+  return out;
+}
 function targetExtras(){
   let coins=G.bountyCoins,notes=[];
   if(G.bountyCount)notes.push(`Bounties collected: ${G.bountyCount} (+${G.bountyCoins} coins).`);
-  if(G.landmark){const o=G.owner[Math.floor(G.landmark.y)*G.W+Math.floor(G.landmark.x)];
-    if(o===1&&G.player.alive){coins+=50;notes.push(`You held ${G.landmark.name} at the end (+50 coins).`);}
-    else notes.push(`${G.landmark.name} ended up ${o?(o===1?'yours, but you were out':entById(o).name+"'s"):'unclaimed'}.`);}
-  return {coins,note:notes.join(' ')};
+  let bonus=0;
+  if(G.landmarks.length){const h=landmarksHeld();
+    if(h.n&&G.player.alive){bonus=h.val;coins+=h.val*2;notes.push(`Landmarks held at the end: ${h.names.join(', ')} (+${h.val}% to your score, +${h.val*2} coins).`);}
+    else notes.push(h.n?'You held landmarks, but you were out at the end.':'No landmarks held at the end.');}
+  return {coins,note:notes.join(' '),bonus};
 }
 function endFlag(){
   const p=G.player,f=G.flag;
@@ -3006,7 +3024,7 @@ function optHint(){
   if(o.map==='daily')h.push("Today's daily map keeps its own size and rivals.");
   if(o.map.startsWith('place:'))h.push((o.map==='place:random'?'A random country or US state':o.map.slice(6))+': the sea is off-limits and the size is set by the shape.');
   if(o.style!=='classic')h.push({mixed:'Rivals get a mix of styles: hunters chase your line, turtles stay home, sprinters take big risky loops, collectors grab pickups.',hunter:'Every rival is a hunter: they come after your line.',turtle:'Every rival is a turtle: small, safe loops close to home.',sprinter:'Every rival is a sprinter: long, risky loops.',collector:'Every rival is a collector: they go for the pickups.'}[o.style]);
-  if(o.target!=='none')h.push({bounty:'Bounty: one rival is wanted. Cut them off for +40 coins.',landmark:'Landmark: hold the marked spot (the capital on real places) when the run ends for +50 coins.',both:'Bounty and landmark: cut off the wanted rival for +40 coins, and hold the marked spot at the end for +50.'}[o.target]);
+  if(o.target!=='none')h.push({bounty:'Bounty: one rival is wanted. Cut them off for +40 coins.',landmark:'Landmarks: five starred spots worth 25%, 20%, 15%, 10% and 5%. Each one you hold when the run ends adds its value to your score (and 2 coins per point).',both:'Bounty and landmarks: cut off the wanted rival for +40 coins, and hold any of the five starred spots at the end to add 25%, 20%, 15%, 10% or 5% to your score.'}[o.target]);
   const tid=o.twist==='today'?dailyTwist(S.today):o.twist,tw=twistById(tid);
   if(o.twist==='today'&&!tw)h.push('No twist today. Daily twists start tomorrow.');
   else if(o.twist==='random')h.push('Random twist: a surprise each run.');
