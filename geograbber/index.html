@@ -337,7 +337,9 @@ details>summary::-webkit-details-marker{display:none}
     <details class="opt-wrap" id="optWrap">
       <summary>Options</summary>
     <div class="opts">
-      <label for="optMode">Mode<select id="optMode"><option value="classic">Classic</option><option value="flag">Flag rush</option></select></label>
+      <label for="optMode">Mode<select id="optMode"><option value="classic">Classic</option><option value="flag">Flag rush</option><option value="team">Team flag</option></select></label>
+      <label for="optCaps" class="team-only">Captures to win<select id="optCaps"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="none">No cap (clock decides)</option></select></label>
+      <label for="optJail" class="team-only">Whole team jailed<select id="optJail"><option value="lose">That team loses</option><option value="release">Jail opens after 10s</option></select></label>
       <label for="optMap">Map<select id="optMap"><option value="random">Random shapes</option><option value="daily">Today's daily map</option><option value="place:random">Random real place</option><optgroup label="Countries"><option value="place:Argentina">Argentina</option><option value="place:Australia">Australia</option><option value="place:Brazil">Brazil</option><option value="place:Egypt">Egypt</option><option value="place:France">France</option><option value="place:Germany">Germany</option><option value="place:Great Britain">Great Britain</option><option value="place:Greece">Greece</option><option value="place:Iceland">Iceland</option><option value="place:India">India</option><option value="place:Ireland">Ireland</option><option value="place:Italy">Italy</option><option value="place:Japan">Japan</option><option value="place:Madagascar">Madagascar</option><option value="place:Mexico">Mexico</option><option value="place:New Zealand">New Zealand</option><option value="place:Norway">Norway</option><option value="place:Peru">Peru</option><option value="place:South Africa">South Africa</option><option value="place:Spain">Spain</option><option value="place:Sweden">Sweden</option><option value="place:Turkey">Turkey</option></optgroup><optgroup label="US states"><option value="place:Alaska">Alaska</option><option value="place:California">California</option><option value="place:Colorado">Colorado</option><option value="place:Florida">Florida</option><option value="place:Idaho">Idaho</option><option value="place:Illinois">Illinois</option><option value="place:Louisiana">Louisiana</option><option value="place:Maine">Maine</option><option value="place:Massachusetts">Massachusetts</option><option value="place:Michigan">Michigan</option><option value="place:Minnesota">Minnesota</option><option value="place:New York">New York</option><option value="place:Oklahoma">Oklahoma</option><option value="place:Tennessee">Tennessee</option><option value="place:Texas">Texas</option></optgroup></select></label>
       <label for="optSize">Size<select id="optSize"><option value="auto">Auto</option><option value="56">Small</option><option value="64">Medium</option><option value="72">Large</option></select></label>
       <label for="optRivals">Rivals<select id="optRivals"><option value="auto">Auto</option><option value="3">3</option><option value="6">6</option><option value="9">9</option><option value="12">12</option><option value="15">15</option></select></label>
@@ -769,7 +771,8 @@ function startGame(daily,opts){
   let place=null;
   if(!daily&&opts.map.startsWith('place:'))place=opts.map==='place:random'?PLACES[Math.floor(Math.random()*PLACES.length)]:placeByName(opts.map.slice(6));
   if(place){cfg.place=place;cfg.size=72;cfg.ponds=0;}
-  const twist=daily||opts.twist==='today'?dailyTwist(S.today):opts.twist==='random'?TWISTS[Math.floor(Math.random()*TWISTS.length)].id:twistById(opts.twist)?opts.twist:null;
+  let twist=daily||opts.twist==='today'?dailyTwist(S.today):opts.twist==='random'?TWISTS[Math.floor(Math.random()*TWISTS.length)].id:twistById(opts.twist)?opts.twist:null;
+  const team=!daily&&opts.mode==='team';if(team){twist=null;opts={...opts,target:'none'};}
   applyTwistCfg(cfg,twist);
   if(place)cfg.bots=Math.min(cfg.bots,Math.max(2,Math.floor(place.room/45)));
   const map=buildMap(cfg);
@@ -784,13 +787,14 @@ function startGame(daily,opts){
     tiles:{},theme:null,themeT:0,terrDirty:true,floods:[],floats:[],stains:[],drops:[],shake:0,rt:0,view:null,terr:[],pondPath:null,items:[],itemT:2,zoom:1,
     opts,mode:opts.mode,itemsMode:twist==='frenzy'?'lots':twist==='bare'?'none':opts.items,held:new Float64Array(64),
     twist,twistObj:twistById(twist),mg:0,place,target:daily?'none':opts.target,bounty:0,bountyNext:4,bountyCoins:0,bountyCount:0,landmarks:[],shrinkNext:30,shrinkWarned:false,edgeKO:false,
-    timeLimit:daily?DAILY_SECONDS:opts.mode==='flag'?(opts.clock==='none'?180:+opts.clock):(opts.clock==='none'?0:+opts.clock)};
+    timeLimit:daily?DAILY_SECONDS:opts.mode==='flag'?(opts.clock==='none'?180:+opts.clock):opts.mode==='team'?(opts.clock==='none'?(opts.caps==='none'?300:0):+opts.clock):(opts.clock==='none'?0:+opts.clock)};
   {const pp=buildPaths(i=>G.blocked[i]?1:0,1,true,place?4:2);G.pondPath=pp[1]||new Path2D();G.pondEdge=pp.edges[1]||new Path2D();}
   G.S=Math.max(4,Math.min(8,Math.floor(1800/W)));G.lastOwner=null;G.torn=tornSheet(W,seed);
   const botColors=map.colors.filter(c=>dist(c,skin.color)>90);
   const player={id:1,name:S.profile.nick||'You',isPlayer:true,color:skin.color,pattern:skin.pattern,skinId:skin.id,speed:19,turn:9,
     shield:power==='shield'?1:0,turboUntil:power==='turbo'?45:0,kills:0};
   G.ents.push(player);G.player=player;
+  if(team)cfg.bots=opts.rivals==='auto'?7:Math.max(3,(+opts.rivals)|1);
   for(let i=0;i<cfg.bots;i++){
     G.ents.push({id:i+2,name:map.names[i%map.names.length],isPlayer:false,color:botColors[i%botColors.length],pattern:'solid',
       speed:16.5+G.rng()*2.5,turn:6.5,agg:Math.min(.95,cfg.aggression+(G.rng()-.5)*.3),kills:0});
@@ -798,16 +802,18 @@ function startGame(daily,opts){
     if(STYLES[st]){const b=G.ents[G.ents.length-1];const {name:sn,...params}=STYLES[st];Object.assign(b,params);b.style=st;b.styleName=sn;}
     if(twist==='giants'){const b=G.ents[G.ents.length-1];b.giant=true;b.turn*=.7;b.speed*=.9;b.name='Giant '+b.name;}
   }
+  if(team)setupTeams(map);
   for(const e of G.ents){e.dark=mix(e.color,'#000000',.28);e.light=mix(e.color,'#ffffff',.3);
     if(twist==='rush'){e.speed*=2;e.turn*=1.35;}}
-  G.ents.forEach((e,i)=>{
+  if(!team)G.ents.forEach((e,i)=>{
     const sp=map.spawns[i]||map.spawns[0];
     spawn(e,sp.x,sp.y,e.isPlayer?(power==='headstart'?15:9):twist==='giants'?16:twist==='swarm'?5:9);
   });
   if(twist==='gold')setupGold(map.spawns);
   recount();
   if(G.mode==='flag'){const c=nearestFree(W/2,W/2);G.flag={x:c[0],y:c[1],holder:0,safeUntil:0};}
-  $('.hud-of').textContent=G.mode==='flag'?'time with the flag':twist==='gold'?'of the land value is yours':'of the land is yours';
+  if(team)placeTeams();
+  $('.hud-of').textContent=G.mode==='team'?'Blue · captures · Red':G.mode==='flag'?'time with the flag':twist==='gold'?'of the land value is yours':'of the land is yours';
   $('#mini').hidden=twist==='fog';
   if(G.target==='landmark'||G.target==='both'){
     // five landmarks, spread out; holding one when the run ends adds its value to your score
@@ -826,7 +832,8 @@ function startGame(daily,opts){
       if(best)G.landmarks.push({x:best[0],y:best[1],name,val});
     }
   }
-  $('#cdTip').textContent=[place?place.n:'',G.twistObj?`${G.twistObj.name}: ${G.twistObj.desc}`:''].filter(Boolean).join(' · ')||'Drag, point, or use the arrow keys';
+  if(team)$('#cdTip').textContent='You are Blue. Bring Red\'s flag home · free your teammates from Red\'s jail';
+  else $('#cdTip').textContent=[place?place.n:'',G.twistObj?`${G.twistObj.name}: ${G.twistObj.desc}`:''].filter(Boolean).join(' · ')||'Drag, point, or use the arrow keys';
   if(power)saveProfile();
   S.profile.runs++;
   if(daily){
@@ -860,6 +867,7 @@ const entById=id=>G.ents[id-1];
 function share(id){return G.val?G.vcounts[id]/G.vtotal*100:G.counts[id]/G.claimable*100;}
 function cellsValue(cells){if(!G.val)return cells.length/G.claimable*100;let v=0;for(const i of cells)v+=G.val[i];return v/G.vtotal*100;}
 const cellOf=e=>Math.floor(e.y)*G.W+Math.floor(e.x);
+const tidOf=e=>e.tid||e.id; // whose turf you paint: your own, or your team's
 const free=(x,y)=>x>=0&&y>=0&&x<G.W&&y<G.W&&!G.blocked[Math.floor(y)*G.W+Math.floor(x)];
 
 function recount(){
@@ -874,7 +882,7 @@ function clearTrail(e){for(const i of e.trail){if(G.trail[i]===e.id)G.trail[i]=0
 
 function nearestOwn(e){
   const {W,N,owner,blocked}=G;const seen=new Uint8Array(N);const q=[cellOf(e)];seen[q[0]]=1;
-  for(let h=0;h<q.length;h++){const i=q[h];if(owner[i]===e.id)return i;const x=i%W,y=(i-x)/W;
+  for(let h=0;h<q.length;h++){const i=q[h];if(owner[i]===tidOf(e))return i;const x=i%W,y=(i-x)/W;
     for(let d=0;d<4;d++){const nx=x+DX[d],ny=y+DY[d];if(!inB(nx,ny))continue;const j=ny*W+nx;if(!seen[j]&&!blocked[j]){seen[j]=1;q.push(j);}}}
   return null;
 }
@@ -889,6 +897,7 @@ function kill(e,killer){
       burst(e.x,e.y,'#ffffff',14);toast('Shield used: back on your turf');return;
     }
   }
+  if(G.mode==='team'){jail(e,killer);return;}
   e.alive=false;burst(e.x,e.y,e.color,10);splat(e.x,e.y,e.color,e.dark);
   const vtrail=e.trail.slice();clearTrail(e);
   // whoever takes you out inherits your turf and your line; a death with no killer leaves it blank
@@ -1051,7 +1060,7 @@ function prune(e){
 }
 
 function capture(e){
-  const {W,N,owner,blocked}=G,id=e.id;
+  const {W,N,owner,blocked}=G,id=tidOf(e),TM=G.mode==='team';
   G.inCapture=true;
   // which ground can reach the map edge without crossing your turf
   const q=new Int32Array(N);
@@ -1068,7 +1077,7 @@ function capture(e){
       for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=W||yy>=W)continue;const j=yy*W+xx;
         if(!band.has(j)&&!blocked[j]&&!owner[j]&&!G.trail[j]){band.add(j);owner[j]=id;}}}
   }
-  for(const i of e.trail){owner[i]=id;if(G.trail[i]===id)G.trail[i]=0;}
+  for(const i of e.trail){owner[i]=id;if(G.trail[i]===e.id)G.trail[i]=0;}
   e.trail=[];e.pts=[];
   const after=outside();
   // only ground this loop just closed off is taken; pockets already inside your turf
@@ -1077,10 +1086,10 @@ function capture(e){
   for(let i=0;i<N;i++){if(before[i]&&!after[i]&&owner[i]!==id&&!blocked[i]){owner[i]=id;enclosed.push(i);mark[i]=1;}}
   if(enclosed.length)addFlood(e,enclosed,e.x,e.y);
   const pre=share(id);
-  for(const o of G.ents){if(o!==e&&o.alive&&mark[cellOf(o)])kill(o,e);}
-  for(const o of G.ents)if(o.alive)prune(o);
+  for(const o of G.ents){if(o!==e&&o.alive&&mark[cellOf(o)]&&!(TM&&o.team===e.team))kill(o,e);}
+  if(!TM)for(const o of G.ents)if(o.alive)prune(o);
   recount();
-  for(const o of G.ents){if(o!==e&&o.alive&&G.counts[o.id]===0)kill(o,e);}
+  if(!TM)for(const o of G.ents){if(o!==e&&o.alive&&G.counts[o.id]===0)kill(o,e);}
   G.inCapture=false;
   if(e.isPlayer){const gain=share(id)-pre;if(gain>0)addFloat(e.x,e.y,gain);}
   recount();
@@ -1093,15 +1102,15 @@ function enterCell(e,i,px,py){
   const t=G.trail[i];
   if(t){
     if(t===e.id){/* crossing your own line is safe */}
-    else{const v=entById(t);if(v&&v.alive)kill(v,e);}
+    else{const v=entById(t);if(v&&v.alive&&!(G.mode==='team'&&v.team===e.team))kill(v,e);}
   }
   else if(G.twist==='giants'){ // a giant's stroke is wide: brushing its edge cuts it too
     const W=G.W,x=i%W;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=G.N)continue;const u=G.trail[j];
       if(u&&u!==e.id){const v=entById(u);if(v&&v.giant&&v.alive){kill(v,e);break;}}}
   }
   if(!e.alive||G.over)return false;
-  if(G.owner[i]===e.id){e.lastHome=i;if(e.trail.length)capture(e);}
-  else if(G.trail[i]!==e.id){
+  if(G.owner[i]===tidOf(e)){e.lastHome=i;if(e.trail.length)capture(e);}
+  else if(G.trail[i]!==e.id&&!(G.mode==='team'&&G.trail[i]&&entById(G.trail[i]).team===e.team)){
     if(!e.trail.length)e.pts=[[px,py]];
     G.trail[i]=e.id;e.trail.push(i);
   }
@@ -1135,11 +1144,12 @@ function move(e,dt){
     const side=Math.sign(angDiff(e.ta,e.a))||1,nx=-Math.sin(e.a)*side,ny=Math.cos(e.a)*side;
     addStain(e.x-nx*(.7+Math.random()*.5),e.y-ny*(.7+Math.random()*.5),e.color,.35+Math.random()*.35,6,false);}
   // top speed grows with your turf: 4× on a bare start, +0.15× per percent of the land, up to 12×
-  e.maxBoost=Math.min(12,4+(G.counts[e.id]||0)/G.claimable*100*.15);
+  e.maxBoost=G.mode==='team'?Math.min(9,4+(G.counts[tidOf(e)]||0)/G.claimable*100*.06):Math.min(12,4+(G.counts[e.id]||0)/G.claimable*100*.15);
   // base speed scales in step with the top speed, so the ramp from base to top takes the same time at any size
   e.base=e.maxBoost/4;
   e.boost=e.base*Math.min(4,1+Math.max(0,e.straight-.25)*.7);
   if(G.mode==='flag'&&G.flag.holder===e.id)e.boost=Math.min(e.boost,e.maxBoost/2); // the flag weighs you down
+  if(G.mode==='team'&&e.carry!=null)e.boost=Math.min(e.boost,e.maxBoost/1.7);
   e.mult=e.boost*(G.t<(e.speedUntil||0)?1.5:1)*(e.isPlayer&&G.t<e.turboUntil?1.3:1)*(1+((G.lmHeld&&G.lmHeld[e.id])||0)/100);
   let left=e.speed*e.mult*dt;
   while(left>1e-6&&e.alive&&!G.over){
@@ -1197,6 +1207,7 @@ function huntTarget(e,maxD){
 function think(e){
   const id=e.id,home=G.owner[cellOf(e)]===id,r=G.rng;
   let aim=null;
+  if(G.mode==='team'){teamThink(e);return;}
   if(G.mode==='flag'){const fa=flagThink(e,home);if(fa!=null){e.ta=fa;if(!clearAhead(e,e.a,4)||!clearAhead(e,e.ta,3))e.ta=findClear(e);return;}}
   if(e.hunt!=null){
     if(!G.trail[e.hunt]||G.trail[e.hunt]===id||e.huntT<=0||e.trail.length>30)e.hunt=null;
@@ -1299,7 +1310,7 @@ function update(dt){
   if(G.over)return;
   G.t+=dt;
   for(const e of G.ents){
-    if(!e.alive){if((!e.isPlayer||G.mode==='flag')&&G.t>=e.respawnAt&&!respawnBot(e))e.respawnAt=G.t+1;continue;}
+    if(!e.alive){if(G.mode!=='team'&&(!e.isPlayer||G.mode==='flag')&&G.t>=e.respawnAt&&!respawnBot(e))e.respawnAt=G.t+1;continue;}
     if(!e.isPlayer){
       e.thinkT-=dt;e.wander-=dt;if(e.hunt!=null)e.huntT-=dt;
       if(e.thinkT<=0||e.blocked){think(e);e.thinkT=.08;}
@@ -1317,6 +1328,10 @@ function update(dt){
   for(let i=0;i<L.length;i++)for(let j=i+1;j<L.length;j++){
     const a=L[i],b=L[j];if(!a.alive||!b.alive)continue;
     if(Math.hypot(a.x-b.x,a.y-b.y)>1.4)continue;
+    if(G.mode==='team'){ // tag: an intruder caught on the other team's turf goes to jail
+      if(a.team===b.team)continue;const ca=G.owner[cellOf(a)],cb=G.owner[cellOf(b)];
+      if(cb===tidOf(a)&&ca!==tidOf(b))kill(b,a);else if(ca===tidOf(b)&&cb!==tidOf(a))kill(a,b);
+      if(G.over)return;continue;}
     const ah=G.owner[cellOf(a)]===a.id,bh=G.owner[cellOf(b)]===b.id;
     if(ah&&bh)continue;
     if(ah)kill(b,a);else if(bh)kill(a,b);
@@ -1324,7 +1339,8 @@ function update(dt){
     else{kill(a,b);kill(b,a);}
     if(G.over)return;
   }
-  if(G.mode==='flag'){
+  if(G.mode==='team'){updateTeam(dt);if(G.over)return;}
+  else if(G.mode==='flag'){
     updateFlag(dt);if(G.over)return;
     if(G.t>=G.timeLimit){endGame('flag');return;}
   }else{
@@ -1374,16 +1390,173 @@ function flagThink(e,home){
   const goal=Math.floor(ty)*G.W+Math.floor(tx);
   return pathAim(e,i=>i===goal,12000)??dir;
 }
-function drawFlag(x,y,wave){
+function drawFlag(x,y,wave,col,edge){
   ctx.save();ctx.translate(x,y);ctx.lineCap='round';
   ctx.strokeStyle='#ffffff';ctx.lineWidth=.42;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(0,-5.2);ctx.stroke();
   ctx.strokeStyle='#2a2f3a';ctx.lineWidth=.2;ctx.stroke();
   const w=Math.sin(wave)*.35;
   ctx.beginPath();ctx.moveTo(0,-5.2);ctx.quadraticCurveTo(1.3,-5.1+w,2.7,-4.4+w*.6);ctx.quadraticCurveTo(1.4,-3.9-w,0,-3.4);ctx.closePath();
-  ctx.fillStyle='#ffc94d';ctx.strokeStyle='#ffffff';ctx.lineWidth=.22;ctx.stroke();ctx.fill();
-  ctx.strokeStyle='#d99a12';ctx.lineWidth=.1;ctx.stroke();
+  ctx.fillStyle=col||'#ffc94d';ctx.strokeStyle='#ffffff';ctx.lineWidth=.22;ctx.stroke();ctx.fill();
+  ctx.strokeStyle=edge||'#d99a12';ctx.lineWidth=.1;ctx.stroke();
   ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(0,-5.25,.2,0,Math.PI*2);ctx.fill();
   ctx.restore();
+}
+/* ---------- team flag: Blue vs Red, jails and jailbreaks ---------- */
+const TEAMS=[{name:'Blue',color:'#2f6fd6'},{name:'Red',color:'#d94158'}];
+function setupTeams(map){
+  const n=G.ents.length,half=Math.ceil(n/2);
+  G.ents.forEach((e,i)=>{e.team=i<half?0:1;e.color=TEAMS[e.team].color;e.pattern='solid';});
+  const cap=[1,G.ents.find(e=>e.team===1).id];
+  const roles=['attack','defend','attack','rescue','attack','defend'];
+  for(const t of [0,1]){let k=0;for(const e of G.ents)if(e.team===t){e.tid=cap[t];if(!e.isPlayer)e.role=roles[k++%roles.length];}}
+}
+function placeAt(e,x,y){
+  const W=G.W;e.x=x;e.y=y;e.a=Math.atan2(W/2-y,W/2-x);e.ta=e.a;e.trail=[];e.pts=[];e.alive=true;e.jailed=false;e.carry=null;
+  e.legs=null;e.leg=0;e.legDist=0;e.hunt=null;e.huntT=0;e.thinkT=0;e.wander=0;e.blocked=false;e.straight=0;e.boost=1;
+  e.lastHome=Math.floor(y)*W+Math.floor(x);if(!e.isPlayer)e.maxTrail=Math.floor(50+e.agg*60);
+}
+function placeTeams(){
+  const W=G.W,{owner,blocked}=G;
+  const b0=nearestFree(W*.2,W*.5),b1=nearestFree(W*.8,W*.5);
+  G.bases=[{x:b0[0],y:b0[1]},{x:b1[0],y:b1[1]}];
+  const R=Math.max(8,Math.round(W*.09));
+  for(const t of [0,1]){const B=G.bases[t],tid=t===0?1:G.ents.find(e=>e.team===1).id;
+    for(let y=Math.floor(B.y-R);y<=B.y+R;y++)for(let x=Math.floor(B.x-R);x<=B.x+R;x++){if(x<0||y<0||x>=W||y>=W)continue;const i=y*W+x;
+      if(!blocked[i]&&(x+.5-B.x)**2+(y+.5-B.y)**2<=R*R)owner[i]=tid;}}
+  // each team's prisoners are held behind the other team's base
+  G.jails=[0,1].map(t=>{const B=G.bases[1-t],dx=B.x<W/2?-1:1;const c=nearestFree(B.x+dx*R*.55,B.y+R*.45);return {x:c[0],y:c[1]};});
+  G.tflags=[0,1].map(t=>({team:t,hx:G.bases[t].x,hy:G.bases[t].y,x:G.bases[t].x,y:G.bases[t].y,holder:0,home:true,safeUntil:0,dropT:0}));
+  for(const t of [0,1]){const mem=G.ents.filter(e=>e.team===t);
+    mem.forEach((e,k)=>{const a=k/mem.length*Math.PI*2+.4,r=e.isPlayer?2.5:3+(k%2)*2.5;const c=nearestFree(G.bases[t].x+Math.cos(a)*r,G.bases[t].y+Math.sin(a)*r);placeAt(e,c[0],c[1]);});}
+  G.score=[0,0];G.winCaps=G.opts.caps==='none'?0:+G.opts.caps||3;G.jailRule=G.opts.jail||'lose';G.jailOpenAt=[0,0];
+  G.teamStats={caps:0,rescues:0,tags:0,jailed:0};
+  recount();
+}
+function jailSpot(t,k){const J=G.jails[t];return [J.x+((k%3)-1)*1.5,J.y+(Math.floor(k/3)-.4)*1.5];}
+function jail(e,killer){
+  if(e.carry!=null){const f=G.tflags[e.carry],c=nearestFree(e.x,e.y);f.holder=0;f.x=c[0];f.y=c[1];f.home=false;f.dropT=G.t;f.safeUntil=G.t+.8;e.carry=null;}
+  burst(e.x,e.y,e.color,12);clearTrail(e);
+  const k=G.ents.filter(o=>o.team===e.team&&o.jailed).length;
+  e.alive=false;e.jailed=true;e.jailT=G.t;const [jx,jy]=jailSpot(e.team,k);e.x=jx;e.y=jy;e.a=G.bases[e.team].x<e.x?Math.PI:0;
+  const by=killer&&killer!==e&&killer.team!==e.team?killer:null;
+  if(by){by.kills++;if(by.isPlayer){G.teamStats.tags++;toast(`You sent ${e.name} to jail`);}}
+  if(e.isPlayer){G.teamStats.jailed++;toast(`${by?by.name+' caught you':'Caught'}: you're in Red's jail`);}
+  else if(e.team===0&&!by?.isPlayer)toast(`${e.name} is in jail`);
+  recount();
+}
+function release(t,by){
+  const out=G.ents.filter(e=>e.team===t&&e.jailed);if(!out.length)return;
+  out.forEach((e,k)=>{const B=G.bases[t],a=k*1.7,c=nearestFree(B.x+Math.cos(a)*3,B.y+Math.sin(a)*3);placeAt(e,c[0],c[1]);e.invUntil=G.t+2;burst(e.x,e.y,'#ffffff',10);});
+  const J=G.jails[t];burst(J.x,J.y,TEAMS[t].color,30);G.jailOpenAt[t]=0;
+  if(by){by.rescues=(by.rescues||0)+1;if(by.isPlayer)G.teamStats.rescues++;}
+  toast(by?(by.isPlayer?`Jailbreak! You freed ${out.length}`:`${by.name} broke ${out.length} ${TEAMS[t].name} out of jail`):`The ${TEAMS[t].name} jail opened`);
+}
+function updateTeam(dt){
+  // a whole team behind bars
+  for(const t of [0,1]){const mem=G.ents.filter(e=>e.team===t);
+    if(mem.every(e=>e.jailed)){
+      if(G.jailRule==='lose'){G.teamWinner=1-t;endGame('jailout');return;}
+      if(!G.jailOpenAt[t]){G.jailOpenAt[t]=G.t+10;toast(`All of ${TEAMS[t].name} is in jail: it opens in 10 seconds`);}
+      else if(G.t>=G.jailOpenAt[t])release(t,null);
+    }else G.jailOpenAt[t]=0;}
+  // jailbreak: a free teammate runs through the jail
+  for(const e of G.ents){if(!e.alive)continue;const J=G.jails[e.team];
+    if(Math.hypot(e.x-J.x,e.y-J.y)<2.8&&G.ents.some(o=>o.team===e.team&&o.jailed))release(e.team,e);}
+  // flags
+  for(const t of [0,1]){const f=G.tflags[t];
+    if(f.holder){const h=entById(f.holder);f.x=h.x;f.y=h.y;
+      const B=G.bases[h.team];
+      if(Math.hypot(h.x-B.x,h.y-B.y)<3){ // home with it: a capture
+        G.score[h.team]++;h.carry=null;f.holder=0;f.home=true;f.x=f.hx;f.y=f.hy;f.safeUntil=G.t+1.5;
+        burst(B.x,B.y,TEAMS[h.team].color,40);if(h.isPlayer)G.teamStats.caps++;
+        G.shake=Math.max(G.shake,.35);
+        toast(h.isPlayer?`You captured Red's flag! ${G.score[0]}–${G.score[1]}`:`${h.name} captured for ${TEAMS[h.team].name}: ${G.score[0]}–${G.score[1]}`);
+        if(G.winCaps&&G.score[h.team]>=G.winCaps){G.teamWinner=h.team;endGame('caps');return;}
+      }
+    }else{
+      if(!f.home&&G.t-f.dropT>20){f.home=true;f.x=f.hx;f.y=f.hy;toast(`${TEAMS[t].name}'s flag went back home`);}
+      if(G.t>=f.safeUntil)for(const e of G.ents){if(!e.alive||Math.hypot(e.x-f.x,e.y-f.y)>2.2)continue;
+        if(e.team===t){if(!f.home){f.home=true;f.x=f.hx;f.y=f.hy;f.safeUntil=G.t+1;toast(`${e.isPlayer?'You':e.name} returned ${TEAMS[t].name}'s flag`);}}
+        else if(e.carry==null){f.holder=e.id;f.home=false;e.carry=t;burst(e.x,e.y,TEAMS[t].color,20);
+          toast(e.isPlayer?'You have Red\'s flag! Run it home':e.team===0?`${e.name} has Red's flag`:`${e.name} took your flag!`);}
+        break;}
+    }}
+  if(G.timeLimit&&G.t>=G.timeLimit){endGame('time');return;}
+}
+function teamThink(e){
+  const t=e.team,o=1-t,id=tidOf(e),home=G.owner[cellOf(e)]===id,W=G.W;
+  const goTo=(x,y)=>{const d=Math.hypot(x-e.x,y-e.y),dir=Math.atan2(y-e.y,x-e.x);
+    if(clearAhead(e,dir,Math.min(6,Math.ceil(d))))return dir;const g=Math.floor(y)*W+Math.floor(x);return pathAim(e,i=>i===g,15000)??dir;};
+  let aim=null;const myF=G.tflags[t],theirF=G.tflags[o],J=G.jails[t];
+  const prisoners=G.ents.some(x=>x.team===t&&x.jailed);
+  if(e.carry!=null)aim=goTo(G.bases[t].x,G.bases[t].y);
+  else{
+    // safety first: a long line, or a rival about to cut it, sends you home to close the loop
+    if(!home&&e.trail.length&&(e.trail.length>e.maxTrail||threatDist(e)<5))aim=pathAim(e,i=>G.owner[i]===id,15000);
+    if(aim==null&&myF.holder){const c=entById(myF.holder);if(e.role==='defend'||Math.hypot(c.x-e.x,c.y-e.y)<30)aim=goTo(c.x,c.y);}
+    if(aim==null&&!myF.home&&!myF.holder&&Math.hypot(myF.x-e.x,myF.y-e.y)<45)aim=goTo(myF.x,myF.y);
+    if(aim==null&&prisoners){
+      // the free teammate closest to the jail (or a rescuer) makes the run
+      let best=null,bd=1e9;for(const x of G.ents){if(x.team!==t||!x.alive||x.isPlayer||x.carry!=null)continue;const d=Math.hypot(x.x-J.x,x.y-J.y)*(x.role==='rescue'?.5:1);if(d<bd){bd=d;best=x;}}
+      if(best===e)aim=goTo(J.x,J.y);
+    }
+    if(aim==null&&e.role==='defend'){
+      const B=G.bases[t];let tgt=null,td=24;
+      for(const x of G.ents){if(x.team===t||!x.alive)continue;const d=Math.hypot(x.x-B.x,x.y-B.y);if(G.owner[cellOf(x)]===id&&d<td){td=d;tgt=x;}}
+      if(tgt)aim=goTo(tgt.x,tgt.y);
+      else if(Math.hypot(e.x-B.x,e.y-B.y)>8)aim=goTo(B.x,B.y);
+      else{e.wander-=0;if(e.wander<=0){e.wanderAng=Math.atan2(e.y-B.y,e.x-B.x)+Math.PI/2+(G.rng()-.5);e.wander=.6;}aim=e.wanderAng;}
+    }
+    if(aim==null){ // attackers (and anyone with nothing better to do) go for their flag
+      if(!theirF.holder)aim=goTo(theirF.x,theirF.y);
+      else{const h=entById(theirF.holder);aim=goTo((h.x+G.bases[t].x)/2,(h.y+G.bases[t].y)/2);} // escort the carrier home
+    }
+  }
+  e.ta=aim??e.a;
+  if(!clearAhead(e,e.a,4)||!clearAhead(e,e.ta,3))e.ta=findClear(e);
+}
+function drawTeam(){
+  const t=G.rt,W=G.W;
+  for(const k of [0,1]){const B=G.bases[k];
+    ctx.save();ctx.setLineDash([.9,.7]);ctx.lineDashOffset=-t*2;ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=.3;ctx.beginPath();ctx.arc(B.x,B.y,3,0,Math.PI*2);ctx.stroke();ctx.restore();}
+  // jails: a fenced pen; it flashes when someone is waiting to be broken out
+  for(const k of [0,1]){const J=G.jails[k],n=G.ents.filter(e=>e.team===k&&e.jailed).length,s=2.6;
+    ctx.save();ctx.translate(J.x,J.y);
+    ctx.fillStyle='rgba(10,20,30,.28)';ctx.fillRect(-s,-s+.4,s*2,s*2);
+    ctx.fillStyle='rgba(40,40,48,.35)';ctx.fillRect(-s,-s,s*2,s*2);
+    if(n){ctx.strokeStyle=`rgba(255,255,255,${.5+.5*Math.sin(t*6)})`;ctx.lineWidth=.35;ctx.strokeRect(-s-.5,-s-.5,s*2+1,s*2+1);}
+    ctx.restore();}
+  for(const e of G.ents)if(e.jailed){const c=Object.create(e);c.x=e.x-2.1;c.y=e.y+.25;c.a=0;c.run=Math.sin(t*2+e.id)*.3;c.mult=1;drawRunner(c);}
+  for(const k of [0,1]){const J=G.jails[k],s=2.6;ctx.save();ctx.translate(J.x,J.y);
+    ctx.strokeStyle='#2a2f3a';ctx.lineWidth=.22;for(let x=-s;x<=s+.01;x+=s/3){ctx.beginPath();ctx.moveTo(x,-s-1.2);ctx.lineTo(x,s);ctx.stroke();}
+    ctx.lineWidth=.32;ctx.strokeStyle=TEAMS[1-k].color;ctx.strokeRect(-s,-s-1.2,s*2,s*2+1.2);
+    ctx.font='800 1.1px Unbounded,Figtree,sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.strokeStyle='rgba(10,15,25,.8)';ctx.lineWidth=.3;ctx.strokeText('JAIL',0,-s-1.6);ctx.fillText('JAIL',0,-s-1.6);
+    ctx.restore();}
+  for(const k of [0,1]){const f=G.tflags[k],col=TEAMS[k].color,edge=mix(col,'#000000',.3),wave=t*7+k;
+    if(f.holder){const h=entById(f.holder);if(h.rx!=null)drawFlag(h.rx-(Math.cos(h.a)<0?-1:1)*.55,h.ry-1.6,wave,col,edge);}
+    else{if(f.home){ctx.fillStyle=rgba(col,.3);ctx.beginPath();ctx.ellipse(f.x,f.y,1.8,.65,0,0,Math.PI*2);ctx.fill();}
+      else{const pulse=1+Math.sin(t*5)*.12;ctx.fillStyle=rgba(col,.3);ctx.beginPath();ctx.ellipse(f.x,f.y,2.6*pulse,.9*pulse,0,0,Math.PI*2);ctx.fill();}
+      drawFlag(f.x,f.y,wave,col,edge);}}
+}
+function endTeam(reason){
+  const p=G.player,sc=G.score;
+  let winner=G.teamWinner;
+  if(reason==='time'||reason==='quit'&&winner==null){winner=sc[0]>sc[1]?0:sc[1]>sc[0]?1:(G.counts[1]>G.counts[tidOf(G.ents.find(e=>e.team===1))]?0:G.counts[1]<G.counts[tidOf(G.ents.find(e=>e.team===1))]?1:-1);}
+  if(reason==='quit')winner=-2; // walked away: no result
+  const win=winner===0,TS=G.teamStats;
+  const coins=(reason==='quit'?0:20)+(win?60:0)+TS.caps*15+TS.rescues*10+TS.tags*5;
+  S.profile.coins+=coins;const BR=recordRun(runFacts(false,win));saveProfile();
+  $('#resEyebrow').textContent='Practice · Team flag'+(G.place?' · '+G.place.n:'')+(win?' · winner':'');
+  $('#resTitle').textContent=reason==='quit'?'Game ended':winner===-1?"It's a draw":reason==='jailout'?(win?'Red is all in jail: Blue wins':'Blue is all in jail: Red wins'):win?'Blue wins!':'Red wins';
+  $('#resPct').textContent=`${sc[0]} – ${sc[1]}`;$('#resBigLbl').textContent='Blue · captures · Red';
+  const st=$('#resStats');st.innerHTML='';
+  for(const [k,v] of [['Your captures',TS.caps],['Rescues',TS.rescues],['Sent to jail',TS.tags],['Coins',`+${coins}`]]){
+    const d=document.createElement('div');const b=document.createElement('b');b.textContent=v;d.append(b,k);st.append(d);}
+  $('#resNote').textContent=(win?'+60 coins for the win. ':'')+'Coins: 20 for playing, 15 per capture, 10 per jailbreak, 5 per rival you sent to jail.';
+  const acts=$('#resActions');acts.innerHTML='';
+  acts.append(button('Play again','btn primary',()=>startGame(false,G.opts)),button('Back to home','btn',()=>quitToLobby()));
+  $('#result .card').classList.toggle('win',win);if(win)startConfetti();
+  updateHud();renderStandings();showRunBadges(BR);$('#result').hidden=false;acts.firstChild.focus();
 }
 /* ---------- gold rush ---------- */
 function setupGold(spawns){
@@ -1628,7 +1801,7 @@ function applyItem(e,it){
 }
 // push your whole border outward; rivals' land in the way becomes yours, their lines are left alone
 function landGrab(e,r){
-  const {W,N,owner,blocked,trail}=G,id=e.id;
+  const {W,N,owner,blocked,trail}=G,id=tidOf(e);
   const d=new Int16Array(N).fill(-1),q=new Int32Array(N);let h=0,t=0;
   for(let i=0;i<N;i++)if(owner[i]===id){d[i]=0;q[t++]=i;}
   if(!t)return;
@@ -1639,14 +1812,22 @@ function landGrab(e,r){
   G.inCapture=true;
   for(const o of G.ents)if(o.alive)prune(o);
   recount();
-  for(const o of G.ents){if(o!==e&&o.alive&&G.counts[o.id]===0)kill(o,e);}
+  if(G.mode!=='team')for(const o of G.ents){if(o!==e&&o.alive&&G.counts[o.id]===0)kill(o,e);}
   G.inCapture=false;recount();
   if(got.length){addFlood(e,got,e.x,e.y);if(e.isPlayer)addFloat(e.x,e.y,cellsValue(got));}
 }
 function updateHud(){
   const p=G.player;const pct=share(1);
   const chips=[];const C=(cls,icon,text)=>chips.push([cls,icon,text]);
-  if(G.mode==='flag'){
+  if(G.mode==='team'){
+    $('#hudPct').textContent=`${G.score[0]} – ${G.score[1]}`;
+    if(G.winCaps)C('','',`First to ${G.winCaps}`);
+    if(p.carry!=null)C('gold','⚑','You have their flag: bring it home');
+    else{const f=G.tflags[0];if(f.holder)C('red','⚑',`${entById(f.holder).name} has your flag`);else if(!f.home)C('red','⚑','Your flag is loose');}
+    if(p.jailed)C('red','⛓','In jail: wait for a teammate');
+    const jb=G.ents.filter(e=>e.team===0&&e.jailed).length,jr=G.ents.filter(e=>e.team===1&&e.jailed).length;
+    if(jb)C('red','⛓',`${jb} Blue in jail`);if(jr)C('green','⛓',`${jr} Red in jail`);
+  }else if(G.mode==='flag'){
     $('#hudPct').textContent=clock(G.held[1]);
     const h=G.flag.holder;C('gold','⚑',h===1?'You have the flag':h?`${entById(h).name} has it`:'Flag is loose');
     C('','',`Land ${pct.toFixed(1)}%`);
@@ -1696,6 +1877,14 @@ function updateHud(){
 const clock=s=>`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;
 function renderStandings(){
   const box=$('#stand');box.innerHTML='';
+  if(G.mode==='team'){
+    for(const t of [0,1]){const d=document.createElement('div');if(t===0)d.className='me';
+      const sw=document.createElement('i');sw.style.background=TEAMS[t].color;
+      const n=document.createElement('span');const free=G.ents.filter(e=>e.team===t&&!e.jailed).length,all=G.ents.filter(e=>e.team===t).length;
+      n.textContent=`${TEAMS[t].name} · ${free}/${all} free`;
+      const b=document.createElement('b');b.textContent=G.score[t];d.append(sw,n,b);box.append(d);}
+    return;
+  }
   if(G.mode==='flag'){
     const rows=G.ents.map(e=>({e,v:G.held[e.id]})).sort((a,b)=>b.v-a.v);
     const n=innerWidth<520?3:5;const top=rows.slice(0,n);const me=rows.findIndex(r=>r.e.isPlayer);if(me>=n)top.push(rows[me]);
@@ -1803,7 +1992,7 @@ function render(dt){
   const cs=Math.max(4,Math.min(12,Math.min(w,h)/58))*G.zoom;
   const p=G.player;
   if(!G.cam)G.cam={x:p.x,y:p.y};
-  if(p.alive){const k=dt?Math.min(1,dt*14):1;G.cam.x+=(p.x-G.cam.x)*k;G.cam.y+=(p.y-G.cam.y)*k;}
+  if(p.alive||p.jailed){const k=dt?Math.min(1,dt*14):1;G.cam.x+=(p.x-G.cam.x)*k;G.cam.y+=(p.y-G.cam.y)*k;}
   let ox=w/2-G.cam.x*cs,oy=h/2-G.cam.y*cs;
   if(G.shake>0){G.shake=Math.max(0,G.shake-dt*2.2);if(!calm){const a=G.shake*G.shake*14;ox+=(Math.random()-.5)*a;oy+=(Math.random()-.5)*a;}}
   G.rt+=dt;
@@ -1859,6 +2048,7 @@ function render(dt){
     for(const off of [-.9,.9]){const bx=e.x-sn*off-c*1.4,by=e.y+c*off-sn*1.4;ctx.moveTo(bx,by);ctx.lineTo(bx-c*len,by-sn*len);}
     ctx.stroke();}
   themeFx(dt);drawThemeFx();
+  if(G.mode==='team')drawTeam();
   // heads
   for(const e of G.ents){if(!e.alive)continue;
     if(G.bounty===e.id&&e.rx!=null){ctx.save();ctx.setLineDash([.9,.6]);ctx.strokeStyle='#ffc94d';ctx.lineWidth=.45;ctx.beginPath();ctx.arc(e.rx,e.ry-2.4,3.6,G.t*2,G.t*2+Math.PI*2);ctx.stroke();ctx.restore();}
@@ -1910,6 +2100,17 @@ function render(dt){
       ctx.fillStyle='#ffc94d';ctx.strokeStyle='rgba(5,10,20,.85)';ctx.lineWidth=3;ctx.lineJoin='round';
       ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-8,-10);ctx.lineTo(-3,0);ctx.lineTo(-8,10);ctx.closePath();ctx.stroke();ctx.fill();ctx.restore();
     }
+  }
+  if(G.mode==='team'&&p.alive){ // arrow to where you should go: their flag, or home with it, or the jail
+    const tgt=p.carry!=null?G.bases[0]:G.ents.some(e=>e.team===0&&e.jailed)&&!G.tflags[1].holder?G.jails[0]:(G.tflags[1].holder?entById(G.tflags[1].holder):G.tflags[1]);
+    const col=p.carry!=null?'#7cc4f0':tgt===G.jails[0]?'#ffffff':TEAMS[1].color;
+    const fx=ox+tgt.x*cs,fy=oy+(tgt.y-2.5)*cs,m=36;
+    if(fx<m||fy<m||fx>w-m||fy>cv.clientHeight-m){
+      const cx=w/2,cy=cv.clientHeight/2,a=Math.atan2(fy-cy,fx-cx);
+      const t=Math.min((w/2-m)/Math.abs(Math.cos(a)||1e-6),(cv.clientHeight/2-m)/Math.abs(Math.sin(a)||1e-6));
+      ctx.save();ctx.translate(cx+Math.cos(a)*t,cy+Math.sin(a)*t);ctx.rotate(a);
+      ctx.fillStyle=col;ctx.strokeStyle='rgba(5,10,20,.85)';ctx.lineWidth=3;ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(14,0);ctx.lineTo(-8,-10);ctx.lineTo(-3,0);ctx.lineTo(-8,10);ctx.closePath();ctx.stroke();ctx.fill();ctx.restore();}
   }
   if(G.confetti)drawConfetti(dt);
   G.miniT-=dt;if(G.miniT<=0){G.miniT=.2;drawMini(T);}
@@ -2314,6 +2515,10 @@ function drawMini(T){
   if(G.bounty){const b=entById(G.bounty);if(b.alive){mctx.strokeStyle='#ffc94d';mctx.lineWidth=1.6;mctx.beginPath();mctx.arc(b.x/W*112,b.y/W*112,4.5,0,Math.PI*2);mctx.stroke();}}
   for(const it of G.items){mctx.fillStyle=ITEM_TYPES.find(x=>x.id===it.type).color;mctx.beginPath();mctx.arc(it.x/W*112,it.y/W*112,2.5,0,Math.PI*2);mctx.fill();}
   if(G.mode==='flag'){const f=G.flag;mctx.fillStyle='#ffc94d';mctx.strokeStyle='#10151f';mctx.lineWidth=1.5;mctx.beginPath();mctx.arc(f.x/W*112,f.y/W*112,4,0,Math.PI*2);mctx.fill();mctx.stroke();}
+  if(G.mode==='team'){
+    for(const t of [0,1]){const f=G.tflags[t];mctx.fillStyle=TEAMS[t].color;mctx.strokeStyle='#ffffff';mctx.lineWidth=1.5;mctx.beginPath();mctx.arc(f.x/W*112,f.y/W*112,4,0,Math.PI*2);mctx.fill();mctx.stroke();
+      const j=G.jails[t];mctx.strokeStyle='#10151f';mctx.lineWidth=1.2;mctx.strokeRect(j.x/W*112-3.5,j.y/W*112-3.5,7,7);}
+  }
   const p=G.player;if(p.alive){mctx.fillStyle=T.ink;mctx.beginPath();mctx.arc(p.x/W*112,p.y/W*112,3,0,Math.PI*2);mctx.fill();}
 }
 // GeoGenius guy, shared with GeoGeniuses (badge-art.js), plus GeoGrabber scenes
@@ -2870,6 +3075,7 @@ function endGame(reason){
   if(G.over)return;G.over=true;
   const p=G.player;const peak=Math.round(G.peak*10)/10;
   if(reason==='flag')return endFlag();
+  if(G.mode==='team')return endTeam(reason);
   const win=reason==='win'||reason==='last';
   const X=targetExtras();
   let coins=Math.floor(peak)+p.kills*5+(G.daily?20:0)+(win?100:0)+X.coins;
@@ -3157,11 +3363,13 @@ async function renderBoard(){
 }
 $('#tabToday').addEventListener('click',()=>{S.tab='today';renderBoard();});
 $('#tabWeek').addEventListener('click',()=>{S.tab='week';renderBoard();});
-const OPT_IDS={mode:'optMode',map:'optMap',size:'optSize',rivals:'optRivals',style:'optStyle',target:'optTarget',items:'optItems',twist:'optTwist',clock:'optClock'};
-const OPT_DEF={mode:'classic',map:'random',size:'auto',rivals:'auto',style:'classic',target:'none',items:'normal',twist:'none',clock:'none'};
+const OPT_IDS={caps:'optCaps',jail:'optJail',mode:'optMode',map:'optMap',size:'optSize',rivals:'optRivals',style:'optStyle',target:'optTarget',items:'optItems',twist:'optTwist',clock:'optClock'};
+const OPT_DEF={caps:'3',jail:'lose',mode:'classic',map:'random',size:'auto',rivals:'auto',style:'classic',target:'none',items:'normal',twist:'none',clock:'none'};
 function readOpts(){const o={};for(const [k,id] of Object.entries(OPT_IDS))o[k]=$('#'+id).value||OPT_DEF[k];return o;}
 function optHint(){
   const o=readOpts(),h=[];
+  for(const el of document.querySelectorAll('.team-only'))el.hidden=o.mode!=='team';
+  if(o.mode==='team')h.push(`Team flag: you and your Blue teammates against Red. Grab their flag and bring it to your base to score${o.caps==='none'?'; most captures when the clock runs out wins':`; first to ${o.caps} wins`}${o.caps==='none'&&o.clock==='none'?' (5:00 clock)':''}. Get your line cut, or get tagged on their turf, and you go to their jail until a free teammate runs through it. Twists and targets are off in this mode.`);
   if(o.mode==='flag')h.push('Flag rush: grab the flag and hold it at the buzzer. Tag or cut off the holder to steal it. Unlimited respawns.'+(o.clock==='none'?' Runs on a 3:00 clock.':''));
   if(o.map==='daily')h.push("Today's daily map keeps its own size and rivals.");
   if(o.map.startsWith('place:'))h.push((o.map==='place:random'?'A random country or US state':o.map.slice(6))+': the sea is off-limits and the size is set by the shape.');
@@ -3173,7 +3381,7 @@ function optHint(){
   else if(tw)h.push(`${tw.name}: ${tw.desc}`+(tid==='giants'||tid==='swarm'?' Overrides the rivals setting.':tid==='frenzy'||tid==='bare'?' Overrides the pickups setting.':''));
   $('#optHint').textContent=h.join(' ');
   const sel=id=>{const el=$('#'+id);return el.options[el.selectedIndex]?.text||'';};
-  const sum=[o.mode==='flag'?'Flag rush':'Classic',o.map==='random'?'Random shapes':o.map==='daily'?"Today's map":sel('optMap')];
+  const sum=[o.mode==='flag'?'Flag rush':o.mode==='team'?'Team flag':'Classic',o.map==='random'?'Random shapes':o.map==='daily'?"Today's map":sel('optMap')];
   if(o.twist!=='none')sum.push(o.twist==='today'?(twistById(dailyTwist(S.today))?.name||'No twist'):sel('optTwist'));
   if(o.style!=='classic')sum.push(sel('optStyle'));
   if(o.target!=='none')sum.push(o.target==='both'?'Bounty + landmark':sel('optTarget'));
