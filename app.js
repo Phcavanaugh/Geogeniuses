@@ -1199,6 +1199,7 @@
     const wrap = $("badgeWrap");
     const ok = await loadHistory();
     flushShares();
+    if (ok) renderYesterday();
     if (!ok || !player || !session) { wrap.hidden = true; return; }
     const hist = mergedHistory(), today = todayCentral();
     const mineBefore = hist.rows.filter((r) => r.player === player && r.date < today).map((r) => r.date).sort();
@@ -1318,6 +1319,37 @@
     requestAnimationFrame(() => t.classList.add("show"));
     clearTimeout(toast.timer);
     toast.timer = setTimeout(() => { t.classList.remove("show"); setTimeout(() => { t.hidden = true; }, 350); }, 3600);
+  }
+
+  // ---------- Yesterday's winner, on the score page ----------
+  function renderYesterday() {
+    const box = $("yWin");
+    box.hidden = true;
+    const y = addDays(todayCentral(), -1);
+    const seen = new Set(), rows = [];
+    mergedHistory().rows.forEach((r) => {
+      const k = r.player + "|" + r.date;
+      if (r.date === y && !seen.has(k)) { seen.add(k); rows.push(r); }
+    });
+    if (!rows.length) return;
+    const top = Math.max.apply(null, rows.map((r) => Number(r.total)));
+    const winners = rows.filter((r) => Number(r.total) === top);
+    const art = $("yArt"); art.innerHTML = "";
+    art.appendChild(medal(BADGES.find((b) => b.id === "champ"), 3, 54));
+    const who = $("yWho"); who.innerHTML = "";
+    winners.forEach((r, i) => {
+      if (i) who.appendChild(document.createTextNode(" & "));
+      const w = document.createElement("span"); w.className = "yw-name";
+      w.appendChild(avatar(r.player));
+      const n = document.createElement("b"); n.textContent = r.player; w.appendChild(n);
+      who.appendChild(w);
+    });
+    $("yScore").textContent = fmt(top);
+    $("yEmoji").textContent = (winners[0].scores || []).map((s, i) => emojiFor(Number(s), MAX_PTS[i])).join("");
+    const me = winners.some((r) => r.player === player);
+    $("ySub").textContent = (winners.length > 1 ? "Tied for 1st" : me ? "That was you!" : "Top score") + " · " + rows.length + (rows.length === 1 ? " player" : " players");
+    box.onclick = () => openShelf(winners[0].player);
+    box.hidden = false;
   }
 
   // ---------- Badge shelf (a player's profile) ----------

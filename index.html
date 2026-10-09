@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 <div id="app">
@@ -75,6 +75,15 @@
       <div id="sEmoji" class="semoji"></div>
       <div id="sNote" class="muted small"></div>
     </div>
+    <button id="yWin" class="ywin" type="button" hidden>
+      <span id="yArt" class="yw-art"></span>
+      <span class="yw-txt">
+        <span class="lbl">Yesterday's winner</span>
+        <span id="yWho" class="yw-who"></span>
+        <span id="ySub" class="yw-sub"></span>
+      </span>
+      <span class="yw-right"><strong id="yScore"></strong><span id="yEmoji"></span></span>
+    </button>
     <section id="grabCard" class="grab-card" hidden aria-labelledby="grabTitle">
       <div class="gc-top">
         <img class="gc-art" src="geograbber/painter.jpg" width="124" height="124" alt="The GeoGenius guy painting a spinning globe">
@@ -172,11 +181,11 @@
 
   <div id="demo" class="demo" hidden>Demo mode — scores are only saved on this device.</div>
 </div>
-<script src="config.js?v=40"></script>
+<script src="config.js?v=41"></script>
 <script src="vendor/d3.min.js"></script>
 <script src="vendor/topojson-client.min.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
-<script src="badge-art.js?v=40"></script>
-<script src="app.js?v=40"></script>
+<script src="badge-art.js?v=41"></script>
+<script src="app.js?v=41"></script>
 </body>
 </html>

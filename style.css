@@ -427,3 +427,17 @@ p.muted{margin:0 16px 16px}
 .gp-later{position:relative;margin-top:6px;width:100%;height:44px;border:0;background:none;color:var(--muted);font:600 14.5px/1 var(--body)}
 .gp-later:hover{color:var(--ink)}
 @media (prefers-reduced-motion:reduce){.gp,.gp-dim{transition:none}.gp-art,.gp::before{animation:none}}
+
+/* Yesterday's winner card on the score page */
+.ywin{display:flex;align-items:center;gap:12px;margin:16px 18px 0;padding:12px 14px;width:calc(100% - 36px);text-align:left;border-radius:18px;
+  background:linear-gradient(120deg,rgba(255,201,77,.14),rgba(255,255,255,.03) 60%);border:1px solid rgba(255,201,77,.35);color:var(--ink)}
+.ywin[hidden]{display:none}
+.yw-art{flex:none;display:grid;place-items:center}
+.yw-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.yw-who{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-size:16px}
+.yw-name{display:inline-flex;align-items:center;gap:7px}
+.yw-name .av{width:24px;height:24px;font-size:11px}
+.yw-sub{font-size:12.5px;color:var(--muted)}
+.yw-right{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.yw-right strong{font:800 22px/1 var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.yw-right span{font-size:12px;letter-spacing:1px;white-space:nowrap}
