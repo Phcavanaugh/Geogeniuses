@@ -520,7 +520,7 @@ const STYLES={
 const TWISTS=[
   {id:'rush',name:'Rush hour',desc:'Everyone runs at double speed.'},
   {id:'fog',name:'Fog',desc:"You can only see what's near you. No minimap."},
-  {id:'giants',name:'Giants',desc:'Three big rivals with big head starts.'},
+  {id:'giants',name:'Giants',desc:'Three towering rivals with broom-sized brushes that paint a wide stripe. Big head starts; they turn slowly.'},
   {id:'swarm',name:'Swarm',desc:'Fifteen tiny rivals.'},
   {id:'frenzy',name:'Pickup frenzy',desc:'Pickups everywhere.'},
   {id:'bare',name:'Empty-handed',desc:'No pickups at all.'},
@@ -796,6 +796,7 @@ function startGame(daily,opts){
       speed:16.5+G.rng()*2.5,turn:6.5,agg:Math.min(.95,cfg.aggression+(G.rng()-.5)*.3),kills:0});
     const st=daily?'classic':opts.style==='mixed'?['hunter','turtle','sprinter','collector'][i%4]:opts.style;
     if(STYLES[st]){const b=G.ents[G.ents.length-1];const {name:sn,...params}=STYLES[st];Object.assign(b,params);b.style=st;b.styleName=sn;}
+    if(twist==='giants'){const b=G.ents[G.ents.length-1];b.giant=true;b.turn*=.7;b.speed*=.9;b.name='Giant '+b.name;}
   }
   for(const e of G.ents){e.dark=mix(e.color,'#000000',.28);e.light=mix(e.color,'#ffffff',.3);
     if(twist==='rush'){e.speed*=2;e.turn*=1.35;}}
@@ -1061,6 +1062,12 @@ function capture(e){
       if(x>0)push(i-1);if(x<W-1)push(i+1);if(y>0)push(i-W);if(y<W-1)push(i+W);}
     return seen;};
   const before=outside();
+  if(e.giant){ // a giant's brush is three cells wide: the band either side of its line is painted too
+    const band=new Set(e.trail);
+    for(const i of e.trail){const x=i%W,y=(i-x)/W;
+      for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){const xx=x+dx,yy=y+dy;if(xx<0||yy<0||xx>=W||yy>=W)continue;const j=yy*W+xx;
+        if(!band.has(j)&&!blocked[j]&&!owner[j]&&!G.trail[j]){band.add(j);owner[j]=id;}}}
+  }
   for(const i of e.trail){owner[i]=id;if(G.trail[i]===id)G.trail[i]=0;}
   e.trail=[];e.pts=[];
   const after=outside();
@@ -1087,6 +1094,10 @@ function enterCell(e,i,px,py){
   if(t){
     if(t===e.id){/* crossing your own line is safe */}
     else{const v=entById(t);if(v&&v.alive)kill(v,e);}
+  }
+  else if(G.twist==='giants'){ // a giant's stroke is wide: brushing its edge cuts it too
+    const W=G.W,x=i%W;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=G.N)continue;const u=G.trail[j];
+      if(u&&u!==e.id){const v=entById(u);if(v&&v.giant&&v.alive){kill(v,e);break;}}}
   }
   if(!e.alive||G.over)return false;
   if(G.owner[i]===e.id){e.lastHome=i;if(e.trail.length)capture(e);}
@@ -1273,6 +1284,11 @@ function frame(ts){
   if(G)S.raf=requestAnimationFrame(frame);
 }
 function update(dt){
+  if(G.twist==='giants')for(const e of G.ents){if(!e.giant||!e.alive||e.rx==null)continue;
+    const st=Math.floor((e.run||0)/Math.PI);if(st!==e.lastStep){e.lastStep=st;
+      const fx=e.rx+Math.cos(e.a)*.6,fy=e.ry+.2;
+      for(let k=0;k<6;k++){const a=Math.PI+Math.random()*Math.PI,v=3+Math.random()*4;G.parts.push({x:fx,y:fy,vx:Math.cos(a)*v,vy:Math.sin(a)*v*.4,life:.45,max:.45,c:'rgba(120,100,70,.55)',s:.8+Math.random()*.8});}
+      const d=Math.hypot(e.x-G.player.x,e.y-G.player.y);if(d<22&&G.player.alive)G.shake=Math.max(G.shake,.32*(1-d/22));}}
   // landmarks you hold add their value to your speed (25% landmark = 25% faster)
   if(G.landmarks.length){const m=G.lmHeld||(G.lmHeld=new Float32Array(64));m.fill(0);
     for(const L of G.landmarks){const o=G.owner[Math.floor(L.y)*G.W+Math.floor(L.x)];if(o)m[o]+=L.val;}}
@@ -1868,7 +1884,7 @@ function render(dt){
   // names: nudged apart so they never pile up, quieter the farther they are from you
   ctx.textAlign='center';ctx.textBaseline='bottom';ctx.font=`700 12px ${T.font}`;ctx.lineWidth=3;ctx.lineJoin='round';
   {const labs=[],far=Math.min(w,h)*.5;
-   for(const e of G.ents){if(!e.alive)continue;const sx=ox+(e.rx??e.x)*cs,sy=oy+((e.ry??e.y)-5.6)*cs;
+   for(const e of G.ents){if(!e.alive)continue;const sx=ox+(e.rx??e.x)*cs,sy=oy+((e.ry??e.y)-(e.giant?11:5.6))*cs;
      if(sx<-60||sy<-20||sx>w+60||sy>h+20)continue;
      const wanted=G.bounty===e.id,text=(wanted?'★ ':'')+(e.isPlayer?'You':e.name)+(e.styleName?` · ${e.styleName}`:'');
      const d=Math.hypot(sx-G.headSX,sy-G.headSY),a=e.isPlayer||wanted?1:Math.max(.35,Math.min(1,1.6-d/far));
@@ -2153,7 +2169,7 @@ const SKINS_TONE=['#f7d7b5','#eebf98','#d39b6c','#a8693f','#71472a'];
 const HAIR=['#2a1c14','#5a3820','#8a5a2b','#d4a347','#1b1b1f','#b8452a'];
 function drawRunner(e,X=ctx){
   const chP=e.isPlayer&&e.skinId?CHARS[e.skinId]:null,tNow=(typeof G!=='undefined'&&G&&G.rt)||performance.now()/1000;
-  const K=1.2*((chP&&chP.big)||1),ph=e.run||0,face=Math.cos(e.a)<0?-1:1;
+  const GS=e.giant?2.3:1,K=1.2*((chP&&chP.big)||1)*GS,ph=e.run||0,face=Math.cos(e.a)<0?-1:1;
   const lean=Math.min(.38,.14+((e.mult||1)-1)*.06),cl=Math.cos(lean),sl=Math.sin(lean);
   const ch=e.isPlayer&&e.skinId?CHARS[e.skinId]:null;
   const guy=e.isPlayer&&!ch,skin=ch?ch.skin:guy?'#fcdfcb':SKINS_TONE[(e.id*7+3)%SKINS_TONE.length],hair=ch?ch.hair:guy?'#f09a45':HAIR[(e.id*5+1)%HAIR.length];
@@ -2172,11 +2188,11 @@ function drawRunner(e,X=ctx){
   const legF=leg(ph),legB=leg(ph+Math.PI),armF=chP&&chP.armForward?seg(sh,1.45+Math.sin(ph)*.08,.58,1.55,.5):armSwing(ph+Math.PI);
   // the brush trails behind along the line; place the runner so its wet tip sits exactly where the ink is laid
   const h0=toW(brushArm[2][0],brushArm[2][1]);
-  const bvx=-Math.cos(e.a)*2.3,bvy=-Math.sin(e.a)*2.3+.55;
+  const bvx=-Math.cos(e.a)*2.3*GS,bvy=-Math.sin(e.a)*2.3*GS+.55*GS;
   rx=e.x-h0[0]-bvx;ry=e.y-h0[1]-bvy;e.rx=rx;e.ry=ry;
   const hand=toW(brushArm[2][0],brushArm[2][1]);
   // shadow
-  X.fillStyle='rgba(10,20,30,.28)';X.beginPath();X.ellipse(rx,ry+.15,1.5,.45,0,0,Math.PI*2);X.fill();
+  X.fillStyle='rgba(10,20,30,.28)';X.beginPath();X.ellipse(rx,ry+.15*GS,1.5*GS,.45*GS,0,0,Math.PI*2);X.fill();
   X.lineCap='round';X.lineJoin='round';
   const L=(pts,w,col)=>{X.strokeStyle=col;X.lineWidth=w*K;X.beginPath();pts.forEach((p,i)=>{const q=toW(p[0],p[1]);i?X.lineTo(q[0],q[1]):X.moveTo(q[0],q[1]);});X.stroke();};
   const C=(p,r,col)=>{const q=toW(p[0],p[1]);X.fillStyle=col;X.beginPath();X.arc(q[0],q[1],r*K,0,Math.PI*2);X.fill();};
@@ -2192,15 +2208,15 @@ function drawRunner(e,X=ctx){
   const tip=[e.x,e.y],bx=tip[0]-hand[0],by=tip[1]-hand[1];
   const at=t=>[hand[0]+bx*t,hand[1]+by*t];
   const brush=(o)=>{
-    const w=o?.26:0;
-    X.strokeStyle=o?'#fff':wood;X.lineWidth=.28+w;X.beginPath();X.moveTo(...at(-.1));X.lineTo(...at(.5));X.stroke();
-    X.strokeStyle=o?'#fff':metal;X.lineWidth=.46+w;X.beginPath();X.moveTo(...at(.48));X.lineTo(...at(.62));X.stroke();
-    X.strokeStyle=o?'#fff':e.dark;X.lineWidth=.72+w;X.beginPath();X.moveTo(...at(.62));X.lineTo(...at(.84));X.stroke();
-    X.strokeStyle=o?'#fff':e.color;X.lineWidth=.5+w;X.beginPath();X.moveTo(...at(.82));X.lineTo(...at(1));X.stroke();
-    if(!o){X.fillStyle=e.color;X.beginPath();X.ellipse(tip[0],tip[1],.7,.35,0,0,Math.PI*2);X.fill();}
+    const w=o?.26:0,bw=e.giant?2.6:1; // a giant swings a broom-sized brush
+    X.strokeStyle=o?'#fff':wood;X.lineWidth=.28*bw+w;X.beginPath();X.moveTo(...at(-.1));X.lineTo(...at(.5));X.stroke();
+    X.strokeStyle=o?'#fff':metal;X.lineWidth=.46*bw+w;X.beginPath();X.moveTo(...at(.48));X.lineTo(...at(.62));X.stroke();
+    X.strokeStyle=o?'#fff':e.dark;X.lineWidth=.72*bw+w;X.beginPath();X.moveTo(...at(.62));X.lineTo(...at(.84));X.stroke();
+    X.strokeStyle=o?'#fff':e.color;X.lineWidth=.5*bw+w;X.beginPath();X.moveTo(...at(.82));X.lineTo(...at(1));X.stroke();
+    if(!o){X.fillStyle=e.color;X.beginPath();X.ellipse(tip[0],tip[1],.7*bw,.35*bw,0,0,Math.PI*2);X.fill();}
   };
   // white sticker outline under everything, so the figure reads on any ink
-  const O=.28;
+  const O=.28/GS;
   brush(true);
   for(const [p,w] of (tail?[[[hip,sh],.9],[armF,.32],[brushArm,.32]]:[[legB,.42],[legF,.42],[[hip,sh],.9],[armF,.32],[brushArm,.32]]))L(p,w+O,'#ffffff');
   if(!tail)for(const lg of [legB,legF]){const f=lg[2];L([f,[f[0]+.34,f[1]+.02]],.3+O,'#ffffff');}
@@ -2242,7 +2258,7 @@ function drawTrail(e){
   const L=new Array(n),R=new Array(n),N=new Array(n),Wd=new Float32Array(n);
   for(let i=0;i<n;i++){
     const a=pts[Math.max(0,i-1)],b=pts[Math.min(n-1,i+1)];let dx=b[0]-a[0],dy=b[1]-a[1];const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
-    const hw=.48+.34*Math.exp(-s[i]/9),j=.05*Math.sin(i*2.7+e.id*1.3)+.035*Math.sin(i*6.1+e.id);
+    const hw=(.48+.34*Math.exp(-s[i]/9))*(e.giant?2.6:1),j=.05*Math.sin(i*2.7+e.id*1.3)+.035*Math.sin(i*6.1+e.id);
     N[i]=[-dy,dx];Wd[i]=hw;
     L[i]=[pts[i][0]-dy*(hw+j),pts[i][1]+dx*(hw+j)];R[i]=[pts[i][0]+dy*(hw-j),pts[i][1]-dx*(hw-j)];
   }
