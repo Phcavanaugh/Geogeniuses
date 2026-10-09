@@ -1576,6 +1576,7 @@
     catch (e) { $("boardList").innerHTML = '<li class="muted">Couldn\'t load the leaderboard.</li>'; }
   }
   const TOP_N = 10;
+  const AVG_MIN_GAMES = 5;
   let showAll = false;
   function renderBoard() {
     if (!board) return;
@@ -1583,7 +1584,16 @@
     let rows = [], note = "";  // each row: [name, display value, sub-label, sort value]
     if (tab === "today") { rows = board.today.map((r) => [r.name, fmt(r.total), (r.scores || []).map((s, i) => emojiFor(s, MAX_PTS[i])).join(""), r.total]); note = "Today's scores"; }
     if (tab === "week") { rows = board.week.map((r) => [r.name, fmt(r.total), r.games + (r.games === 1 ? " day" : " days"), r.total]); note = "Total points since Monday, " + prettyDate(board.weekStart, false); }
-    if (tab === "avg") { rows = board.avg.map((r) => [r.name, fmt(r.avg), r.games + (r.games === 1 ? " game" : " games"), r.avg]); note = "Average daily score, all time"; }
+    if (tab === "avg") {
+      // All-time list: at least 5 games, and at least one in the last 7 days.
+      const lastPlayed = {};
+      if (histReady) mergedHistory().rows.forEach((r) => { if (!lastPlayed[r.player] || r.date > lastPlayed[r.player]) lastPlayed[r.player] = r.date; });
+      const weekAgo = addDays(todayCentral(), -6);
+      rows = board.avg
+        .filter((r) => r.games >= AVG_MIN_GAMES && (!histReady || (lastPlayed[r.name] && lastPlayed[r.name] >= weekAgo)))
+        .map((r) => [r.name, fmt(r.avg), r.games + (r.games === 1 ? " game" : " games"), r.avg]);
+      note = "Average daily score, all time · " + AVG_MIN_GAMES + "+ games and played this week";
+    }
     if (tab === "streak") { rows = board.streak.map((r) => [r.name, r.streak + (r.streak === 1 ? " day" : " days"), "", r.streak]); note = "Days played in a row"; }
     if (!rows.length) { ul.innerHTML = '<li class="muted">No scores yet.</li>'; $("boardNote").textContent = note; return; }
     // Ties share a place (1, 2, 2, 4 …).
@@ -1610,7 +1620,13 @@
       addRow(rows[mine], ranks[mine]);
     }
     const count = rows.length + (rows.length === 1 ? " player" : " players");
-    const you = mine >= 0 ? "" : (tab === "streak" ? " · Play today to start a streak" : " · You're not on this board yet");
+    let you = mine >= 0 ? "" : (tab === "streak" ? " · Play today to start a streak" : " · You're not on this board yet");
+    if (mine < 0 && tab === "avg") {
+      const meAvg = board.avg.find((r) => r.name === player);
+      you = !meAvg || meAvg.games < AVG_MIN_GAMES
+        ? " · Play " + (AVG_MIN_GAMES - (meAvg ? meAvg.games : 0)) + " more " + ((AVG_MIN_GAMES - (meAvg ? meAvg.games : 0)) === 1 ? "game" : "games") + " to join"
+        : " · Play today to get back on";
+    }
     $("boardNote").textContent = note + " · " + count + you;
     const more = $("boardMore");
     more.hidden = rows.length <= TOP_N;
