@@ -339,7 +339,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="opts">
       <label for="optMode">Mode<select id="optMode"><option value="classic">Classic</option><option value="flag">Flag rush</option><option value="team">Team flag</option></select></label>
       <label for="optCaps" class="team-only">Captures to win<select id="optCaps"><option value="1">1</option><option value="3">3</option><option value="5">5</option><option value="none">No cap (clock decides)</option></select></label>
-      <label for="optJail" class="team-only">Whole team jailed<select id="optJail"><option value="lose">That team loses</option><option value="release">Jail opens after 10s</option></select></label>
+      <label for="optJail" class="team-only">Whole team jailed<select id="optJail"><option value="reserve">A reserve joins to break them out</option><option value="release">Jail opens after 10s</option><option value="lose">That team loses</option></select></label>
       <label for="optMap">Map<select id="optMap"><option value="random">Random shapes</option><option value="daily">Today's daily map</option><option value="place:random">Random real place</option><optgroup label="Countries"><option value="place:Argentina">Argentina</option><option value="place:Australia">Australia</option><option value="place:Brazil">Brazil</option><option value="place:Egypt">Egypt</option><option value="place:France">France</option><option value="place:Germany">Germany</option><option value="place:Great Britain">Great Britain</option><option value="place:Greece">Greece</option><option value="place:Iceland">Iceland</option><option value="place:India">India</option><option value="place:Ireland">Ireland</option><option value="place:Italy">Italy</option><option value="place:Japan">Japan</option><option value="place:Madagascar">Madagascar</option><option value="place:Mexico">Mexico</option><option value="place:New Zealand">New Zealand</option><option value="place:Norway">Norway</option><option value="place:Peru">Peru</option><option value="place:South Africa">South Africa</option><option value="place:Spain">Spain</option><option value="place:Sweden">Sweden</option><option value="place:Turkey">Turkey</option></optgroup><optgroup label="US states"><option value="place:Alaska">Alaska</option><option value="place:California">California</option><option value="place:Colorado">Colorado</option><option value="place:Florida">Florida</option><option value="place:Idaho">Idaho</option><option value="place:Illinois">Illinois</option><option value="place:Louisiana">Louisiana</option><option value="place:Maine">Maine</option><option value="place:Massachusetts">Massachusetts</option><option value="place:Michigan">Michigan</option><option value="place:Minnesota">Minnesota</option><option value="place:New York">New York</option><option value="place:Oklahoma">Oklahoma</option><option value="place:Tennessee">Tennessee</option><option value="place:Texas">Texas</option></optgroup></select></label>
       <label for="optSize">Size<select id="optSize"><option value="auto">Auto</option><option value="56">Small</option><option value="64">Medium</option><option value="72">Large</option></select></label>
       <label for="optRivals">Rivals<select id="optRivals"><option value="auto">Auto</option><option value="3">3</option><option value="6">6</option><option value="9">9</option><option value="12">12</option><option value="15">15</option></select></label>
@@ -774,6 +774,7 @@ function startGame(daily,opts){
   let twist=daily||opts.twist==='today'?dailyTwist(S.today):opts.twist==='random'?TWISTS[Math.floor(Math.random()*TWISTS.length)].id:twistById(opts.twist)?opts.twist:null;
   const team=!daily&&opts.mode==='team';if(team){twist=null;opts={...opts,target:'none'};}
   applyTwistCfg(cfg,twist);
+  if(team&&!place)cfg.size=Math.max(cfg.size,96); // team flag plays on a bigger sheet: more room to run, fewer collisions
   if(place)cfg.bots=Math.min(cfg.bots,Math.max(2,Math.floor(place.room/45)));
   const map=buildMap(cfg);
   const W=map.W,N=W*W;
@@ -1149,7 +1150,7 @@ function move(e,dt){
   e.base=e.maxBoost/4;
   e.boost=e.base*Math.min(4,1+Math.max(0,e.straight-.25)*.7);
   if(G.mode==='flag'&&G.flag.holder===e.id)e.boost=Math.min(e.boost,e.maxBoost/2); // the flag weighs you down
-  if(G.mode==='team'&&e.carry!=null)e.boost=Math.min(e.boost,e.maxBoost/1.7);
+  if(G.mode==='team'&&e.carry!=null)e.boost=Math.min(e.boost,e.maxBoost/1.35);
   e.mult=e.boost*(G.t<(e.speedUntil||0)?1.5:1)*(e.isPlayer&&G.t<e.turboUntil?1.3:1)*(1+((G.lmHeld&&G.lmHeld[e.id])||0)/100);
   let left=e.speed*e.mult*dt;
   while(left>1e-6&&e.alive&&!G.over){
@@ -1329,8 +1330,9 @@ function update(dt){
     const a=L[i],b=L[j];if(!a.alive||!b.alive)continue;
     if(Math.hypot(a.x-b.x,a.y-b.y)>1.4)continue;
     if(G.mode==='team'){ // tag: an intruder caught on the other team's turf goes to jail
-      if(a.team===b.team)continue;const ca=G.owner[cellOf(a)],cb=G.owner[cellOf(b)];
-      if(cb===tidOf(a)&&ca!==tidOf(b))kill(b,a);else if(ca===tidOf(b)&&cb!==tidOf(a))kill(a,b);
+      // tags only count in the defending team's home zone around its flag, so the open map is for racing, not brawling
+      if(a.team===b.team)continue;const ca=G.owner[cellOf(a)],cb=G.owner[cellOf(b)],inZone=(e,t)=>Math.hypot(e.x-G.bases[t].x,e.y-G.bases[t].y)<G.zoneR;
+      if(cb===tidOf(a)&&ca!==tidOf(b)&&inZone(b,a.team))kill(b,a);else if(ca===tidOf(b)&&cb!==tidOf(a)&&inZone(a,b.team))kill(a,b);
       if(G.over)return;continue;}
     const ah=G.owner[cellOf(a)]===a.id,bh=G.owner[cellOf(b)]===b.id;
     if(ah&&bh)continue;
@@ -1397,7 +1399,7 @@ function drawFlag(x,y,wave,col,edge){
   const w=Math.sin(wave)*.35;
   ctx.beginPath();ctx.moveTo(0,-5.2);ctx.quadraticCurveTo(1.3,-5.1+w,2.7,-4.4+w*.6);ctx.quadraticCurveTo(1.4,-3.9-w,0,-3.4);ctx.closePath();
   ctx.fillStyle=col||'#ffc94d';ctx.strokeStyle='#ffffff';ctx.lineWidth=.22;ctx.stroke();ctx.fill();
-  ctx.strokeStyle=edge||'#d99a12';ctx.lineWidth=.1;ctx.stroke();
+  ctx.strokeStyle=edge||'#d99a12';ctx.lineWidth=edge?.2:.1;ctx.stroke();
   ctx.fillStyle='#ffffff';ctx.beginPath();ctx.arc(0,-5.25,.2,0,Math.PI*2);ctx.fill();
   ctx.restore();
 }
@@ -1407,13 +1409,13 @@ function setupTeams(map){
   const n=G.ents.length,half=Math.ceil(n/2);
   G.ents.forEach((e,i)=>{e.team=i<half?0:1;e.color=TEAMS[e.team].color;e.pattern='solid';});
   const cap=[1,G.ents.find(e=>e.team===1).id];
-  const roles=['attack','defend','attack','rescue','attack','defend'];
+  const roles=['attack','defend','attack','attack','rescue','defend'];
   for(const t of [0,1]){let k=0;for(const e of G.ents)if(e.team===t){e.tid=cap[t];if(!e.isPlayer)e.role=roles[k++%roles.length];}}
 }
 function placeAt(e,x,y){
   const W=G.W;e.x=x;e.y=y;e.a=Math.atan2(W/2-y,W/2-x);e.ta=e.a;e.trail=[];e.pts=[];e.alive=true;e.jailed=false;e.carry=null;
   e.legs=null;e.leg=0;e.legDist=0;e.hunt=null;e.huntT=0;e.thinkT=0;e.wander=0;e.blocked=false;e.straight=0;e.boost=1;
-  e.lastHome=Math.floor(y)*W+Math.floor(x);if(!e.isPlayer)e.maxTrail=Math.floor(50+e.agg*60);
+  e.lastHome=Math.floor(y)*W+Math.floor(x);if(!e.isPlayer)e.maxTrail=Math.floor(30+e.agg*30);
 }
 function placeTeams(){
   const W=G.W,{owner,blocked}=G;
@@ -1426,9 +1428,10 @@ function placeTeams(){
   // each team's prisoners are held behind the other team's base
   G.jails=[0,1].map(t=>{const B=G.bases[1-t],dx=B.x<W/2?-1:1;const c=nearestFree(B.x+dx*R*.55,B.y+R*.45);return {x:c[0],y:c[1]};});
   G.tflags=[0,1].map(t=>({team:t,hx:G.bases[t].x,hy:G.bases[t].y,x:G.bases[t].x,y:G.bases[t].y,holder:0,home:true,safeUntil:0,dropT:0}));
-  for(const t of [0,1]){const mem=G.ents.filter(e=>e.team===t);
+  for(const t of [0,1]){const mem=G.ents.filter(e=>e.team===t&&!e.gone);
     mem.forEach((e,k)=>{const a=k/mem.length*Math.PI*2+.4,r=e.isPlayer?2.5:3+(k%2)*2.5;const c=nearestFree(G.bases[t].x+Math.cos(a)*r,G.bases[t].y+Math.sin(a)*r);placeAt(e,c[0],c[1]);});}
-  G.score=[0,0];G.winCaps=G.opts.caps==='none'?0:+G.opts.caps||3;G.jailRule=G.opts.jail||'lose';G.jailOpenAt=[0,0];
+  G.zoneR=R*1.7;
+  G.score=[0,0];G.winCaps=G.opts.caps==='none'?0:+G.opts.caps||3;G.jailRule=G.opts.jail||'reserve';G.jailOpenAt=[0,0];
   G.teamStats={caps:0,rescues:0,tags:0,jailed:0};
   recount();
 }
@@ -1436,7 +1439,7 @@ function jailSpot(t,k){const J=G.jails[t];return [J.x+((k%3)-1)*1.5,J.y+(Math.fl
 function jail(e,killer){
   if(e.carry!=null){const f=G.tflags[e.carry],c=nearestFree(e.x,e.y);f.holder=0;f.x=c[0];f.y=c[1];f.home=false;f.dropT=G.t;f.safeUntil=G.t+.8;e.carry=null;}
   burst(e.x,e.y,e.color,12);clearTrail(e);
-  const k=G.ents.filter(o=>o.team===e.team&&o.jailed).length;
+  const k=G.ents.filter(o=>o.team===e.team&&o.jailed&&!o.gone).length;
   e.alive=false;e.jailed=true;e.jailT=G.t;const [jx,jy]=jailSpot(e.team,k);e.x=jx;e.y=jy;e.a=G.bases[e.team].x<e.x?Math.PI:0;
   const by=killer&&killer!==e&&killer.team!==e.team?killer:null;
   if(by){by.kills++;if(by.isPlayer){G.teamStats.tags++;toast(`You sent ${e.name} to jail`);}}
@@ -1444,18 +1447,43 @@ function jail(e,killer){
   else if(e.team===0&&!by?.isPlayer)toast(`${e.name} is in jail`);
   recount();
 }
+function addReserve(t){
+  // one reserve per team, reused: it charges in shielded, breaks everyone out, then heads home
+  const B=G.bases[t],names=['Reserve Ace','Reserve Kit','Reserve Bo','Reserve Dee','Reserve Max'];
+  let e=G.ents.find(x=>x.team===t&&x.reserve);
+  if(!e){if(G.ents.length>=28)return;
+    e={id:G.ents.length+1,isPlayer:false,color:TEAMS[t].color,pattern:'solid',speed:23,turn:7.5,agg:.7,kills:0,
+      team:t,tid:t===0?1:G.ents.find(x=>x.team===1).id,role:'rescue',reserve:true};
+    e.dark=mix(e.color,'#000000',.28);e.light=mix(e.color,'#ffffff',.3);G.ents.push(e);}
+  e.name=names[(G.reserves=(G.reserves||0)+1)%names.length];e.gone=false;
+  const c=nearestFree(B.x,B.y);placeAt(e,c[0],c[1]);e.invUntil=G.t+30;
+  burst(e.x,e.y,'#ffffff',24);
+  toast(t===0?`Everyone's in jail: ${e.name} joins Blue to break you out`:`Red is all in jail: ${e.name} comes in for them`);
+}
+function retireReserves(t){
+  for(const e of G.ents)if(e.team===t&&e.reserve&&!e.gone){
+    if(e.carry!=null){const f=G.tflags[e.carry],c=nearestFree(e.x,e.y);f.holder=0;f.x=c[0];f.y=c[1];f.home=false;f.dropT=G.t;e.carry=null;}
+    clearTrail(e);burst(e.x,e.y,'#ffffff',14);e.alive=false;e.jailed=false;e.gone=true;}
+}
 function release(t,by){
-  const out=G.ents.filter(e=>e.team===t&&e.jailed);if(!out.length)return;
+  const out=G.ents.filter(e=>e.team===t&&e.jailed&&!e.gone);if(!out.length)return;
   out.forEach((e,k)=>{const B=G.bases[t],a=k*1.7,c=nearestFree(B.x+Math.cos(a)*3,B.y+Math.sin(a)*3);placeAt(e,c[0],c[1]);e.invUntil=G.t+2;burst(e.x,e.y,'#ffffff',10);});
   const J=G.jails[t];burst(J.x,J.y,TEAMS[t].color,30);G.jailOpenAt[t]=0;
   if(by){by.rescues=(by.rescues||0)+1;if(by.isPlayer)G.teamStats.rescues++;}
-  toast(by?(by.isPlayer?`Jailbreak! You freed ${out.length}`:`${by.name} broke ${out.length} ${TEAMS[t].name} out of jail`):`The ${TEAMS[t].name} jail opened`);
+  toast(by?(by.isPlayer?`Jailbreak! You freed ${out.length}`:`${by.name} broke ${out.length} ${TEAMS[t].name} out of jail`):`${TEAMS[t].name}'s prisoners are free`);
+  // reserves only come in to break the team out; once everyone is free, they head home
+  if(G.ents.some(e=>e.team===t&&e.reserve&&!e.gone)){const g=G;setTimeout(()=>{if(G===g&&!G.over)retireReserves(t);},by&&by.reserve?400:1500);}
 }
 function updateTeam(dt){
   // a whole team behind bars
-  for(const t of [0,1]){const mem=G.ents.filter(e=>e.team===t);
+  for(const t of [0,1]){const mem=G.ents.filter(e=>e.team===t&&!e.gone);
+    // you alone against the world: if every teammate has been locked up for a while, a reserve comes in to help
+    if(G.jailRule==='reserve'&&t===0&&mem.length>1&&mem.every(e=>e.jailed||e.isPlayer)&&!mem.some(e=>e.reserve&&!e.jailed)){
+      if(!G.aloneSince)G.aloneSince=G.t;else if(G.t-G.aloneSince>12){G.aloneSince=0;addReserve(t);}
+    }else if(t===0)G.aloneSince=0;
     if(mem.every(e=>e.jailed)){
       if(G.jailRule==='lose'){G.teamWinner=1-t;endGame('jailout');return;}
+      if(G.jailRule==='reserve'){addReserve(t);continue;}
       if(!G.jailOpenAt[t]){G.jailOpenAt[t]=G.t+10;toast(`All of ${TEAMS[t].name} is in jail: it opens in 10 seconds`);}
       else if(G.t>=G.jailOpenAt[t])release(t,null);
     }else G.jailOpenAt[t]=0;}
@@ -1472,12 +1500,13 @@ function updateTeam(dt){
         G.shake=Math.max(G.shake,.35);
         toast(h.isPlayer?`You captured Red's flag! ${G.score[0]}–${G.score[1]}`:`${h.name} captured for ${TEAMS[h.team].name}: ${G.score[0]}–${G.score[1]}`);
         if(G.winCaps&&G.score[h.team]>=G.winCaps){G.teamWinner=h.team;endGame('caps');return;}
+        if(G.ents.some(e=>e.team===h.team&&e.jailed&&!e.gone))release(h.team,null); // a capture also opens your team's jail
       }
     }else{
       if(!f.home&&G.t-f.dropT>20){f.home=true;f.x=f.hx;f.y=f.hy;toast(`${TEAMS[t].name}'s flag went back home`);}
       if(G.t>=f.safeUntil)for(const e of G.ents){if(!e.alive||Math.hypot(e.x-f.x,e.y-f.y)>2.2)continue;
         if(e.team===t){if(!f.home){f.home=true;f.x=f.hx;f.y=f.hy;f.safeUntil=G.t+1;toast(`${e.isPlayer?'You':e.name} returned ${TEAMS[t].name}'s flag`);}}
-        else if(e.carry==null){f.holder=e.id;f.home=false;e.carry=t;burst(e.x,e.y,TEAMS[t].color,20);
+        else if(e.carry==null){f.holder=e.id;f.home=false;e.carry=t;e.invUntil=Math.max(e.invUntil||0,G.t+1.5);burst(e.x,e.y,TEAMS[t].color,20);
           toast(e.isPlayer?'You have Red\'s flag! Run it home':e.team===0?`${e.name} has Red's flag`:`${e.name} took your flag!`);}
         break;}
     }}
@@ -1497,7 +1526,7 @@ function teamThink(e){
     if(aim==null&&!myF.home&&!myF.holder&&Math.hypot(myF.x-e.x,myF.y-e.y)<45)aim=goTo(myF.x,myF.y);
     if(aim==null&&prisoners){
       // the free teammate closest to the jail (or a rescuer) makes the run
-      let best=null,bd=1e9;for(const x of G.ents){if(x.team!==t||!x.alive||x.isPlayer||x.carry!=null)continue;const d=Math.hypot(x.x-J.x,x.y-J.y)*(x.role==='rescue'?.5:1);if(d<bd){bd=d;best=x;}}
+      let best=null,bd=1e9;for(const x of G.ents){if(x.team!==t||!x.alive||x.isPlayer||x.carry!=null)continue;const d=Math.hypot(x.x-J.x,x.y-J.y)*(x.reserve?.1:x.role==='rescue'?.5:1);if(d<bd){bd=d;best=x;}}
       if(best===e)aim=goTo(J.x,J.y);
     }
     if(aim==null&&e.role==='defend'){
@@ -1518,6 +1547,7 @@ function teamThink(e){
 function drawTeam(){
   const t=G.rt,W=G.W;
   for(const k of [0,1]){const B=G.bases[k];
+    ctx.save();ctx.setLineDash([2.2,1.4]);ctx.strokeStyle=rgba(TEAMS[k].color,.45);ctx.lineWidth=.35;ctx.beginPath();ctx.arc(B.x,B.y,G.zoneR,0,Math.PI*2);ctx.stroke();ctx.restore();
     ctx.save();ctx.setLineDash([.9,.7]);ctx.lineDashOffset=-t*2;ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=.3;ctx.beginPath();ctx.arc(B.x,B.y,3,0,Math.PI*2);ctx.stroke();ctx.restore();}
   // jails: a fenced pen; it flashes when someone is waiting to be broken out
   for(const k of [0,1]){const J=G.jails[k],n=G.ents.filter(e=>e.team===k&&e.jailed).length,s=2.6;
@@ -1532,11 +1562,13 @@ function drawTeam(){
     ctx.lineWidth=.32;ctx.strokeStyle=TEAMS[1-k].color;ctx.strokeRect(-s,-s-1.2,s*2,s*2+1.2);
     ctx.font='800 1.1px Unbounded,Figtree,sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffffff';ctx.strokeStyle='rgba(10,15,25,.8)';ctx.lineWidth=.3;ctx.strokeText('JAIL',0,-s-1.6);ctx.fillText('JAIL',0,-s-1.6);
     ctx.restore();}
-  for(const k of [0,1]){const f=G.tflags[k],col=TEAMS[k].color,edge=mix(col,'#000000',.3),wave=t*7+k;
-    if(f.holder){const h=entById(f.holder);if(h.rx!=null)drawFlag(h.rx-(Math.cos(h.a)<0?-1:1)*.55,h.ry-1.6,wave,col,edge);}
-    else{if(f.home){ctx.fillStyle=rgba(col,.3);ctx.beginPath();ctx.ellipse(f.x,f.y,1.8,.65,0,0,Math.PI*2);ctx.fill();}
-      else{const pulse=1+Math.sin(t*5)*.12;ctx.fillStyle=rgba(col,.3);ctx.beginPath();ctx.ellipse(f.x,f.y,2.6*pulse,.9*pulse,0,0,Math.PI*2);ctx.fill();}
-      drawFlag(f.x,f.y,wave,col,edge);}}
+  for(const k of [0,1]){const f=G.tflags[k],col=TEAMS[k].color,edge='#ffffff',wave=t*7+k;
+    const big=(x,y)=>{ctx.save();ctx.translate(x,y);ctx.scale(1.45,1.45);drawFlag(0,0,wave,col,edge);ctx.restore();};
+    if(f.holder){const h=entById(f.holder);if(h.rx!=null)big(h.rx-(Math.cos(h.a)<0?-1:1)*.55,h.ry-1.6);}
+    else{const pulse=f.home?1:1+Math.sin(t*5)*.12;
+      ctx.fillStyle='rgba(255,255,255,.85)';ctx.beginPath();ctx.ellipse(f.x,f.y,2.2*pulse,.8*pulse,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle=col;ctx.lineWidth=.3;ctx.stroke();
+      big(f.x,f.y);}}
 }
 function endTeam(reason){
   const p=G.player,sc=G.score;
@@ -1880,7 +1912,7 @@ function renderStandings(){
   if(G.mode==='team'){
     for(const t of [0,1]){const d=document.createElement('div');if(t===0)d.className='me';
       const sw=document.createElement('i');sw.style.background=TEAMS[t].color;
-      const n=document.createElement('span');const free=G.ents.filter(e=>e.team===t&&!e.jailed).length,all=G.ents.filter(e=>e.team===t).length;
+      const n=document.createElement('span');const free=G.ents.filter(e=>e.team===t&&!e.jailed&&!e.gone).length,all=G.ents.filter(e=>e.team===t&&!e.gone).length;
       n.textContent=`${TEAMS[t].name} · ${free}/${all} free`;
       const b=document.createElement('b');b.textContent=G.score[t];d.append(sw,n,b);box.append(d);}
     return;
@@ -3364,12 +3396,12 @@ async function renderBoard(){
 $('#tabToday').addEventListener('click',()=>{S.tab='today';renderBoard();});
 $('#tabWeek').addEventListener('click',()=>{S.tab='week';renderBoard();});
 const OPT_IDS={caps:'optCaps',jail:'optJail',mode:'optMode',map:'optMap',size:'optSize',rivals:'optRivals',style:'optStyle',target:'optTarget',items:'optItems',twist:'optTwist',clock:'optClock'};
-const OPT_DEF={caps:'3',jail:'lose',mode:'classic',map:'random',size:'auto',rivals:'auto',style:'classic',target:'none',items:'normal',twist:'none',clock:'none'};
+const OPT_DEF={caps:'3',jail:'reserve',mode:'classic',map:'random',size:'auto',rivals:'auto',style:'classic',target:'none',items:'normal',twist:'none',clock:'none'};
 function readOpts(){const o={};for(const [k,id] of Object.entries(OPT_IDS))o[k]=$('#'+id).value||OPT_DEF[k];return o;}
 function optHint(){
   const o=readOpts(),h=[];
   for(const el of document.querySelectorAll('.team-only'))el.hidden=o.mode!=='team';
-  if(o.mode==='team')h.push(`Team flag: you and your Blue teammates against Red. Grab their flag and bring it to your base to score${o.caps==='none'?'; most captures when the clock runs out wins':`; first to ${o.caps} wins`}${o.caps==='none'&&o.clock==='none'?' (5:00 clock)':''}. Get your line cut, or get tagged on their turf, and you go to their jail until a free teammate runs through it. Twists and targets are off in this mode.`);
+  if(o.mode==='team')h.push(`Team flag: you and your Blue teammates against Red. Grab their flag and bring it to your base to score${o.caps==='none'?'; most captures when the clock runs out wins':`; first to ${o.caps} wins`}${o.caps==='none'&&o.clock==='none'?' (5:00 clock)':''}. Get your line cut, or get tagged inside their home zone (the dashed circle), and you go to their jail until a free teammate runs through it${o.jail==='reserve'?'; if your whole team is locked up, a reserve joins to break you out, then heads home':''}. Every capture also frees your team's prisoners. Plays on a bigger map. Twists and targets are off in this mode.`);
   if(o.mode==='flag')h.push('Flag rush: grab the flag and hold it at the buzzer. Tag or cut off the holder to steal it. Unlimited respawns.'+(o.clock==='none'?' Runs on a 3:00 clock.':''));
   if(o.map==='daily')h.push("Today's daily map keeps its own size and rivals.");
   if(o.map.startsWith('place:'))h.push((o.map==='place:random'?'A random country or US state':o.map.slice(6))+': the sea is off-limits and the size is set by the shape.');
