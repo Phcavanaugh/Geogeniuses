@@ -812,7 +812,7 @@ function startGame(daily,opts){
   });
   if(twist==='gold')setupGold(map.spawns);
   recount();
-  if(G.mode==='flag'){const c=nearestFree(W/2,W/2);G.flag={x:c[0],y:c[1],holder:0,safeUntil:0};}
+  if(G.mode==='flag'){const c=mainLandNear(W/2,W/2);G.flag={x:c[0],y:c[1],holder:0,safeUntil:0};}
   if(team)placeTeams();
   $('.hud-of').textContent=G.mode==='team'?'Blue · captures · Red':G.mode==='flag'?'time with the flag':twist==='gold'?'of the land value is yours':'of the land is yours';
   $('#mini').hidden=twist==='fog';
@@ -826,7 +826,7 @@ function startGame(daily,opts){
         let lx,ly;
         if(val===25&&place&&!tries){lx=place.cx*F+1.5;ly=place.cy*F+1.5;}
         else{lx=W*(.12+G.rng()*.76);ly=W*(.12+G.rng()*.76);}
-        const c=nearestFree(lx,ly);if(!c)continue;
+        const c=mainLandNear(lx,ly);if(!c)continue;
         if(G.owner[Math.floor(c[1])*W+Math.floor(c[0])])continue; // not inside anyone's starting turf
         if(far(c[0],c[1],W*(tries<40?.2:.1)))best=c;
       }
@@ -1354,7 +1354,7 @@ function update(dt){
 }
 /* ---------- flag rush ---------- */
 function nearestFree(x,y){
-  for(let r=0;r<40;r++)for(let k=0;k<Math.max(1,r*8);k++){const a=k/Math.max(1,r*8)*Math.PI*2,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;if(free(px,py))return [Math.floor(px)+.5,Math.floor(py)+.5];}
+  for(let r=0;r<Math.max(40,G.W);r++)for(let k=0;k<Math.max(1,r*8);k++){const a=k/Math.max(1,r*8)*Math.PI*2,px=x+Math.cos(a)*r,py=y+Math.sin(a)*r;if(free(px,py))return [Math.floor(px)+.5,Math.floor(py)+.5];}
   return [x,y];
 }
 function giveFlag(e,from){
@@ -1419,15 +1419,15 @@ function placeAt(e,x,y){
 }
 function placeTeams(){
   const W=G.W,{owner,blocked}=G;
-  // flags in opposite corners; each team's jail sits at the far end of its own side, a long run from its flag
-  const b0=nearestFree(W*.2,W*.74),b1=nearestFree(W*.8,W*.26);
-  G.bases=[{x:b0[0],y:b0[1]},{x:b1[0],y:b1[1]}];
+  // flags far apart; each team's jail sits at the far end of its own side, a long run from its flag
   const R=Math.max(8,Math.round(W*.09));
+  const sp=teamSpots(R);
+  G.bases=[sp.b0,sp.b1];
   for(const t of [0,1]){const B=G.bases[t],tid=t===0?1:G.ents.find(e=>e.team===1).id;
     for(let y=Math.floor(B.y-R);y<=B.y+R;y++)for(let x=Math.floor(B.x-R);x<=B.x+R;x++){if(x<0||y<0||x>=W||y>=W)continue;const i=y*W+x;
       if(!blocked[i]&&(x+.5-B.x)**2+(y+.5-B.y)**2<=R*R)owner[i]=tid;}}
   // each team's prisoners are held behind the other team's base
-  G.jails=[nearestFree(W*.8,W*.76),nearestFree(W*.2,W*.24)].map(c=>({x:c[0],y:c[1]})); // jails[t] holds team t's prisoners, on the other team's side
+  G.jails=[sp.j0,sp.j1]; // jails[t] holds team t's prisoners, on the other team's side
   const JR=Math.round(R*.7);
   for(const t of [0,1]){const J=G.jails[t],tid=t===1?1:G.ents.find(e=>e.team===1).id; // the jailers' turf around their jail
     for(let y=Math.floor(J.y-JR);y<=J.y+JR;y++)for(let x=Math.floor(J.x-JR);x<=J.x+JR;x++){if(x<0||y<0||x>=W||y>=W)continue;const i=y*W+x;
@@ -1439,6 +1439,56 @@ function placeTeams(){
   G.score=[0,0];G.winCaps=G.opts.caps==='none'?0:+G.opts.caps||3;G.jailRule=G.opts.jail||'reserve';G.jailOpenAt=[0,0];
   G.teamStats={caps:0,rescues:0,tags:0,jailed:0};
   recount();
+}
+// Where flags and jails go. Only solid ground counts: the biggest connected piece of land, and only spots
+// with room around them (not a sliver of coast). On real places the flags go to the two ends of the country.
+// the closest spot on the main landmass (not a tiny island or a cell of coast across the water)
+function mainLandNear(x,y){
+  const {W,N,blocked}=G;
+  if(!G.mainLand){const comp=new Int32Array(N).fill(-1),q=new Int32Array(N);let best=-1,bestN=0,cid=0;
+    for(let s0=0;s0<N;s0++){if(blocked[s0]||comp[s0]>=0)continue;let h=0,t=0;q[t++]=s0;comp[s0]=cid;
+      while(h<t){const i=q[h++],xx=i%W;for(const j of [xx>0?i-1:-1,xx<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||blocked[j]||comp[j]>=0)continue;comp[j]=cid;q[t++]=j;}}
+      if(t>bestN){bestN=t;best=cid;}cid++;}
+    G.mainLand=new Uint8Array(N);for(let i=0;i<N;i++)if(comp[i]===best)G.mainLand[i]=1;}
+  const L=G.mainLand;let bi=-1,bd=1e18;
+  for(let i=0;i<N;i++){if(!L[i])continue;const cx=i%W+.5,cy=Math.floor(i/W)+.5,dd=(cx-x)**2+(cy-y)**2;if(dd<bd){bd=dd;bi=i;}}
+  return bi<0?nearestFree(x,y):[bi%W+.5,Math.floor(bi/W)+.5];
+}
+function teamSpots(R){
+  const {W,N,blocked}=G;
+  // the main landmass
+  const comp=new Int32Array(N).fill(-1);let best=-1,bestN=0,cid=0;const q=new Int32Array(N);
+  for(let s0=0;s0<N;s0++){if(blocked[s0]||comp[s0]>=0)continue;let h=0,t=0;q[t++]=s0;comp[s0]=cid;
+    while(h<t){const i=q[h++],x=i%W;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||blocked[j]||comp[j]>=0)continue;comp[j]=cid;q[t++]=j;}}
+    if(t>bestN){bestN=t;best=cid;}cid++;}
+  // distance from water or the edge of the sheet
+  const d=new Int32Array(N).fill(1e9);let h=0,t=0;
+  for(let i=0;i<N;i++){const x=i%W,y=(i-x)/W;if(blocked[i]||comp[i]!==best||x===0||y===0||x===W-1||y===W-1){d[i]=0;q[t++]=i;}}
+  while(h<t){const i=q[h++],x=i%W;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||d[j]<=d[i]+1)continue;d[j]=d[i]+1;q[t++]=j;}}
+  let maxD=0;for(let i=0;i<N;i++)if(comp[i]===best&&d[i]>maxD)maxD=d[i];
+  const need=Math.max(2,Math.min(Math.round(R*.75),Math.floor(maxD*.6)));
+  const ok=[],okJ=[],needJ=Math.max(2,Math.round(need*.4));
+  for(let i=0;i<N;i++)if(comp[i]===best){if(d[i]>=need)ok.push(i);if(d[i]>=needJ)okJ.push(i);} // jails are smaller, so they can sit on narrower ground
+  const P=i=>({x:i%W+.5,y:Math.floor(i/W)+.5}),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
+  const nearestOk=(x,y)=>{let bi=ok[0],bd=1e18;for(const i of ok){const c=P(i),dd=(c.x-x)**2+(c.y-y)**2;if(dd<bd){bd=dd;bi=i;}}return P(bi);};
+  let b0,b1;
+  if(!G.place){b0=nearestOk(W*.2,W*.74);b1=nearestOk(W*.8,W*.26);}
+  else{ // the two far ends of the country
+    let cx=0,cy=0;for(const i of ok){const c=P(i);cx+=c.x;cy+=c.y;}cx/=ok.length;cy/=ok.length;
+    let a=null,ad=-1;for(const i of ok){const c=P(i),dd=Math.hypot(c.x-cx,c.y-cy);if(dd>ad){ad=dd;a=c;}}
+    let b=null,bd=-1;for(const i of ok){const c=P(i),dd=dist(c,a);if(dd>bd){bd=dd;b=c;}}
+    [b0,b1]=a.x<=b.x?[a,b]:[b,a];
+  }
+  // each jail: on its owners' side (closer to their flag than to the other), as far from their flag as possible
+  // distances measured along the land (so a jail can't sit across a bay from its flag)
+  const walk=c=>{const g=new Int32Array(N).fill(-1);let h2=0,t2=0;const s0=Math.floor(c.y)*W+Math.floor(c.x);g[s0]=0;q[t2++]=s0;
+    while(h2<t2){const i=q[h2++],x=i%W;for(const j of [x>0?i-1:-1,x<W-1?i+1:-1,i-W,i+W]){if(j<0||j>=N||comp[j]!==best||g[j]>=0)continue;g[j]=g[i]+1;q[t2++]=j;}}return g;};
+  const jailFor=(own,other)=>{const gO=walk(own),gX=walk(other);let bj=null,bs=-Infinity;
+    for(const i of okJ){const dO=gO[i],dX=gX[i];if(dO<0||dX<0||dX<dO*1.15)continue;
+      const sc=dO-Math.max(0,R*2.2-dX)*2;if(sc>bs){bs=sc;bj=P(i);}}return bj||own;};
+  const jr=G.place?null:[nearestOk(W*.8,W*.76),nearestOk(W*.2,W*.24)];
+  const j0=jr?jr[0]:jailFor(b1,b0),j1=jr?jr[1]:jailFor(b0,b1); // j0 = Blue prisoners, held by Red near Red's side
+  return {b0,b1,j0,j1};
 }
 function jailSpot(t,k){const J=G.jails[t];return [J.x+((k%3)-1)*1.5,J.y+(Math.floor(k/3)-.4)*1.5];}
 function jail(e,killer){
