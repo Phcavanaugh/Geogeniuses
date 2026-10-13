@@ -1490,6 +1490,13 @@ function teamSpots(R){
   const j0=jr?jr[0]:jailFor(b1,b0),j1=jr?jr[1]:jailFor(b0,b1); // j0 = Blue prisoners, held by Red near Red's side
   return {b0,b1,j0,j1};
 }
+// a fresh patch of your team's ink under you when you come back, so you always have home ground to close loops on
+function paintPad(e,cx,cy,r){
+  const {W,owner,blocked,trail}=G,id=tidOf(e);
+  for(let y=Math.floor(cy-r);y<=cy+r;y++)for(let x=Math.floor(cx-r);x<=cx+r;x++){if(x<0||y<0||x>=W||y>=W)continue;const i=y*W+x;
+    if(!blocked[i]&&!trail[i]&&(x+.5-cx)**2+(y+.5-cy)**2<=r*r)owner[i]=id;}
+  e.lastHome=Math.floor(cy)*W+Math.floor(cx);G.terrDirty=true;
+}
 function jailSpot(t,k){const J=G.jails[t];return [J.x+((k%3)-1)*1.5,J.y+(Math.floor(k/3)-.4)*1.5];}
 function jail(e,killer){
   if(e.carry!=null){const f=G.tflags[e.carry],c=nearestFree(e.x,e.y);f.holder=0;f.x=c[0];f.y=c[1];f.home=false;f.dropT=G.t;f.safeUntil=G.t+.8;e.carry=null;}
@@ -1511,7 +1518,7 @@ function addReserve(t){
       team:t,tid:t===0?1:G.ents.find(x=>x.team===1).id,role:'rescue',reserve:true};
     e.dark=mix(e.color,'#000000',.28);e.light=mix(e.color,'#ffffff',.3);G.ents.push(e);}
   e.name=names[(G.reserves=(G.reserves||0)+1)%names.length];e.gone=false;
-  const c=nearestFree(B.x,B.y);placeAt(e,c[0],c[1]);e.invUntil=G.t+30;
+  const c=nearestFree(B.x,B.y);placeAt(e,c[0],c[1]);paintPad(e,e.x,e.y,4.5);recount();e.invUntil=G.t+30;
   burst(e.x,e.y,'#ffffff',24);
   toast(t===0?`Everyone's in jail: ${e.name} joins Blue to break you out`:`Red is all in jail: ${e.name} comes in for them`);
 }
@@ -1522,7 +1529,8 @@ function retireReserves(t){
 }
 function release(t,by){
   const out=G.ents.filter(e=>e.team===t&&e.jailed&&!e.gone);if(!out.length)return;
-  out.forEach((e,k)=>{const B=G.bases[t],a=k*1.7,c=nearestFree(B.x+Math.cos(a)*3,B.y+Math.sin(a)*3);placeAt(e,c[0],c[1]);e.invUntil=G.t+2;burst(e.x,e.y,'#ffffff',10);});
+  out.forEach((e,k)=>{const B=G.bases[t],a=k*1.7,c=nearestFree(B.x+Math.cos(a)*3,B.y+Math.sin(a)*3);placeAt(e,c[0],c[1]);paintPad(e,e.x,e.y,4.5);e.invUntil=G.t+2;burst(e.x,e.y,'#ffffff',10);});
+  recount();
   const J=G.jails[t];burst(J.x,J.y,TEAMS[t].color,30);G.jailOpenAt[t]=0;
   if(by){by.rescues=(by.rescues||0)+1;if(by.isPlayer)G.teamStats.rescues++;}
   toast(by?(by.isPlayer?`Jailbreak! You freed ${out.length}`:`${by.name} broke ${out.length} ${TEAMS[t].name} out of jail`):`${TEAMS[t].name}'s prisoners are free`);
