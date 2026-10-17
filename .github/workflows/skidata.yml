@@ -1,0 +1,19 @@
+name: ski-data
+on:
+  push:
+    branches: [ski-data]
+    paths: [tools/fetch.py]
+permissions:
+  contents: write
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 tools/fetch.py
+      - run: |
+          git config user.name "ski-data bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add skidata
+          git commit -m "Steamboat terrain and trail data"
+          git push
