@@ -1,0 +1,1702 @@
+/* GeoGeniuses — front end. Plain JavaScript, no build step. */
+(function () {
+  "use strict";
+
+  // ---------- Settings ----------
+  const API = (window.GGG_API_URL || "").trim();
+  const START = window.GGG_START_DATE || "2026-09-28";
+  const TZ = "America/Chicago";
+  const MAX_PTS = [100, 100, 200, 300, 300];
+  const DAY_MAX = MAX_PTS.reduce((a, b) => a + b, 0);
+  const PERFECT_EMOJI = "👨🏻‍🦰";
+
+  // ---------- Small helpers ----------
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  };
+  function todayCentral() {
+    return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  }
+  function ymdToUTC(s) { const [y, m, d] = s.split("-").map(Number); return Date.UTC(y, m - 1, d); }
+  function addDays(s, n) { return new Date(ymdToUTC(s) + n * 864e5).toISOString().slice(0, 10); }
+  function daysBetween(a, b) { return Math.round((ymdToUTC(b) - ymdToUTC(a)) / 864e5); }
+  function prettyDate(s, withDow) {
+    const opts = { timeZone: "UTC", month: "short", day: "numeric" };
+    if (withDow) opts.weekday = "short";
+    return new Date(ymdToUTC(s)).toLocaleDateString("en-US", opts);
+  }
+  const fmt = (n) => Number(n).toLocaleString("en-US");
+
+  // ---------- Scoring ----------
+  function milesBetween(a, b) { // [lon,lat]
+    return d3.geoDistance(a, b) * 3958.8;
+  }
+  // Every question is scored out of 100 (GeoHistory's curve), then multiplied (x1, x1, x2, x3, x3).
+  // 100 at the spot, 71 at 1,000 miles, 50 at 3,000 miles, 41 at 5,000 miles.
+  function baseScore(miles) { return Math.round(100 / Math.sqrt(1 + miles / 1000)); }
+  function pointsFor(miles, max) { return baseScore(miles) * (max / 100); }
+  function tierFor(pts, max) {
+    const base = Math.round(pts * 100 / max);
+    return base >= 100 ? "perfect" : base >= 90 ? "green" : base >= 50 ? "yellow" : base >= 1 ? "red" : "black";
+  }
+  function emojiFor(pts, max) {
+    const base = Math.round(pts * 100 / max);
+    if (base >= 100) return PERFECT_EMOJI;
+    if (base >= 90) return "🟢";
+    if (base >= 50) return "🟡";
+    if (base >= 1) return "🔴";
+    return "⚫";
+  }
+
+
+  // ---------- Leaderboard math (demo mode; the Sheet script does the same) ----------
+  function computeBoard(rows, today) {
+    const seen = new Set(), clean = [];
+    rows.forEach((r) => { const k = r.player + "|" + r.date; if (!seen.has(k)) { seen.add(k); clean.push(r); } });
+    const dow = new Date(ymdToUTC(today)).getUTCDay();
+    const monday = addDays(today, -((dow + 6) % 7));
+    const by = {};
+    clean.forEach((r) => { (by[r.player] = by[r.player] || []).push(r); });
+    const todayList = clean.filter((r) => r.date === today)
+      .map((r) => ({ name: r.player, total: r.total, scores: r.scores })).sort((a, b) => b.total - a.total);
+    const week = [], avg = [], streak = [];
+    Object.keys(by).forEach((name) => {
+      const list = by[name];
+      const wk = list.filter((r) => r.date >= monday && r.date <= today);
+      if (wk.length) week.push({ name, total: wk.reduce((s, r) => s + r.total, 0), games: wk.length });
+      avg.push({ name, avg: Math.round(list.reduce((s, r) => s + r.total, 0) / list.length), games: list.length });
+      const dates = new Set(list.map((r) => r.date));
+      let d = dates.has(today) ? today : addDays(today, -1), n = 0;
+      while (dates.has(d)) { n++; d = addDays(d, -1); }
+      if (n) streak.push({ name, streak: n });
+    });
+    week.sort((a, b) => b.total - a.total);
+    avg.sort((a, b) => b.avg - a.avg);
+    streak.sort((a, b) => b.streak - a.streak);
+    return { today: todayList, week, avg, streak, weekStart: monday };
+  }
+
+  // ---------- Backend: Google Sheet, or demo mode on this device ----------
+  const api = API ? {
+    async players() { const r = await fetch(API + "?action=players"); return (await r.json()).players; },
+    async board() { const r = await fetch(API + "?action=board"); return r.json(); },
+    async submit(payload) {
+      const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "submit" }, payload)) });
+      return r.json();
+    },
+    async addPlayer(name) {
+      const r = await fetch(API, { method: "POST", body: JSON.stringify({ action: "addPlayer", name }) });
+      return r.json();
+    },
+    async history() { const r = await fetch(API + "?action=history"); return r.json(); },
+    async day(who, date) { const r = await fetch(API + "?action=day&player=" + encodeURIComponent(who) + "&date=" + encodeURIComponent(date)); return r.json(); },
+    async share(p) {
+      const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "share" }, p)) });
+      return r.json();
+    },
+  } : {
+    async players() { return ["Pete", "Guest"].concat(store.get("ggg:demo:players") || []); },
+    async addPlayer(name) {
+      const list = store.get("ggg:demo:players") || [];
+      if (["Pete", "Guest"].concat(list).some((k) => k.toLowerCase() === name.toLowerCase())) return { ok: false, taken: true };
+      list.push(name); store.set("ggg:demo:players", list); return { ok: true, name };
+    },
+    async board() { return computeBoard(store.get("ggg:demo:rows") || [], todayCentral()); },
+    async history() { return { ok: true, rows: store.get("ggg:demo:rows") || [], shares: store.get("ggg:demo:shares") || [] }; },
+    async share(p) {
+      const list = store.get("ggg:demo:shares") || [];
+      if (!list.some((s) => s.player === p.player && s.date === p.date)) { list.push({ player: p.player, date: p.date }); store.set("ggg:demo:shares", list); }
+      return { ok: true };
+    },
+    async submit(p) {
+      const rows = store.get("ggg:demo:rows") || [];
+      if (rows.some((r) => r.player === p.player && r.date === p.date)) return { ok: true, duplicate: true };
+      rows.push({ date: p.date, player: p.player, total: p.total, scores: p.scores, miles: p.miles, guesses: p.guesses });
+      store.set("ggg:demo:rows", rows);
+      return { ok: true };
+    },
+    async day(who, date) {
+      const r = (store.get("ggg:demo:rows") || []).find((x) => x.player === who && x.date === date);
+      return r ? { ok: true, player: who, date, scores: r.scores, total: r.total, miles: r.miles || [], guesses: r.guesses || null } : { ok: false };
+    },
+  };
+
+  // ---------- Globe (MapLibre, static NASA Blue Marble imagery bundled with the game) ----------
+  const Globe = (function () {
+    const MAX_ZOOM = 8.6;                 // closest view is roughly 40 x 40 miles on a phone
+    // Live Esri World Imagery (the same source GeoHistory uses). The bundled NASA images sit
+    // underneath, so if Esri is ever unreachable the globe still shows, just less sharp.
+    const ESRI_KEY = (window.GGG_ESRI_KEY || "").trim();
+    const ESRI_TILES = ESRI_KEY
+      ? "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=" + encodeURIComponent(ESRI_KEY)
+      : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
+    const US_CENTER = [-98.5, 39.5];
+    let map = null, pin = null, answer = null, locked = false, onPin = () => {};
+    let pinMarker = null, ansMarker = null, anim = null, placed = false;
+    let topPad = 0, restBottom = 0; // screen space covered by the floating clue card and Confirm button
+
+    // --- Serve map tiles by cutting them out of five static images (no live map service) ---
+    const imgCache = {};
+    function loadImage(url) {
+      if (!imgCache[url]) {
+        imgCache[url] = new Promise((res, rej) => {
+          const im = new Image();
+          im.onload = () => res(im); im.onerror = () => rej(new Error("image " + url));
+          im.src = url;
+        });
+      }
+      return imgCache[url];
+    }
+    const tileCanvas = document.createElement("canvas");
+    tileCanvas.width = tileCanvas.height = 256;
+    const tctx = tileCanvas.getContext("2d");
+    function tileBlob() { return new Promise((res) => tileCanvas.toBlob(res, "image/jpeg", 0.9)); }
+    // Fallback imagery: a 1,024-px overview and four 2,048-px quadrants of NASA Blue Marble.
+    maplibregl.addProtocol("bm", async (params) => {
+      const [z, x, y] = params.url.replace("bm://", "").split("/").map(Number);
+      let im, sx, sy, size;
+      if (z <= 2) {
+        im = await loadImage("imagery/world-1024.jpg");
+        size = 1024 / Math.pow(2, z); sx = x * size; sy = y * size;
+      } else {
+        const shift = z - 1, qx = x >> shift, qy = y >> shift;
+        im = await loadImage("imagery/q" + qx + qy + ".jpg");
+        size = 2048 / Math.pow(2, shift);
+        sx = (x - (qx << shift)) * size; sy = (y - (qy << shift)) * size;
+      }
+      tctx.drawImage(im, sx, sy, size, size, 0, 0, 256, 256);
+      const blob = await tileBlob();
+      return { data: await blob.arrayBuffer() };
+    });
+
+    function pinEl(color, drop) {
+      const el = document.createElement("div");
+      el.className = "pin";
+      el.innerHTML = '<svg class="' + (drop ? "drop" : "") + '" width="28" height="38" viewBox="0 0 28 38"><path d="M14 37C14 37 26 22.5 26 13.5A12 12 0 0 0 2 13.5C2 22.5 14 37 14 37Z" fill="' + color +
+        '" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>';
+      return el;
+    }
+    function fitZoom() {
+      const el = map.getContainer();
+      const d = Math.min(el.clientWidth, el.clientHeight) * 0.9;
+      return d > 0 ? Math.log2(d * Math.PI / 512) : 1;
+    }
+    // Zoom at which an arc of `halfAngle` radians either side of center fits on screen.
+    function zoomToFit(halfAngle, padBottom) {
+      const el = map.getContainer(), room = Math.min(el.clientWidth, el.clientHeight - (padBottom || 0) - topPad) * 0.36;
+      const radius = room / Math.max(Math.sin(Math.min(halfAngle, Math.PI / 2)), 0.002);
+      return Math.max(fitZoom(), Math.min(7, Math.log2(radius * 2 * Math.PI / 512)));
+    }
+    function unwrap(pts) {
+      for (let i = 1; i < pts.length; i++) {
+        while (pts[i][0] - pts[i - 1][0] > 180) pts[i][0] -= 360;
+        while (pts[i][0] - pts[i - 1][0] < -180) pts[i][0] += 360;
+      }
+      return pts;
+    }
+    // Overlay canvas for the line while it's being drawn, redrawn on every map frame so it stays in step.
+    let overlay = null, octx = null, drawing = null;
+    function sizeOverlay() {
+      if (!overlay) return;
+      const el = map.getContainer(), dpr = window.devicePixelRatio || 1;
+      overlay.width = el.clientWidth * dpr; overlay.height = el.clientHeight * dpr;
+      overlay.style.width = el.clientWidth + "px"; overlay.style.height = el.clientHeight + "px";
+      octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+    function drawOverlay() {
+      if (!octx) return;
+      octx.clearRect(0, 0, overlay.width, overlay.height);
+      if (!drawing || drawing.length < 2) return;
+      const c = map.getCenter(), center = [c.lng, c.lat];
+      octx.save();
+      octx.strokeStyle = "#fff"; octx.lineWidth = 2.4; octx.lineCap = "round"; octx.setLineDash([4, 5]);
+      octx.shadowColor = "rgba(0,0,0,.5)"; octx.shadowBlur = 2;
+      octx.beginPath();
+      let pen = false;
+      drawing.forEach((pt) => {
+        if (d3.geoDistance(pt, center) > Math.PI / 2 - 0.02) { pen = false; return; } // far side of the globe
+        const q = map.project(pt);
+        if (pen) octx.lineTo(q.x, q.y); else { octx.moveTo(q.x, q.y); pen = true; }
+      });
+      octx.stroke();
+      octx.restore();
+    }
+    function setLine(coords) {
+      const src = map.getSource("guessline");
+      if (src) src.setData({ type: "Feature", geometry: { type: "LineString", coordinates: coords || [] } });
+    }
+
+    return {
+      async load() {
+        const [w50, us] = await Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())));
+        const borders = topojson.mesh(w50, w50.objects.countries, (a, b) => a !== b);
+        const states = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
+        map = new maplibregl.Map({
+          container: "map",
+          style: {
+            version: 8,
+            projection: { type: "globe" },
+            sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] },
+            sources: {
+              earth: { type: "raster", tiles: ["bm://{z}/{x}/{y}"], tileSize: 256, maxzoom: 4 },
+              esri: { type: "raster", tiles: [ESRI_TILES], tileSize: 256, maxzoom: 19,
+                attribution: "Imagery © Esri, Maxar, Earthstar Geographics, and the GIS User Community" },
+              borders: { type: "geojson", data: borders },
+              states: { type: "geojson", data: states },
+              guessline: { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } },
+            },
+            layers: [
+              // No background layer: space around the globe stays see-through so the starfield shows.
+              { id: "earth", type: "raster", source: "earth", paint: { "raster-fade-duration": 0 } },
+              { id: "esri", type: "raster", source: "esri", paint: { "raster-fade-duration": 200 } },
+              { id: "states", type: "line", source: "states", paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.6 } },
+              { id: "borders", type: "line", source: "borders", paint: { "line-color": "rgba(255,255,255,0.7)", "line-width": 0.9 } },
+              { id: "guessline", type: "line", source: "guessline", layout: { "line-cap": "round" },
+                paint: { "line-color": "#ffffff", "line-width": 2.4, "line-dasharray": [1.5, 1.5] } },
+            ],
+          },
+          center: US_CENTER, zoom: 1, minZoom: 0, maxZoom: MAX_ZOOM,
+          dragRotate: false, pitchWithRotate: false, touchPitch: false, keyboard: false,
+          renderWorldCopies: false, attributionControl: { compact: true },
+        });
+        map.touchZoomRotate.disableRotation();
+        map.on("click", (e) => {
+          if (locked) return;
+          pin = [e.lngLat.lng, e.lngLat.lat];
+          if (!pinMarker) pinMarker = new maplibregl.Marker({ element: pinEl("#ff6b3d"), anchor: "bottom" });
+          pinMarker.setLngLat(pin).addTo(map);
+          onPin(pin);
+        });
+        // Don't wait for imagery: the map is still hidden behind the name screen, so no tiles load yet.
+        await new Promise((res) => {
+          if (map.isStyleLoaded()) return res();
+          map.once("style.load", res); map.once("load", res); setTimeout(res, 4000);
+        });
+        // Keep the imagery credit collapsed behind the (i) button until someone taps it.
+        const collapseAttrib = () => document.querySelectorAll(".maplibregl-ctrl-attrib.maplibregl-compact-show")
+          .forEach((el) => el.classList.remove("maplibregl-compact-show"));
+        collapseAttrib(); map.once("idle", collapseAttrib); setTimeout(collapseAttrib, 1500);
+        overlay = document.createElement("canvas");
+        overlay.className = "line-overlay";
+        map.getContainer().appendChild(overlay);
+        octx = overlay.getContext("2d");
+        sizeOverlay();
+        map.on("resize", sizeOverlay);
+        map.on("render", drawOverlay);
+      },
+      // Clear pins and line for the next question. The camera stays where it was;
+      // only the very first question of a visit starts centered on the continental U.S.
+      reset() {
+        if (!map) return;
+        if (anim) { cancelAnimationFrame(anim); anim = null; }
+        pin = null; answer = null; locked = false;
+        if (pinMarker) pinMarker.remove();
+        if (ansMarker) { ansMarker.remove(); ansMarker = null; }
+        setLine(null); drawing = null; drawOverlay();
+        if (!placed) {
+          map.jumpTo({ center: US_CENTER, zoom: fitZoom(), padding: { top: topPad, bottom: restBottom, left: 0, right: 0 } });
+          placed = true;
+        } else {
+          map.easeTo({ padding: { top: topPad, bottom: restBottom, left: 0, right: 0 }, duration: 350 });
+        }
+      },
+      // How much of the screen the clue card (top) and the Confirm button (bottom) cover.
+      setInsets(top, bottom) { topPad = top || 0; restBottom = bottom || 0; },
+      onPin(fn) { onPin = fn; },
+      tileTemplate() { return ESRI_TILES; },
+      getPin() { return pin; },
+      resize() { if (map) map.resize(); },
+      invertAt(sx, sy) { const r = map.getContainer().getBoundingClientRect(); const p = map.unproject([sx - r.left, sy - r.top]); return [p.lng, p.lat]; },
+      // Draw a dotted line from the guess to the answer, with the camera following it,
+      // then drop the answer flag at the end. Resolves when the flag has landed.
+      reveal(guess, ans, hooks) {
+        hooks = hooks || {};
+        pin = guess; answer = ans; locked = true;
+        map.stop();
+        const angle = d3.geoDistance(guess, ans), miles = angle * 3958.8;
+        const interp = d3.geoInterpolate(guess, ans);
+        const c0 = map.getCenter(), start = [c0.lng, c0.lat], z0 = map.getZoom();
+        // Frame both pins in the part of the map above the result card (hooks.padBottom px).
+        const padEnd = hooks.padBottom || 0, pad0 = (map.getPadding() || {}).bottom || 0;
+        const zEnd = zoomToFit(angle / 2, padEnd);
+        const duration = Math.min(3200, 1100 + miles * 0.35);
+        const t0 = performance.now();
+        if (hooks.onStart) hooks.onStart(duration);
+        return new Promise((done) => {
+          const step = (now) => {
+            const u = Math.min(1, (now - t0) / duration);
+            const t = d3.easeCubicInOut(u);
+            const n = Math.max(2, Math.ceil(96 * t));
+            const pts = []; for (let i = 0; i <= n; i++) pts.push(interp((i / n) * t));
+            drawing = pts;
+            if (hooks.onProgress) hooks.onProgress(t);
+            // Camera: centered on the drawn part of the line, zoomed out just enough to keep it in view.
+            const target = interp(t / 2), blend = Math.min(1, u / 0.25);
+            const center = d3.geoInterpolate(start, target)(blend);
+            const zoom = Math.min(z0 + (zEnd - z0) * t, zoomToFit((angle * t) / 2 + 0.01, padEnd));
+            const padding = { top: topPad, left: 0, right: 0, bottom: pad0 + (padEnd - pad0) * blend };
+            map.jumpTo({ center, zoom: Math.max(zoom, zEnd < z0 ? zEnd : fitZoom()), padding });
+            if (u < 1) { anim = requestAnimationFrame(step); return; }
+            anim = null;
+            drawing = null; drawOverlay();
+            const full = []; for (let i = 0; i <= 128; i++) full.push(interp(i / 128));
+            setLine(unwrap(full));
+            ansMarker = new maplibregl.Marker({ element: pinEl("#3ecf7a", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
+            if (hooks.onLand) setTimeout(hooks.onLand, 330); // as the flag hits the ground
+            setTimeout(done, 550);
+          };
+          anim = requestAnimationFrame(step);
+        });
+      },
+    };
+  })();
+
+  // ---------- Starfield behind the globe (Milky Way) ----------
+  // Drawn on its own canvas under the map, so spinning the globe never moves the stars.
+  const Stars = (function () {
+    const cv = $("stars"), c = cv.getContext("2d");
+    const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let w = 0, h = 0, stars = [], running = false, last = 0;
+    function rng(seed) { return () => { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }; }
+    function build() {
+      const dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = cv.clientWidth; h = cv.clientHeight;
+      if (!w || !h) return;
+      cv.width = w * dpr; cv.height = h * dpr; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const r = rng(23), area = (w * h) / (300 * 620);
+      stars = [];
+      for (let i = 0; i < 170 * area; i++)
+        stars.push({ x: r() * w, y: r() * h, s: r() < 0.12 ? 1.5 : r() * 0.9 + 0.4, a: 0.5 + r() * 0.5, tw: 0.4 + r() * 1.6, ph: r() * 6.28, c: "255,255,255" });
+      // The Milky Way: a dense, faint band of stars on a diagonal.
+      for (let i = 0; i < 900 * area; i++) {
+        const t = r(), off = (r() + r() + r() - 1.5) * 70;
+        stars.push({ x: t * w * 1.3 - w * 0.15, y: h * 0.95 - t * h * 0.9 + off, s: r() * 0.7 + 0.2, a: 0.12 + r() * 0.35, tw: 0.2 + r(), ph: r() * 6.28, c: "225,232,255" });
+      }
+      const tints = ["170,200,255", "255,214,150", "200,220,255"];
+      for (let i = 0; i < 9 * area; i++) stars.push({ x: r() * w, y: r() * h * 0.8, s: 1.9, a: 0.9, tw: 0.8 + r(), ph: r() * 6.28, c: tints[i % 3], glow: true });
+    }
+    function draw(s) {
+      c.fillStyle = "#050a14"; c.fillRect(0, 0, w, h);
+      c.save(); c.translate(w / 2, h / 2); c.rotate(-Math.atan2(h * 0.9, w * 1.3));
+      const g = c.createLinearGradient(0, -90, 0, 90);
+      g.addColorStop(0, "rgba(120,140,200,0)"); g.addColorStop(0.5, "rgba(160,175,230,.2)"); g.addColorStop(1, "rgba(120,140,200,0)");
+      c.fillStyle = g; c.fillRect(-w, -90, w * 2, 180); c.restore();
+      const drift = reduce ? 0 : s * 1.2;
+      for (const st of stars) {
+        const a = reduce ? st.a : st.a * (0.65 + 0.35 * Math.sin(s * st.tw + st.ph));
+        const x = (((st.x + drift) % (w + 4)) + w + 4) % (w + 4) - 2;
+        if (st.glow) {
+          const gg = c.createRadialGradient(x, st.y, 0, x, st.y, st.s * 4);
+          gg.addColorStop(0, "rgba(" + st.c + "," + a + ")"); gg.addColorStop(1, "rgba(" + st.c + ",0)");
+          c.fillStyle = gg; c.beginPath(); c.arc(x, st.y, st.s * 4, 0, 7); c.fill();
+        }
+        c.fillStyle = "rgba(" + st.c + "," + a + ")"; c.beginPath(); c.arc(x, st.y, st.s, 0, 7); c.fill();
+      }
+    }
+    function loop(t) {
+      if (!running) return;
+      // About 20 frames a second is plenty for a slow twinkle and easy on the battery.
+      if (t - last > 50) { last = t; draw(t / 1000); }
+      requestAnimationFrame(loop);
+    }
+    function start() {
+      build();
+      if (!w) return;
+      if (reduce) { draw(0); return; }
+      if (!running) { running = true; requestAnimationFrame(loop); }
+    }
+    function stop() { running = false; }
+    window.addEventListener("resize", () => { if (running || reduce) { build(); draw(performance.now() / 1000); } });
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stop(); else if (!$("gameScreen").hidden) start();
+    });
+    return { start, stop };
+  })();
+
+  // ---------- Sound and haptics ----------
+  const Feedback = (function () {
+    let ctx = null;
+    let on = store.get("ggg:sound") !== false;
+    function audio() {
+      if (!on) return null;
+      try {
+        if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+        if (ctx.state === "suspended") ctx.resume();
+      } catch (e) { return null; }
+      return ctx;
+    }
+    function tone(freq, start, dur, type, vol, endFreq) {
+      const c = audio(); if (!c) return;
+      const t = c.currentTime + start, o = c.createOscillator(), g = c.createGain();
+      o.type = type || "sine";
+      o.frequency.setValueAtTime(freq, t);
+      if (endFreq) o.frequency.exponentialRampToValueAtTime(endFreq, t + dur);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol || 0.3, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g).connect(c.destination);
+      o.start(t); o.stop(t + dur + 0.02);
+    }
+    function thud(start) {
+      const c = audio(); if (!c) return;
+      const t = c.currentTime + (start || 0), n = Math.floor(c.sampleRate * 0.12);
+      const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain();
+      src.buffer = buf; f.type = "lowpass"; f.frequency.value = 500; g.gain.value = 0.5;
+      src.connect(f).connect(g).connect(c.destination); src.start(t);
+      tone(150, start || 0, 0.22, "sine", 0.45, 55);
+    }
+    // iPhones ignore navigator.vibrate; toggling a hidden switch control triggers a tap on iOS 18+.
+    let iosSwitch = null;
+    function buzz(pattern) {
+      if (!on) return;
+      if (navigator.vibrate) { try { navigator.vibrate(pattern); return; } catch (e) {} }
+      try {
+        if (!iosSwitch) {
+          const label = document.createElement("label");
+          label.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0";
+          const input = document.createElement("input");
+          input.type = "checkbox"; input.setAttribute("switch", "");
+          label.appendChild(input); document.body.appendChild(label); iosSwitch = label;
+        }
+        const taps = Array.isArray(pattern) ? Math.ceil(pattern.length / 2) : 1;
+        for (let i = 0; i < taps; i++) setTimeout(() => iosSwitch.click(), i * 90);
+      } catch (e) {}
+    }
+    // While the line draws: a soft whoosh plus ticks that speed up and rise in pitch.
+    let whoosh = null, lastTick = -1;
+    function lineStart(duration) {
+      const c = audio(); if (!c) return;
+      const secs = duration / 1000, n = Math.floor(c.sampleRate * (secs + 0.3));
+      const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      const src = c.createBufferSource(), f = c.createBiquadFilter(), g = c.createGain(), t = c.currentTime;
+      src.buffer = buf; f.type = "bandpass"; f.Q.value = 1.2;
+      f.frequency.setValueAtTime(350, t); f.frequency.exponentialRampToValueAtTime(1600, t + secs);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.25);
+      g.gain.setValueAtTime(0.07, t + Math.max(0.3, secs - 0.2)); g.gain.exponentialRampToValueAtTime(0.0001, t + secs + 0.1);
+      src.connect(f).connect(g).connect(c.destination); src.start(t); src.stop(t + secs + 0.2);
+      whoosh = src; lastTick = -1;
+    }
+    function lineProgress(t) {
+      const step = Math.floor(t * 24);            // 24 ticks over the whole line
+      if (step <= lastTick) return;
+      lastTick = step;
+      tone(520 + step * 22, 0, 0.035, "square", 0.035);
+    }
+    function lineStop() { if (whoosh) { try { whoosh.stop(); } catch (e) {} whoosh = null; } }
+    // A different sound for each score color, on top of the flag's thunk.
+    const outcomes = {
+      perfect() { [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => tone(f, 0.12 + i * 0.09, 0.38, "triangle", 0.22));
+                  [1318.5, 1567.98].forEach((f, i) => tone(f, 0.5 + i * 0.07, 0.25, "sine", 0.1)); buzz([30, 60, 30, 60, 80]); },
+      green()   { tone(783.99, 0.12, 0.18, "triangle", 0.22); tone(1046.5, 0.24, 0.3, "triangle", 0.22); buzz([25, 50, 25]); },
+      yellow()  { tone(659.25, 0.12, 0.28, "sine", 0.22); buzz(30); },
+      red()     { tone(392, 0.12, 0.22, "triangle", 0.2, 370); tone(311.13, 0.34, 0.45, "triangle", 0.2, 262); buzz(45); },
+      black()   { tone(110, 0.12, 0.5, "sawtooth", 0.12, 80); buzz([60, 40, 60]); },
+    };
+    return {
+      unlock() { audio(); },
+      pin() { tone(880, 0, 0.05, "triangle", 0.12); buzz(10); },
+      lineStart, lineProgress, lineStop,
+      land(tier) { lineStop(); thud(0); (outcomes[tier] || outcomes.yellow)(); },
+      isOn() { return on; },
+      toggle() { on = !on; store.set("ggg:sound", on); if (on) audio(); return on; },
+    };
+  })();
+
+  // ---------- App state ----------
+  let QUESTIONS = [];
+  let player = store.get("ggg:player");
+  let session = null; // {date, dayIdx, practice, key, progress}
+
+  function show(id) {
+    ["pickScreen", "gameScreen", "doneScreen", "msgScreen", "badgeScreen"].forEach((s) => { $(s).hidden = s !== id; });
+    if (id === "gameScreen") { Globe.resize(); Stars.start(); } else Stars.stop();
+  }
+  function message(title, body) { $("msgTitle").textContent = title; $("msgBody").textContent = body; show("msgScreen"); }
+  // Each player gets a consistent colored initial, wherever their name appears.
+  const AV_COLORS = ["#ff6b3d", "#1fa7a0", "#8a63d2", "#3a86d6", "#d64f8a", "#d99a00", "#2f9e5b", "#6c7bd9", "#c2572b", "#0f8fb8"];
+  function avatar(name) {
+    let h = 0;
+    for (const ch of String(name)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    const el = document.createElement("span");
+    el.className = "av";
+    el.style.background = AV_COLORS[h % AV_COLORS.length];
+    el.textContent = (String(name).trim()[0] || "?").toUpperCase();
+    el.setAttribute("aria-hidden", "true");
+    const t = tierMap[name];
+    if (t && t.tier) el.classList.add("tier-" + t.tier.id);
+    return el;
+  }
+
+  // ---------- Player tiers, from each player's all-time average (3+ games needed) ----------
+  const TIERS = [
+    { id: "diamond", name: "Diamond", min: 950 },
+    { id: "platinum", name: "Platinum", min: 900 },
+    { id: "gold", name: "Gold", min: 850 },
+    { id: "silver", name: "Silver", min: 800 },
+    { id: "bronze", name: "Bronze", min: 700 },
+    { id: "lead", name: "Lead", min: 600 },
+    { id: "coal", name: "Coal", min: 0 },
+  ];
+  const TIER_MIN_GAMES = 3;
+  let tierMap = {};
+  function computeTiers(rows, cutoff) {
+    const by = {}, seen = new Set();
+    rows.forEach((r) => {
+      const k = r.player + "|" + r.date;
+      if (seen.has(k) || r.date > cutoff) return;
+      seen.add(k); (by[r.player] = by[r.player] || []).push(Number(r.total));
+    });
+    const out = {};
+    Object.keys(by).forEach((n) => {
+      const list = by[n], avg = Math.round(list.reduce((a, b) => a + b, 0) / list.length);
+      out[n] = { avg, games: list.length, tier: list.length >= TIER_MIN_GAMES ? TIERS.find((t) => avg >= t.min) : null };
+    });
+    return out;
+  }
+  function gem(tier, size) {
+    const g = document.createElement("span");
+    g.className = "gem " + (tier ? "tier-" + tier.id : "unranked");
+    if (size) g.style.setProperty("--g", size + "px");
+    g.setAttribute("aria-hidden", "true");
+    return g;
+  }
+  // Recolor names everywhere once the history is in.
+  function refreshTiers() {
+    if (!histReady) return;
+    tierMap = computeTiers(mergedHistory().rows, todayCentral());
+    setWho();
+    if (board) { renderPodium(board.today); renderBoard(); }
+  }
+  function openTiers(who) {
+    const me = tierMap[who] || { avg: 0, games: 0, tier: null };
+    $("sheetMedal").innerHTML = ""; $("sheetMedal").appendChild(gem(me.tier, 54));
+    $("sheetName").textContent = me.tier ? me.tier.name + " tier" : "Unranked";
+    $("sheetHow").textContent = "Tiers come from your all-time average score. Play at least " + TIER_MIN_GAMES +
+      " games to get one. Your tier moves up or down as your average changes.";
+    const ul = $("sheetLadder"); ul.innerHTML = "";
+    TIERS.forEach((t, i) => {
+      const li = document.createElement("li");
+      if (me.tier && me.tier.id === t.id) li.classList.add("here");
+      li.appendChild(gem(t, 26));
+      const d = document.createElement("div"); d.innerHTML = "<span></span><small></small>";
+      d.querySelector("span").textContent = t.name;
+      d.querySelector("small").textContent = i === 0 ? "950 or more" : t.min === 0 ? "Under 600" : fmt(t.min) + " to " + fmt(TIERS[i - 1].min - 1);
+      li.appendChild(d);
+      const st = document.createElement("span"); st.className = "st ok"; st.textContent = me.tier && me.tier.id === t.id ? (who === player ? "You" : who) : "";
+      li.appendChild(st);
+      ul.appendChild(li);
+    });
+    $("sheetExtra").hidden = true;
+    $("sheetHolders").textContent = me.games ? (who === player ? "Your" : who + "'s") + " all-time average: " + fmt(me.avg) + " over " + me.games + (me.games === 1 ? " game" : " games") : "No games yet.";
+    const sh = $("sheet");
+    $("sheetDim").hidden = false; sh.hidden = false;
+    requestAnimationFrame(() => { sh.classList.add("show"); $("sheetDim").classList.add("show"); });
+  }
+  function setWho() {
+    const b = $("whoBtn");
+    b.hidden = !player; b.innerHTML = "";
+    if (player) {
+      b.appendChild(avatar(player));
+      const s = document.createElement("span"); s.className = "who-name"; s.textContent = player; b.appendChild(s);
+      b.setAttribute("aria-label", "Playing as " + player + ". Switch player");
+    }
+  }
+  // Five segments across the top of the clue card, colored as each answer lands.
+  function renderProgress(current) {
+    const g = session.progress.guesses, box = $("prog");
+    box.innerHTML = "";
+    for (let k = 0; k < 5; k++) {
+      const seg = document.createElement("i");
+      if (g[k] && k !== current) seg.className = tierFor(g[k].pts, MAX_PTS[k]);
+      else if (k === current) seg.className = "now";
+      box.appendChild(seg);
+    }
+    const shown = g.filter((x, k) => k !== current);
+    const tot = document.createElement("em");
+    tot.textContent = fmt(shown.reduce((a, x) => a + x.pts, 0));
+    box.appendChild(tot);
+  }
+
+  let knownPlayers = [];
+  function choosePlayer(n) { player = n; store.set("ggg:player", n); setWho(); begin(todayCentral(), false); }
+  function cleanName(n) { return String(n || "").replace(/\s+/g, " ").trim(); }
+  function newErr(msg) { $("newErr").textContent = msg || ""; $("newErr").hidden = !msg; }
+
+  async function pickPlayer() {
+    show("pickScreen");
+    newErr("");
+    $("findName").value = "";
+    $("matches").innerHTML = '<div class="muted small">Loading names…</div>';
+    try {
+      knownPlayers = await api.players();
+      renderMatches();
+    } catch (e) {
+      $("matches").innerHTML = '<div class="muted small">Couldn\'t load names — refresh to try again.</div>';
+    }
+  }
+  // Names matching what's typed: names starting with it first, then names containing it.
+  function findMatches(q) {
+    q = cleanName(q).toLowerCase();
+    if (!q) return [];
+    const starts = [], contains = [];
+    knownPlayers.forEach((n) => {
+      const l = n.toLowerCase();
+      if (l.startsWith(q) || l.split(" ").some((w) => w.startsWith(q))) starts.push(n);
+      else if (l.includes(q)) contains.push(n);
+    });
+    const byName = (a, b) => a.localeCompare(b, "en", { sensitivity: "base" });
+    return starts.sort(byName).concat(contains.sort(byName)).slice(0, 8);
+  }
+  function renderMatches() {
+    const box = $("matches"), q = $("findName").value;
+    box.innerHTML = "";
+    if (!cleanName(q)) {
+      box.innerHTML = '<div class="muted small">' + knownPlayers.length + (knownPlayers.length === 1 ? " player" : " players") + " so far.</div>";
+      return;
+    }
+    const list = findMatches(q);
+    if (!list.length) { box.innerHTML = '<div class="muted small">No one by that name yet. New here? Join above.</div>'; return; }
+    list.forEach((n) => {
+      const b = document.createElement("button");
+      b.className = "match"; b.textContent = n;
+      b.onclick = () => choosePlayer(n);
+      box.appendChild(b);
+    });
+  }
+  $("findName").addEventListener("input", renderMatches);
+  $("findName").addEventListener("keydown", (e) => {
+    if (e.key !== "Enter") return;
+    const list = findMatches($("findName").value);
+    const exact = list.find((n) => n.toLowerCase() === cleanName($("findName").value).toLowerCase());
+    if (exact || list.length === 1) choosePlayer(exact || list[0]);
+  });
+  $("newName").addEventListener("keydown", (e) => { if (e.key === "Enter") $("joinBtn").click(); });
+  $("newName").addEventListener("input", () => newErr(""));
+  $("joinBtn").onclick = async () => {
+    const n = cleanName($("newName").value);
+    if (!n) return newErr("Type your name first.");
+    if (!/^[A-Za-zÀ-ÿ0-9 .'-]{1,20}$/.test(n)) return newErr("Use letters, numbers and spaces only (up to 20 characters).");
+    const taken = () => newErr("“" + n + "” is already taken. Enter a different name, or pick yours from the list below.");
+    if (knownPlayers.some((k) => k.toLowerCase() === n.toLowerCase())) return taken();
+    $("joinBtn").disabled = true; $("joinBtn").textContent = "…";
+    try {
+      const res = await api.addPlayer(n);
+      if (res && res.ok) { knownPlayers.push(res.name || n); choosePlayer(res.name || n); }
+      else if (res && res.taken) taken();
+      else newErr((res && res.error) || "Couldn't add you. Try again.");
+    } catch (e) {
+      newErr("Couldn't reach the scoreboard. Check your connection and try again.");
+    } finally {
+      $("joinBtn").disabled = false; $("joinBtn").textContent = "Join";
+    }
+  };
+
+  async function begin(date, practice) {
+    const dayIdx = daysBetween(START, date);
+    $("dateLabel").textContent = prettyDate(date, true);
+    document.querySelectorAll(".practice").forEach((n) => n.remove());
+    if (dayIdx < 0) return message("Not yet!", "The first puzzle goes live on " + prettyDate(START, true) + ".");
+    if (dayIdx >= QUESTIONS.length) return message("Out of questions", "The question bank has run out. New days are coming soon.");
+    const key = "ggg:v1:" + player + ":" + date + (practice ? ":practice" : "");
+    const progress = store.get(key) || { guesses: [], submitted: false };
+    session = { date, dayIdx, practice, key, progress, qs: QUESTIONS[dayIdx] };
+    if (practice) {
+      const tag = document.createElement("div");
+      tag.className = "practice"; tag.textContent = "Practice — " + prettyDate(date, true) + " (not scored)";
+      $("app").insertBefore(tag, $("app").children[1]);
+    }
+    if (!practice && progress.guesses.length < 5) {
+      // Already played today on another device? Then show the result instead of a replay.
+      try {
+        const b = await api.board();
+        const mine = (b.today || []).find((r) => r.name === player);
+        if (mine) { session.remote = mine; return finish(true); }
+      } catch (e) {}
+    }
+    if (progress.guesses.length >= 5) return finish(true);
+    showQuestion();
+  }
+
+  function showQuestion() {
+    const i = session.progress.guesses.length, q = session.qs[i];
+    $("qNum").textContent = "Question " + (i + 1) + " of 5 · " + (i < 2 ? "U.S." : "World");
+    $("qPts").textContent = MAX_PTS[i] + " pts";
+    $("qClue").textContent = q.clue;
+    $("confirmBtn").hidden = false; $("confirmBtn").disabled = true;
+    $("nextBtn").hidden = true;
+    $("result").hidden = true; $("result").classList.remove("show");
+    $("hint").hidden = false;
+    $("milesChip").hidden = true;
+    show("gameScreen");
+    renderProgress(i);
+    // The clue card and the Confirm button float over the globe; keep the globe's
+    // working area clear of both.
+    const qc = $("qcard"), top = qc.offsetTop + qc.offsetHeight + 6, bottom = $("bottomBar").offsetHeight;
+    const gs = $("gameScreen");
+    gs.style.setProperty("--qh", top + "px");
+    gs.style.setProperty("--bb", bottom + "px");
+    Globe.setInsets(top, bottom);
+    Globe.reset();
+  }
+  Globe.onPin(() => { $("confirmBtn").disabled = false; $("hint").hidden = true; Feedback.pin(); });
+
+  $("confirmBtn").onclick = async () => {
+    const p = Globe.getPin(); if (!p) return;
+    const i = session.progress.guesses.length, q = session.qs[i];
+    const ans = [q.lon, q.lat];
+    const miles = milesBetween(p, ans), pts = pointsFor(miles, MAX_PTS[i]);
+    session.progress.guesses.push({ lon: +p[0].toFixed(4), lat: +p[1].toFixed(4), miles: Math.round(miles), pts });
+    store.set(session.key, session.progress);
+    $("confirmBtn").disabled = true;
+    Feedback.unlock();
+    // Fill in the result card now (hidden) so we know how much of the map it will cover.
+    const card = $("result");
+    $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
+    $("rAnswer").textContent = q.answer;
+    $("rDist").textContent = pts === MAX_PTS[i] ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
+    $("rPts").textContent = "+" + pts;
+    $("rFact").textContent = q.fact;
+    card.classList.remove("show"); card.style.visibility = "hidden"; card.hidden = false;
+    const cardH = card.offsetHeight + $("bottomBar").offsetHeight + 16;
+    card.hidden = true; card.style.visibility = "";
+    const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, MAX_PTS[i]);
+    chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
+    await Globe.reveal(p, ans, {
+      padBottom: cardH,
+      onStart(duration) { Feedback.lineStart(duration); },
+      onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; Feedback.lineProgress(t); },
+      onLand() { renderProgress(-1); chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
+    });
+    // Same spot, same size: Confirm becomes Next, and the card slides up over the map.
+    $("confirmBtn").hidden = true;
+    $("nextBtn").textContent = i === 4 ? "See results" : "Next";
+    $("nextBtn").hidden = false;
+    card.hidden = false;
+    requestAnimationFrame(() => card.classList.add("show"));
+  };
+  $("nextBtn").onclick = () => {
+    if (session.progress.guesses.length >= 5) finish(false); else showQuestion();
+  };
+
+  async function finish(already) {
+    const g = session.progress.guesses;
+    let scores, total;
+    if (g.length >= 5) { scores = g.map((x) => x.pts); total = scores.reduce((a, b) => a + b, 0); }
+    else if (session.remote) { scores = session.remote.scores || []; total = session.remote.total; }
+    const emojis = scores.map((s, i) => emojiFor(s, MAX_PTS[i])).join("");
+    $("sTitle").textContent = "Day " + (session.dayIdx + 1) + " · " + prettyDate(session.date, false) + (session.practice ? " · practice" : "");
+    $("sEmoji").textContent = emojis;
+    countUp($("sTotal"), total, !already);
+    $("sMax").textContent = "/ " + fmt(DAY_MAX);
+    $("sNote").textContent = "";
+    const list = $("sList"); list.innerHTML = "";
+    session.qs.forEach((q, i) => {
+      const li = document.createElement("li");
+      const x = g[i];
+      li.innerHTML = '<span class="e dot"></span><span class="a"></span><span class="m"></span><span class="p"></span>';
+      const t = scores[i] != null ? tierFor(scores[i], MAX_PTS[i]) : "none";
+      // A perfect score shows the redhead emoji instead of a dot, so it can't be mistaken for yellow.
+      if (t === "perfect") { li.querySelector(".e").className = "e face"; li.querySelector(".e").textContent = PERFECT_EMOJI; }
+      else li.querySelector(".e").classList.add(t);
+      li.querySelector(".a").textContent = q.answer;
+      li.querySelector(".m").textContent = x ? fmt(x.miles) + " mi" : "";
+      li.querySelector(".p").textContent = scores[i] != null ? scores[i] : "–";
+      // Tap a row to jump to that question's review card.
+      li.tabIndex = 0; li.setAttribute("role", "link");
+      const jump = () => { const c = $("rev" + i); if (c) c.scrollIntoView({ behavior: "smooth", block: "start" }); };
+      li.onclick = jump; li.onkeydown = (e) => { if (e.key === "Enter") jump(); };
+      list.appendChild(li);
+    });
+    session.shareBase = { emojis, total };
+    session.shareExtra = "";
+    buildShare();
+    $("badgeWrap").hidden = true;
+    $("copied").hidden = true;
+    fillPast();
+    renderGrab();
+    show("doneScreen");
+    renderReview(scores); // after the screen is visible, so the maps can measure their size
+
+    if (!session.practice && g.length >= 5 && !session.progress.submitted) {
+      $("sNote").textContent = "Saving your score…";
+      try {
+        const res = await api.submit({ player, date: session.date, scores, total, miles: g.map((x) => x.miles), guesses: g.map((x) => [x.lon, x.lat]) });
+        if (res && res.ok) {
+          session.progress.submitted = true; store.set(session.key, session.progress);
+          $("sNote").textContent = res.duplicate ? "You'd already played today — your first score stands." : "Score saved.";
+        } else {
+          $("sNote").textContent = (res && res.error) || "Couldn't save your score. Refresh to try again.";
+        }
+      } catch (e) {
+        $("sNote").textContent = "Couldn't reach the scoreboard. Refresh to try again.";
+      }
+    }
+    loadBoard();
+    loadBadges();
+  }
+
+  // ---------- Question review: one card per question with a small map ----------
+  let bordersP = null;
+  function loadBorders() {
+    if (!bordersP) {
+      bordersP = Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())))
+        .then(([w, us]) => ({
+          countries: topojson.mesh(w, w.objects.countries, (a, b) => a !== b),
+          coast: topojson.mesh(w, w.objects.countries, (a, b) => a === b),
+          states: topojson.mesh(us, us.objects.states, (a, b) => a !== b),
+        })).catch(() => null);
+    }
+    return bordersP;
+  }
+  const PIN_SVG = (fill) => '<svg viewBox="0 0 28 38" width="22" height="30"><path d="M14 37C14 37 26 22.5 26 13.5A12 12 0 0 0 2 13.5C2 22.5 14 37 14 37Z" fill="' +
+    fill + '" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>';
+
+  // A still satellite map framing the answer (and your guess, if we have it), built from image tiles.
+  async function miniMap(box, ans, guess) {
+    const w = box.clientWidth || 320, h = box.clientHeight || 200;
+    const mercY = (lat) => { const r = Math.max(-85, Math.min(85, lat)) * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2; };
+    // Take the short way around the globe between the two points.
+    let g = guess ? [guess[0], guess[1]] : null;
+    if (g) { while (g[0] - ans[0] > 180) g[0] -= 360; while (g[0] - ans[0] < -180) g[0] += 360; }
+    const cLon = g ? (g[0] + ans[0]) / 2 : ans[0];
+    const yA = mercY(ans[1]), yG = g ? mercY(g[1]) : yA, cY = (yA + yG) / 2;
+    const dLon = g ? Math.abs(g[0] - ans[0]) / 360 : 0, dY = Math.abs(yA - yG);
+    let z = 10;
+    while (z > 1 && (dLon * 256 * Math.pow(2, z) > w * 0.72 || dY * 256 * Math.pow(2, z) > h * 0.62)) z--;
+    const W = 256 * Math.pow(2, z);
+    const cx = ((cLon + 180) / 360) * W, cy = cY * W, tlx = cx - w / 2, tly = cy - h / 2;
+    // Tiles one zoom level deeper, drawn at half size, so the map stays sharp on phone screens.
+    const tz = z + 1, n = Math.pow(2, tz), ts = 128, tpl = Globe.tileTemplate();
+    const layer = document.createElement("div"); layer.className = "mm-tiles";
+    for (let ty = Math.floor(tly / ts); ty <= Math.floor((tly + h) / ts); ty++) {
+      if (ty < 0 || ty >= n) continue;
+      for (let tx = Math.floor(tlx / ts); tx <= Math.floor((tlx + w) / ts); tx++) {
+        const im = new Image();
+        im.alt = ""; im.loading = "lazy"; im.decoding = "async";
+        im.src = tpl.replace("{z}", tz).replace("{y}", ty).replace("{x}", ((tx % n) + n) % n);
+        im.style.left = (tx * ts - tlx) + "px"; im.style.top = (ty * ts - tly) + "px";
+        im.onerror = () => im.remove();
+        layer.appendChild(im);
+      }
+    }
+    box.appendChild(layer);
+    const proj = d3.geoMercator().rotate([-cLon, 0]).scale(W / (2 * Math.PI)).translate([w / 2, W / 2 - tly]);
+    const svg = d3.select(box).append("svg").attr("class", "mm-lines").attr("viewBox", "0 0 " + w + " " + h);
+    const path = d3.geoPath(proj);
+    const b = await loadBorders();
+    if (b) {
+      if (z >= 4) svg.append("path").attr("d", path(b.states)).attr("class", "mm-state");
+      svg.append("path").attr("d", path(b.coast)).attr("class", "mm-coast");
+      svg.append("path").attr("d", path(b.countries)).attr("class", "mm-border");
+    }
+    if (g) {
+      const line = { type: "LineString", coordinates: d3.range(0, 1.0001, 1 / 64).map((t) => d3.geoInterpolate(g, ans)(t)) };
+      svg.append("path").attr("d", path(line)).attr("class", "mm-route");
+    }
+    const place = (pt, fill) => {
+      const p = proj(pt), el = document.createElement("div");
+      el.className = "mm-pin"; el.innerHTML = PIN_SVG(fill);
+      el.style.left = p[0] + "px"; el.style.top = p[1] + "px";
+      box.appendChild(el);
+    };
+    if (g) {
+      // Your guess: a white dot with an orange ring, so the answer pin can never hide it.
+      const p = proj(g), dot = document.createElement("div");
+      dot.className = "mm-guess"; dot.style.left = p[0] + "px"; dot.style.top = p[1] + "px";
+      dot.title = "Your guess";
+      box.appendChild(dot);
+    }
+    place(ans, "#3ecf7a");
+  }
+
+  function renderReview(scores) {
+    const g = session.progress.guesses;
+    buildCards($("review"), session.qs, scores, g.map((x) => x ? { lon: x.lon, lat: x.lat, miles: x.miles } : null), { idPrefix: "rev" });
+  }
+  // Review cards: clue, map with the guess and the answer, distance and the fun fact.
+  // guesses[i] is { lon, lat, miles } (lon/lat may be missing), or null. opts.who names someone else.
+  function buildCards(wrap, qs, scores, guesses, opts) {
+    opts = opts || {};
+    wrap.innerHTML = "";
+    qs.forEach((q, i) => {
+      const x = guesses[i], pts = scores[i];
+      const card = document.createElement("article");
+      card.className = "rev";
+      if (opts.idPrefix) card.id = opts.idPrefix + i;
+      const t = pts != null ? tierFor(pts, MAX_PTS[i]) : "none";
+      card.innerHTML =
+        '<div class="rev-head"><span class="rev-q"></span><span class="rev-x"></span><span class="rev-where"></span><span class="rev-score"><span class="rev-mark"></span><b></b></span></div>' +
+        '<p class="rev-clue"></p><div class="mm" role="img"></div>' +
+        '<div class="rev-ans"></div><div class="rev-dist"></div><p class="rev-fact"></p>';
+      card.querySelector(".rev-q").textContent = "Q" + (i + 1);
+      card.querySelector(".rev-x").textContent = "×" + (MAX_PTS[i] / 100);
+      card.querySelector(".rev-where").textContent = i < 2 ? "U.S." : "World";
+      const mark = card.querySelector(".rev-mark");
+      if (t === "perfect") { mark.className = "rev-mark face"; mark.textContent = PERFECT_EMOJI; } else mark.className = "rev-mark dot " + t;
+      card.querySelector(".rev-score b").textContent = pts != null ? pts : "–";
+      card.querySelector(".rev-clue").textContent = q.clue;
+      card.querySelector(".rev-ans").textContent = q.answer;
+      const dist = card.querySelector(".rev-dist");
+      const hasPin = x && x.lon != null && x.lat != null;
+      if (x && x.miles != null) {
+        dist.innerHTML = (opts.who ? "<span></span> was " : "You were ") + "<b></b> from the answer." + (hasPin ? "" : " <i>(Guess location wasn't saved.)</i>");
+        if (opts.who) dist.querySelector("span").textContent = opts.who;
+        dist.querySelector("b").textContent = fmt(x.miles) + (x.miles === 1 ? " mile" : " miles");
+      } else dist.textContent = opts.who ? "Guess wasn't saved for this question." : "Played on another device.";
+      card.querySelector(".rev-fact").textContent = q.fact;
+      const mm = card.querySelector(".mm");
+      mm.setAttribute("aria-label", "Map of " + q.answer + (hasPin ? " with the guess" : ""));
+      wrap.appendChild(card);
+      miniMap(mm, [q.lon, q.lat], hasPin ? [x.lon, x.lat] : null).catch(() => {});
+    });
+  }
+
+  // ---------- Someone's game on their profile ----------
+  // Shows their most recent day. For today's game you have to finish yours first (no spoilers).
+  async function showTheirGame(who) {
+    const box = $("theirGame"), cards = $("theirCards"), note = $("theirNote"), title = $("theirTitle");
+    cards.innerHTML = ""; note.textContent = ""; box.hidden = true;
+    if (!who || who === player || !histReady) return;
+    const today = todayCentral();
+    const days = mergedHistory().rows.filter((r) => r.player === who).map((r) => r.date).sort();
+    if (!days.length) return;
+    const date = days[days.length - 1], idx = daysBetween(START, date);
+    if (idx < 0 || idx >= QUESTIONS.length) return;
+    box.hidden = false;
+    title.textContent = date === today ? who + "'s game today" : who + "'s last game · " + prettyDate(date, true);
+    if (date === today) {
+      const mine = store.get("ggg:v1:" + player + ":" + today);
+      const done = (mine && mine.guesses && mine.guesses.length >= 5) || (board && (board.today || []).some((r) => r.name === player));
+      if (!done) { note.textContent = "Finish today's game to see " + who + "'s guesses."; return; }
+    }
+    note.textContent = "Loading…";
+    let d = null;
+    try { d = await api.day(who, date); } catch (e) {}
+    if (shelfWho !== who) return; // they opened someone else meanwhile
+    if (!d || !d.ok) { note.textContent = "Couldn't load " + who + "'s game."; return; }
+    note.textContent = "";
+    const gs = (d.scores || []).map((_, i) => ({
+      lon: d.guesses && d.guesses[i] ? d.guesses[i][0] : null,
+      lat: d.guesses && d.guesses[i] ? d.guesses[i][1] : null,
+      miles: d.miles && d.miles[i] != null ? d.miles[i] : null,
+    }));
+    buildCards(cards, QUESTIONS[idx], d.scores || [], gs, { who });
+  }
+
+  // The total counts up from zero when you've just finished; otherwise it just shows.
+  function countUp(el, end, animate) {
+    if (!animate || matchMedia("(prefers-reduced-motion: reduce)").matches) { el.textContent = fmt(end); return; }
+    const t0 = performance.now(), dur = 1200;
+    const step = (now) => {
+      const u = Math.min(1, (now - t0) / dur);
+      el.textContent = fmt(Math.round(end * (1 - Math.pow(1 - u, 3))));
+      if (u < 1) requestAnimationFrame(step);
+    };
+    el.textContent = "0";
+    requestAnimationFrame(step);
+  }
+
+  // Today's top three on a podium: 2nd, 1st, 3rd from left to right.
+  function renderPodium(list) {
+    const box = $("podium"), wrap = $("podiumWrap");
+    box.innerHTML = "";
+    const top = (list || []).slice(0, 3);
+    wrap.hidden = !top.length;
+    [1, 0, 2].forEach((k) => {
+      const r = top[k], d = document.createElement("div");
+      if (!r) { d.className = "step empty"; box.appendChild(d); return; }
+      d.className = "step s" + (k + 1) + (r.name === player ? " me" : "");
+      d.appendChild(avatar(r.name));
+      const n = document.createElement("span"); n.className = "pn"; n.textContent = r.name; d.appendChild(n);
+      const b = document.createElement("span"); b.className = "blk"; b.textContent = fmt(r.total); d.appendChild(b);
+      box.appendChild(d);
+    });
+  }
+
+  function buildShare() {
+    const b = session.shareBase;
+    session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
+      "\n" + b.emojis + " · " + fmt(b.total) + "/" + fmt(DAY_MAX) +
+      "\n" + location.origin + location.pathname;
+  }
+
+  // ---------- Badges ----------
+  // Everything is worked out here from the saved score history, so thresholds can change
+  // without touching the Google Sheet script.
+  const BADGES = [
+    { id: "streak",   icon: "🔥", name: "On a Roll",     levels: [3, 7, 30, 100, 365], unit: ["day in a row", "days in a row"],
+      names: ["Warming Up", "Heating Up", "On Fire", "Blazing", "Inferno"],
+      how: "Play days in a row. Your longest run counts, so a missed day never takes a level away." },
+    { id: "flyer",    icon: "🧳", name: "Frequent Flyer", levels: [5, 25, 50, 100, 365], unit: ["day played", "days played"],
+      names: ["Economy", "Premium", "Business", "First Class", "Private Jet"],
+      how: "Play the daily puzzle. Every day counts, in a row or not." },
+    { id: "bullseye", icon: "🎯", name: "Bullseye",      levels: [1, 10, 50, 100, 250], unit: ["perfect answer", "perfect answers"],
+      how: "Score a perfect 100 on a question by landing within about 10 miles." },
+    { id: "pb",       icon: "📈", name: "Personal Best", levels: [1, 3, 5, 10, 25], unit: ["new best day", "new best days"],
+      names: ["Base Camp", "Ridge", "Summit", "Above the Clouds", "Everest"],
+      how: "Beat your best score from the previous 30 days. Great days roll off after a month, so there's always a new target." },
+    { id: "postcard", icon: "📮", name: "Postcard",      levels: [1, 10, 30, 100, 365], unit: ["day shared", "days shared"],
+      names: ["Pen Pal", "Correspondent", "Town Crier", "Influencer", "Legend"],
+      how: "Share your result with Share result. One share a day counts." },
+    { id: "champ",    icon: "🥇", name: "Daily Champ",   levels: [1, 5, 25, 100], unit: ["win", "wins"],
+      how: "Finish 1st for the day, with at least 2 players. Ties count for everyone tied. Days count once they're over." },
+    { id: "podium",   icon: "🏅", name: "Podium",        levels: [5, 25, 100, 250], unit: ["top-3 finish", "top-3 finishes"],
+      how: "Finish in the top 3 for the day, on days with at least 4 players. Days count once they're over." },
+    { id: "weekly",   icon: "👑", name: "Weekly Winner", levels: [1, 5, 10, 25], unit: ["week won", "weeks won"],
+      how: "Score the most points from Monday to Sunday. Weeks count once Sunday is over." },
+    { id: "genius",   icon: PERFECT_EMOJI, name: "GeoGenius", levels: [1, 3, 10], unit: ["perfect day", "perfect days"],
+      how: "Score a perfect 1,000 in a day." },
+  ];
+  const ROMAN = ["", "I", "II", "III", "IV", "V"];
+  // "Heating Up" for badges with named levels, "Level II" for the rest.
+  const lvlName = (b, n) => (b.names ? b.names[n - 1] : "Level " + ROMAN[n]);
+  const unitFor = (b, n) => b.unit[n === 1 ? 0 : 1];
+
+  let HIST = null;        // { rows, shares } from the Sheet (or this device in demo mode)
+  let histReady = false;  // false until the updated Sheet script answers
+
+  // Shares made on this phone, kept until the Sheet confirms it saved them.
+  const shareKey = "ggg:shares";
+  function localShares() { return store.get(shareKey) || []; }
+  function noteShare(p, date) {
+    const list = localShares();
+    if (!list.some((s) => s.player === p && s.date === date)) { list.push({ player: p, date, sent: false }); store.set(shareKey, list); }
+  }
+  async function flushShares() {
+    const list = localShares();
+    let changed = false;
+    for (const s of list) {
+      if (s.sent) continue;
+      try { const res = await api.share({ player: s.player, date: s.date }); if (res && res.ok) { s.sent = true; changed = true; } } catch (e) {}
+    }
+    // Keep only the last few weeks on the phone.
+    const cutoff = addDays(todayCentral(), -21);
+    const kept = list.filter((s) => !s.sent || s.date >= cutoff);
+    if (changed || kept.length !== list.length) store.set(shareKey, kept);
+  }
+
+  async function loadHistory() {
+    try {
+      const h = await api.history();
+      if (h && Array.isArray(h.rows)) { HIST = { rows: h.rows, shares: h.shares || [] }; histReady = true; }
+    } catch (e) {}
+    return histReady;
+  }
+  // History with anything this phone knows about that the Sheet may not have yet.
+  function mergedHistory() {
+    const rows = (HIST ? HIST.rows : []).slice();
+    const shares = (HIST ? HIST.shares : []).slice();
+    const seenR = new Set(rows.map((r) => r.player + "|" + r.date));
+    if (session && !session.practice && player) {
+      const g = session.progress.guesses;
+      if (g.length >= 5 && !seenR.has(player + "|" + session.date)) {
+        const scores = g.map((x) => x.pts);
+        rows.push({ date: session.date, player, scores, total: scores.reduce((a, b) => a + b, 0) });
+      }
+    }
+    const seenS = new Set(shares.map((s) => s.player + "|" + s.date));
+    localShares().forEach((s) => { if (!seenS.has(s.player + "|" + s.date)) { shares.push({ player: s.player, date: s.date }); seenS.add(s.player + "|" + s.date); } });
+    return { rows, shares };
+  }
+
+  // Badge progress for one player, counting only what was known by the end of `cutoff`.
+  // Head-to-head badges (champ, podium, weekly) only count days/weeks that finished before `cutoff`.
+  function badgeData(hist, who, cutoff) {
+    const seen = new Set(), rows = [];
+    hist.rows.forEach((r) => { const k = r.player + "|" + r.date; if (!seen.has(k) && r.date <= cutoff) { seen.add(k); rows.push(r); } });
+    const mine = rows.filter((r) => r.player === who).sort((a, b) => (a.date < b.date ? -1 : 1));
+    const events = []; // [date, id, value, mode]
+    let best = -1, run = 0, prev = null;
+    mine.forEach((r) => {
+      events.push([r.date, "flyer", 1, "add"]);
+      const bulls = (r.scores || []).filter((s, i) => Number(s) === MAX_PTS[i]).length;
+      if (bulls) events.push([r.date, "bullseye", bulls, "add"]);
+      if (Number(r.total) >= DAY_MAX) events.push([r.date, "genius", 1, "add"]);
+      // Personal Best: beat your best score from the previous 30 days.
+      const windowStart = addDays(r.date, -30);
+      const recent = mine.filter((o) => o.date < r.date && o.date >= windowStart).map((o) => Number(o.total));
+      if (recent.length && Number(r.total) > Math.max.apply(null, recent)) events.push([r.date, "pb", 1, "add"]);
+      best = Math.max(best, r.total);
+      run = prev && addDays(prev, 1) === r.date ? run + 1 : 1; prev = r.date;
+      events.push([r.date, "streak", run, "max"]);
+    });
+    const byDate = {};
+    rows.forEach((r) => { (byDate[r.date] = byDate[r.date] || []).push(r); });
+    mine.forEach((r) => {
+      if (r.date >= cutoff) return;
+      const day = byDate[r.date], higher = day.filter((o) => o.total > r.total).length;
+      if (day.length >= 2 && higher === 0) events.push([r.date, "champ", 1, "add"]);
+      if (day.length >= 4 && higher <= 2) events.push([r.date, "podium", 1, "add"]);
+    });
+    const weeks = {};
+    rows.forEach((r) => {
+      const dow = new Date(ymdToUTC(r.date)).getUTCDay(), mon = addDays(r.date, -((dow + 6) % 7));
+      const w = (weeks[mon] = weeks[mon] || {}); w[r.player] = (w[r.player] || 0) + Number(r.total);
+    });
+    Object.keys(weeks).forEach((mon) => {
+      const sun = addDays(mon, 6), w = weeks[mon];
+      if (sun >= cutoff || !(who in w) || Object.keys(w).length < 2) return;
+      if (Object.values(w).every((t) => t <= w[who])) events.push([sun, "weekly", 1, "add"]);
+    });
+    const shareDays = new Set(hist.shares.filter((s) => s.player === who && s.date <= cutoff).map((s) => s.date));
+    shareDays.forEach((d) => events.push([d, "postcard", 1, "add"]));
+    events.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
+
+    const out = {};
+    BADGES.forEach((b) => { out[b.id] = { value: 0, level: 0, dates: [] }; });
+    events.forEach(([date, id, v, mode]) => {
+      const o = out[id], b = BADGES.find((x) => x.id === id);
+      o.value = mode === "add" ? o.value + v : Math.max(o.value, v);
+      while (o.level < b.levels.length && o.value >= b.levels[o.level]) { o.dates[o.level] = date; o.level++; }
+    });
+    // Current streak: days in a row ending today or yesterday.
+    const dates = new Set(mine.map((r) => r.date));
+    let d = dates.has(cutoff) ? cutoff : addDays(cutoff, -1), cur = 0;
+    while (dates.has(d)) { cur++; d = addDays(d, -1); }
+    out.streak.current = cur;
+    BADGES.forEach((b) => {
+      const o = out[b.id];
+      o.next = b.levels[o.level] || null;
+      const toward = b.id === "streak" ? cur : o.value;
+      o.frac = o.next ? Math.min(1, toward / o.next) : 1;
+      o.toward = toward;
+    });
+    const totals = mine.map((r) => Number(r.total));
+    out.stats = {
+      days: mine.length, first: mine.length ? mine[0].date : null, streak: cur,
+      best: totals.length ? Math.max.apply(null, totals) : 0,
+      avg: totals.length ? Math.round(totals.reduce((a, b) => a + b, 0) / totals.length) : 0,
+      last: mine.length ? mine[mine.length - 1].date : null,
+    };
+    return out;
+  }
+
+  // Badge art for five badges comes from badge-art.js (window.GUY_ART), drawn as plain SVG.
+  let artId = 0;
+  function medal(b, level, size) {
+    const el = document.createElement("span");
+    el.className = "medal " + (level ? "t" + Math.min(level, 5) : "locked");
+    if (size) el.style.setProperty("--sz", size + "px");
+    if (window.GUY_ART && window.GUY_ART[b.id]) {
+      const art = document.createElement("span"); art.className = "art"; art.innerHTML = window.GUY_ART[b.id]("b" + (++artId), level); el.appendChild(art);
+    } else {
+      const g = document.createElement("span"); g.className = "g"; g.textContent = b.icon; el.appendChild(g);
+    }
+    if (level) { const lv = document.createElement("span"); lv.className = "lv"; lv.textContent = ROMAN[level]; el.appendChild(lv); }
+    el.setAttribute("aria-hidden", "true");
+    return el;
+  }
+
+  // Results screen: badges earned since your last visit, and the ones you're closest to.
+  let lastBadges = null;
+  async function loadBadges() {
+    const wrap = $("badgeWrap");
+    const ok = await loadHistory();
+    flushShares();
+    if (ok) renderYesterday();
+    if (!ok || !player || !session) { wrap.hidden = true; return; }
+    const hist = mergedHistory(), today = todayCentral();
+    const mineBefore = hist.rows.filter((r) => r.player === player && r.date < today).map((r) => r.date).sort();
+    const prevDate = mineBefore.length ? mineBefore[mineBefore.length - 1] : "0000-00-00";
+    const before = badgeData(hist, player, prevDate), after = badgeData(hist, player, today);
+    lastBadges = after;
+    const fresh = session.practice ? [] : BADGES.filter((b) => after[b.id].level > before[b.id].level);
+    const card = $("badgeNew"), list = $("badgeNewList");
+    list.innerHTML = "";
+    fresh.forEach((b) => {
+      const o = after[b.id], row = document.createElement("div");
+      row.className = "bn-item";
+      row.appendChild(medal(b, o.level, 46));
+      const t = document.createElement("div");
+      t.innerHTML = "<b></b><span></span>";
+      t.querySelector("b").textContent = b.name + " · " + lvlName(b, o.level);
+      const n = b.levels[o.level - 1];
+      t.querySelector("span").textContent = fmt(n) + " " + unitFor(b, n);
+      row.appendChild(t);
+      row.onclick = () => openBadge(b.id, player);
+      list.appendChild(row);
+    });
+    card.hidden = !fresh.length;
+    $("badgeNewTitle").textContent = fresh.length === 1 ? "New badge!" : "New badges!";
+    // Almost there: the two badges you're closest to leveling up.
+    const near = BADGES.filter((b) => after[b.id].next && after[b.id].toward > 0)
+      .sort((a, b) => after[b.id].frac - after[a.id].frac).slice(0, 2);
+    const box = $("almostList"); box.innerHTML = "";
+    near.forEach((b) => {
+      const o = after[b.id], row = document.createElement("button");
+      row.type = "button"; row.className = "al-row";
+      row.innerHTML = '<span class="e"></span><span class="t"><b></b><small></small></span><span class="n"></span><span class="meter"><i></i></span>';
+      // The badge art for the level you're working toward.
+      row.querySelector(".e").appendChild(medal(b, o.level + 1, 38));
+      row.querySelector("b").textContent = b.name + " · " + lvlName(b, o.level + 1);
+      row.querySelector("small").textContent = fmt(o.next) + " " + unitFor(b, o.next);
+      row.querySelector(".n").textContent = fmt(o.toward) + "/" + fmt(o.next);
+      row.querySelector("i").style.width = Math.round(o.frac * 100) + "%";
+      row.onclick = () => openBadge(b.id, player);
+      box.appendChild(row);
+    });
+    $("almost").hidden = !near.length;
+    // A new personal best: show the old best crossed out.
+    const nb = $("newBest");
+    nb.hidden = true;
+    if (!session.practice) {
+      const mine = hist.rows.filter((r) => r.player === player);
+      const before = mine.filter((r) => r.date < session.date).map((r) => Number(r.total));
+      const todayRow = mine.find((r) => r.date === session.date);
+      const oldBest = before.length ? Math.max.apply(null, before) : 0;
+      const recent = mine.filter((r) => r.date < session.date && r.date >= addDays(session.date, -30)).map((r) => Number(r.total));
+      const old30 = recent.length ? Math.max.apply(null, recent) : 0;
+      const t = todayRow ? Number(todayRow.total) : 0;
+      if (todayRow && oldBest > 0 && t > oldBest) {
+        nb.className = "new-best";
+        nb.innerHTML = "<b>New best!</b> <s></s> → <strong></strong>";
+        nb.querySelector("s").textContent = fmt(oldBest);
+        nb.querySelector("strong").textContent = fmt(t);
+        nb.hidden = false;
+      } else if (todayRow && old30 > 0 && t > old30) {
+        nb.className = "new-best quiet";
+        nb.innerHTML = "<b>Best in 30 days</b> <s></s> → <strong></strong>";
+        nb.querySelector("s").textContent = fmt(old30);
+        nb.querySelector("strong").textContent = fmt(t);
+        nb.hidden = false;
+      }
+    }
+    // Keep the streak alive: a nudge once you're 7+ days in.
+    // Tier change since your last game
+    refreshTiers();
+    const tn = $("tierNote"); tn.hidden = true;
+    if (!session.practice && session.date === today) {
+      const beforeT = computeTiers(hist.rows.filter((r) => r.date < session.date), prevDate)[player];
+      const nowT = tierMap[player];
+      const bi = beforeT && beforeT.tier ? TIERS.indexOf(beforeT.tier) : 99, ni = nowT && nowT.tier ? TIERS.indexOf(nowT.tier) : 99;
+      if (nowT && nowT.tier && ni !== bi) {
+        tn.innerHTML = "";
+        tn.appendChild(gem(nowT.tier, 22));
+        const sp = document.createElement("span");
+        sp.textContent = (ni < bi ? (bi === 99 ? "You're ranked: " : "Promoted to ") : "Down to ") + nowT.tier.name + ". Your average is " + fmt(nowT.avg) + ".";
+        tn.appendChild(sp);
+        tn.className = "tier-note " + (ni < bi ? "up" : "down");
+        tn.onclick = () => openTiers(player);
+        tn.hidden = false;
+      }
+    }
+    const nudge = $("streakNudge"), st = after.stats.streak;
+    nudge.hidden = session.practice || st < 7 || session.date !== today;
+    nudge.textContent = "🔥 " + st + " days in a row. Come back tomorrow for day " + (st + 1) + ".";
+    wrap.hidden = !fresh.length && !near.length && nudge.hidden && tn.hidden;
+    // The share text stays simple: date, emojis, score and the link. No badges or streaks.
+  }
+
+  // After a share: record it, and celebrate if it earned a Postcard level.
+  function afterShare() {
+    if (!session || session.practice || !player) return;
+    const before = lastBadges ? lastBadges.postcard.level : null;
+    noteShare(player, session.date);
+    flushShares();
+    const sent = $("sentStamp");
+    sent.hidden = false; sent.classList.remove("go"); void sent.offsetWidth; sent.classList.add("go");
+    if (!histReady) return;
+    const now = badgeData(mergedHistory(), player, todayCentral());
+    lastBadges = now;
+    const b = BADGES.find((x) => x.id === "postcard");
+    if (before !== null && now.postcard.level > before) toast(b, now.postcard.level);
+  }
+  function toast(b, level) {
+    const t = $("toast");
+    t.innerHTML = "";
+    t.appendChild(medal(b, level, 38));
+    const s = document.createElement("div");
+    s.innerHTML = "<b>New badge!</b><span></span>";
+    s.querySelector("span").textContent = b.name + " · " + lvlName(b, level);
+    t.appendChild(s);
+    t.hidden = false; t.classList.remove("show");
+    requestAnimationFrame(() => t.classList.add("show"));
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => { t.classList.remove("show"); setTimeout(() => { t.hidden = true; }, 350); }, 3600);
+  }
+
+  // ---------- Yesterday's winner, on the score page ----------
+  function renderYesterday() {
+    const box = $("yWin");
+    box.hidden = true;
+    const y = addDays(todayCentral(), -1);
+    const seen = new Set(), rows = [];
+    mergedHistory().rows.forEach((r) => {
+      const k = r.player + "|" + r.date;
+      if (r.date === y && !seen.has(k)) { seen.add(k); rows.push(r); }
+    });
+    if (!rows.length) return;
+    const top = Math.max.apply(null, rows.map((r) => Number(r.total)));
+    const winners = rows.filter((r) => Number(r.total) === top);
+    const art = $("yArt"); art.innerHTML = "";
+    art.appendChild(medal(BADGES.find((b) => b.id === "champ"), 3, 54));
+    const who = $("yWho"); who.innerHTML = "";
+    winners.forEach((r, i) => {
+      if (i) who.appendChild(document.createTextNode(" & "));
+      const w = document.createElement("span"); w.className = "yw-name";
+      w.appendChild(avatar(r.player));
+      const n = document.createElement("b"); n.textContent = r.player; w.appendChild(n);
+      who.appendChild(w);
+    });
+    $("yScore").textContent = fmt(top);
+    $("yEmoji").textContent = (winners[0].scores || []).map((s, i) => emojiFor(Number(s), MAX_PTS[i])).join("");
+    const me = winners.some((r) => r.player === player);
+    $("ySub").textContent = (winners.length > 1 ? "Tied for 1st" : me ? "That was you!" : "Top score") + " · " + rows.length + (rows.length === 1 ? " player" : " players");
+    box.onclick = () => openShelf(winners[0].player);
+    box.hidden = false;
+  }
+
+  // ---------- Badge shelf (a player's profile) ----------
+  let shelfFrom = null, shelfWho = null, shelfData = null;
+  async function openShelf(who) {
+    shelfWho = who;
+    const cur = ["pickScreen", "gameScreen", "doneScreen", "msgScreen"].find((s) => !$(s).hidden);
+    if (cur) shelfFrom = cur;
+    show("badgeScreen");
+    $("shelfSwitch").hidden = who !== player;
+    $("theirGame").hidden = true;
+    const head = $("shelfHead"); head.innerHTML = "";
+    const av = avatar(who); av.classList.add("big"); head.appendChild(av);
+    const t = document.createElement("div"); t.innerHTML = "<h1></h1><small></small>";
+    t.querySelector("h1").textContent = who; head.appendChild(t);
+    $("shelfGrid").innerHTML = '<div class="muted small span">Loading badges…</div>';
+    $("shelfStats").innerHTML = "";
+    if (!histReady) await loadHistory();
+    if (!histReady) {
+      $("shelfGrid").innerHTML = '<div class="muted small span">Badges are almost ready. They\'ll appear here once the scoreboard is updated.</div>';
+      t.querySelector("small").textContent = "";
+      return;
+    }
+    const d = badgeData(mergedHistory(), who, todayCentral());
+    shelfData = d;
+    showTheirGame(who);
+    refreshTiers();
+    const hv = avatar(who); hv.classList.add("big"); head.replaceChild(hv, head.firstChild);
+    const tinfo = tierMap[who], chip = document.createElement("button");
+    chip.type = "button"; chip.className = "tier-chip";
+    chip.appendChild(gem(tinfo && tinfo.tier, 14));
+    const ct = document.createElement("span");
+    ct.textContent = tinfo && tinfo.tier ? tinfo.tier.name + " · avg " + fmt(tinfo.avg) : "Unranked · play " + TIER_MIN_GAMES + " games to get a tier";
+    chip.appendChild(ct);
+    chip.onclick = () => openTiers(who);
+    t.appendChild(chip);
+    const earned = BADGES.reduce((a, b) => a + d[b.id].level, 0), possible = BADGES.reduce((a, b) => a + b.levels.length, 0);
+    t.querySelector("small").textContent = (d.stats.first ? "Playing since " + prettyDate(d.stats.first, false) + " · " : "") + earned + " of " + possible + " badge levels";
+    const stats = $("shelfStats");
+    [["🔥" + d.stats.streak, "Day streak"], [fmt(d.stats.best), "Best day"], [fmt(d.stats.avg), "Average"]].forEach(([v, l]) => {
+      const s = document.createElement("div"); s.className = "stat"; s.innerHTML = "<b></b><span></span>";
+      s.querySelector("b").textContent = v; s.querySelector("span").textContent = l; stats.appendChild(s);
+    });
+    const grid = $("shelfGrid"); grid.innerHTML = "";
+    BADGES.forEach((b) => {
+      const o = d[b.id], cell = document.createElement("button");
+      cell.type = "button"; cell.className = "cell";
+      cell.appendChild(medal(b, o.level, 54));
+      const txt = document.createElement("span"); txt.className = "ct";
+      txt.innerHTML = "<b></b><small></small>";
+      txt.querySelector("b").textContent = b.name;
+      const shown = b.id === "streak" ? o.value : o.value;
+      txt.querySelector("small").textContent = o.level ? fmt(shown) + " " + unitFor(b, shown) + (b.id === "streak" ? " (best)" : "")
+        : b.id === "genius" ? "Score a perfect 1,000" : "Next: " + fmt(b.levels[0]) + " " + unitFor(b, b.levels[0]);
+      if (o.next) { const m = document.createElement("span"); m.className = "mini"; m.innerHTML = "<i></i>"; m.firstChild.style.width = Math.round(o.frac * 100) + "%"; txt.appendChild(m); }
+      cell.appendChild(txt);
+      cell.setAttribute("aria-label", b.name + (o.level ? ", level " + o.level : ", not earned yet"));
+      cell.onclick = () => openBadge(b.id, who);
+      grid.appendChild(cell);
+    });
+  }
+  $("shelfBack").onclick = () => { closeSheet(); show(shelfFrom || "doneScreen"); };
+  $("shelfSwitch").onclick = () => {
+    if (confirm("Switch player? You'll pick your name again.")) { closeSheet(); store.del("ggg:player"); player = null; setWho(); pickPlayer(); }
+  };
+
+  // One badge up close: its levels, when each was reached, and who else has it.
+  function openBadge(id, who) {
+    if (!histReady) return;
+    const b = BADGES.find((x) => x.id === id), hist = mergedHistory(), today = todayCentral();
+    const d = who === shelfWho && shelfData ? shelfData : badgeData(hist, who, today), o = d[id];
+    const sh = $("sheet");
+    $("sheetMedal").innerHTML = ""; $("sheetMedal").appendChild(medal(b, o.level, 60));
+    $("sheetName").textContent = b.name;
+    $("sheetHow").textContent = b.how;
+    const ul = $("sheetLadder"); ul.innerHTML = "";
+    b.levels.forEach((n, i) => {
+      const li = document.createElement("li");
+      // Levels not reached yet show their real art, faded, with a lock, so you can see what you're chasing.
+      const m = medal(b, i + 1, 34);
+      if (i >= o.level) {
+        m.classList.add("preview");
+        const lk = document.createElement("span"); lk.className = "lock"; lk.textContent = "🔒"; m.appendChild(lk);
+      }
+      li.appendChild(m);
+      const t = document.createElement("div"); t.innerHTML = "<span></span><small></small>";
+      t.querySelector("span").textContent = "Level " + ROMAN[i + 1] + (b.names ? " · " + b.names[i] : "");
+      t.querySelector("small").textContent = fmt(n) + " " + unitFor(b, n);
+      li.appendChild(t);
+      const st = document.createElement("span"); st.className = "st";
+      if (i < o.level) { st.classList.add("ok"); st.textContent = o.dates[i] === today ? "Today" : prettyDate(o.dates[i], false); }
+      else if (i === o.level) st.textContent = fmt(o.toward) + "/" + fmt(n);
+      li.appendChild(st);
+      ul.appendChild(li);
+    });
+    // Who else has reached this badge.
+    const names = Array.from(new Set(hist.rows.map((r) => r.player))).filter((n) => n !== who);
+    const holders = names.filter((n) => badgeData(hist, n, today)[id].level >= Math.max(1, o.level));
+    const hb = $("sheetHolders"); hb.innerHTML = "";
+    if (holders.length) {
+      const stack = document.createElement("span"); stack.className = "stack";
+      holders.slice(0, 5).forEach((n) => stack.appendChild(avatar(n)));
+      hb.appendChild(stack);
+      const s = document.createElement("span");
+      const lvl = Math.max(1, o.level);
+      s.textContent = holders.length + (holders.length === 1 ? " other player has " : " other players have ") + (lvl > 1 ? "Level " + ROMAN[lvl] : "this badge");
+      hb.appendChild(s);
+    } else hb.textContent = o.level ? "No one else has this level yet." : "No one has earned this yet.";
+    const ex = $("sheetExtra"); ex.innerHTML = ""; ex.hidden = true;
+    if (id === "flyer") {
+      const seat = o.level ? b.names[o.level - 1] : "Standby";
+      ex.innerHTML = '<div class="bp"><div class="bp-top"><span>GeoGeniuses Air</span><span>✈</span></div><div class="bp-row">' +
+        '<div><small>Passenger</small><b class="bp-who"></b></div><div><small>Days flown</small><b class="bp-days"></b></div><div><small>Seat</small><b class="bp-seat"></b></div></div>' +
+        '<div class="bp-next"></div></div>';
+      ex.querySelector(".bp-who").textContent = who;
+      ex.querySelector(".bp-days").textContent = fmt(o.value);
+      ex.querySelector(".bp-seat").textContent = seat;
+      ex.querySelector(".bp-next").textContent = o.next ? "Next upgrade: " + b.names[o.level] + " at " + fmt(o.next) + " days" : "Top tier. Enjoy the jet.";
+      ex.hidden = false;
+    }
+    $("sheetDim").hidden = false; sh.hidden = false;
+    requestAnimationFrame(() => { sh.classList.add("show"); $("sheetDim").classList.add("show"); });
+  }
+  function closeSheet() {
+    const sh = $("sheet");
+    sh.classList.remove("show"); $("sheetDim").classList.remove("show");
+    setTimeout(() => { sh.hidden = true; $("sheetDim").hidden = true; }, 250);
+  }
+  $("sheetDim").onclick = closeSheet;
+  $("sheetClose").onclick = closeSheet;
+
+  // ---------- Leaderboard ----------
+  let board = null, tab = "today";
+  // ---------- GeoGrabber card: the other daily game, one tap away ----------
+  const GRAB_START = String(window.GRAB_START_DATE || "");
+  async function renderGrab() {
+    const card = $("grabCard");
+    const today = todayCentral();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(GRAB_START) || today < GRAB_START) { card.hidden = true; return; }
+    const plat = daysBetween(GRAB_START, today) + 1;
+    const set = (mine, rows) => {
+      const played = !!mine;
+      card.classList.toggle("played", played);
+      $("grabNew").hidden = played; $("grabMine").hidden = !played;
+      $("grabEyebrow").textContent = played ? "GeoGrabber · Day " + plat : (plat <= 7 ? "New daily game" : "Today's GeoGrabber");
+      $("grabMeta").textContent = played ? "" : "Day " + plat + " · one run a day";
+      $("grabMeta").hidden = played;
+      const btn = $("grabBtn");
+      btn.firstChild.textContent = played ? "See the GeoGrabber board" : "Play today's GeoGrabber";
+      btn.classList.toggle("quiet", played);
+      if (played) {
+        $("grabPct").textContent = (Math.round((mine.pct || 0) * 10) / 10).toFixed(1) + "%";
+        const rank = rows.indexOf(mine) + 1, cut = mine.kills || 0;
+        const r = $("grabRank"); r.textContent = "";
+        if (mine.status !== "done") r.append("Run interrupted · this score stands");
+        else { r.append("Rank "); const b = document.createElement("b"); b.textContent = rank; r.append(b, " of " + rows.length + (cut ? " · " + cut + (cut === 1 ? " rival" : " rivals") + " cut off" : "")); }
+      }
+      const others = rows.filter((r) => r !== mine).map((r) => r.player);
+      const who = $("grabWho");
+      who.hidden = !others.length || played; who.innerHTML = "";
+      if (others.length && !played) {
+        const stack = document.createElement("span"); stack.className = "stack";
+        others.slice(0, 3).forEach((n) => stack.appendChild(avatar(n)));
+        const t = document.createElement("span");
+        const names = others.slice(0, 2), more = others.length - names.length;
+        t.textContent = (more > 0 ? names.join(", ") + " and " + more + (more === 1 ? " other" : " others") : names.join(" and ")) + (others.length === 1 ? " has" : " have") + " played today";
+        who.append(stack, t);
+      }
+      card.hidden = false;
+    };
+    set(null, []);
+    let mine = null, rows = [];
+    if (API) {
+      try {
+        const res = await (await fetch(API + "?action=grabBoard")).json();
+        rows = (res.rows || []).filter((r) => r.date === today)
+          .sort((a, b) => (b.pct || 0) - (a.pct || 0) || (b.kills || 0) - (a.kills || 0) || (a.at || 0) - (b.at || 0));
+        mine = rows.find((r) => r.player === player) || null;
+        set(mine, rows);
+      } catch (e) { /* the card still links to the game */ }
+    }
+    if (!mine) askGrab(plat, rows.map((r) => r.player));
+  }
+
+  // Once a day, after today's score, invite people who haven't played GeoGrabber yet.
+  const GRAB_ASK_KEY = "ggg:grabAsk";
+  function askGrab(day, others) {
+    const today = todayCentral();
+    if (!session || session.practice || session.date !== today) return;
+    if (store.get(GRAB_ASK_KEY) === today) return;
+    setTimeout(() => {
+      if ($("doneScreen").hidden || !$("sheet").hidden || !$("grabPop").hidden) return;
+      store.set(GRAB_ASK_KEY, today);
+      $("gpEyebrow").textContent = day <= 7 ? "New daily game · Day " + day : "GeoGrabber · Day " + day;
+      const who = $("gpWho"); who.innerHTML = "";
+      who.hidden = !others.length;
+      if (others.length) {
+        const stack = document.createElement("span"); stack.className = "stack";
+        others.slice(0, 3).forEach((n) => stack.appendChild(avatar(n)));
+        const t = document.createElement("span"), names = others.slice(0, 2), more = others.length - names.length;
+        t.textContent = (more > 0 ? names.join(", ") + " and " + more + (more === 1 ? " other" : " others") : names.join(" and ")) + (others.length === 1 ? " has" : " have") + " played today";
+        who.append(stack, t);
+      }
+      const pop = $("grabPop"), dim = $("gpDim");
+      pop.hidden = false; dim.hidden = false;
+      requestAnimationFrame(() => { pop.classList.add("show"); dim.classList.add("show"); });
+      $("gpGo").focus();
+    }, 1800);
+  }
+  function closeGrabAsk() {
+    const pop = $("grabPop"), dim = $("gpDim");
+    if (pop.hidden) return;
+    pop.classList.remove("show"); dim.classList.remove("show");
+    setTimeout(() => { pop.hidden = true; dim.hidden = true; }, 260);
+  }
+  $("gpLater").onclick = closeGrabAsk;
+  $("gpDim").onclick = closeGrabAsk;
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeGrabAsk(); });
+
+  async function loadBoard() {
+    $("boardList").innerHTML = '<li class="muted">Loading…</li>';
+    $("boardNote").textContent = "";
+    try { board = await api.board(); renderPodium(board.today); renderBoard(); }
+    catch (e) { $("boardList").innerHTML = '<li class="muted">Couldn\'t load the leaderboard.</li>'; }
+  }
+  const TOP_N = 10;
+  const AVG_MIN_GAMES = 5;
+  let showAll = false;
+  function renderBoard() {
+    if (!board) return;
+    const ul = $("boardList"); ul.innerHTML = "";
+    let rows = [], note = "";  // each row: [name, display value, sub-label, sort value]
+    if (tab === "today") { rows = board.today.map((r) => [r.name, fmt(r.total), (r.scores || []).map((s, i) => emojiFor(s, MAX_PTS[i])).join(""), r.total]); note = "Today's scores"; }
+    if (tab === "week") { rows = board.week.map((r) => [r.name, fmt(r.total), r.games + (r.games === 1 ? " day" : " days"), r.total]); note = "Total points since Monday, " + prettyDate(board.weekStart, false); }
+    if (tab === "avg") {
+      // All-time list: at least 5 games, and at least one in the last 7 days.
+      const lastPlayed = {};
+      if (histReady) mergedHistory().rows.forEach((r) => { if (!lastPlayed[r.player] || r.date > lastPlayed[r.player]) lastPlayed[r.player] = r.date; });
+      const weekAgo = addDays(todayCentral(), -6);
+      rows = board.avg
+        .filter((r) => r.games >= AVG_MIN_GAMES && (!histReady || (lastPlayed[r.name] && lastPlayed[r.name] >= weekAgo)))
+        .map((r) => [r.name, fmt(r.avg), r.games + (r.games === 1 ? " game" : " games"), r.avg]);
+      note = "Average daily score, all time · " + AVG_MIN_GAMES + "+ games and played this week";
+    }
+    if (tab === "streak") { rows = board.streak.map((r) => [r.name, r.streak + (r.streak === 1 ? " day" : " days"), "", r.streak]); note = "Days played in a row"; }
+    if (!rows.length) { ul.innerHTML = '<li class="muted">No scores yet.</li>'; $("boardNote").textContent = note; return; }
+    // Ties share a place (1, 2, 2, 4 …).
+    const ranks = []; rows.forEach((r, i) => { ranks.push(i > 0 && r[3] === rows[i - 1][3] ? ranks[i - 1] : i + 1); });
+    const addRow = (r, rank) => {
+      const li = document.createElement("li");
+      li.innerHTML = '<span class="rank"></span><span class="n"></span><span class="v"></span>';
+      li.querySelector(".rank").textContent = rank;
+      li.querySelector(".n").textContent = r[0];
+      const tt = tierMap[r[0]];
+      if (tt && tt.tier) { const gm = gem(tt.tier, 12); gm.title = tt.tier.name; li.querySelector(".n").appendChild(gm); }
+      li.insertBefore(avatar(r[0]), li.querySelector(".n"));
+      if (r[2]) { const s = document.createElement("span"); s.className = "sub"; s.textContent = r[2]; li.querySelector(".n").appendChild(s); }
+      li.querySelector(".v").textContent = r[1];
+      if (r[0] === player) li.classList.add("me");
+      li.classList.add("tap"); li.onclick = () => openShelf(r[0]);
+      ul.appendChild(li);
+    };
+    const limit = showAll ? rows.length : TOP_N;
+    rows.slice(0, limit).forEach((r, i) => addRow(r, ranks[i]));
+    const mine = rows.findIndex((r) => r[0] === player);
+    if (mine >= limit) {
+      const gap = document.createElement("li"); gap.className = "gap"; gap.textContent = "⋯"; ul.appendChild(gap);
+      addRow(rows[mine], ranks[mine]);
+    }
+    const count = rows.length + (rows.length === 1 ? " player" : " players");
+    let you = mine >= 0 ? "" : (tab === "streak" ? " · Play today to start a streak" : " · You're not on this board yet");
+    if (mine < 0 && tab === "avg") {
+      const meAvg = board.avg.find((r) => r.name === player);
+      you = !meAvg || meAvg.games < AVG_MIN_GAMES
+        ? " · Play " + (AVG_MIN_GAMES - (meAvg ? meAvg.games : 0)) + " more " + ((AVG_MIN_GAMES - (meAvg ? meAvg.games : 0)) === 1 ? "game" : "games") + " to join"
+        : " · Play today to get back on";
+    }
+    $("boardNote").textContent = note + " · " + count + you;
+    const more = $("boardMore");
+    more.hidden = rows.length <= TOP_N;
+    more.textContent = showAll ? "Show top " + TOP_N : "Show all " + rows.length + " players";
+    more.setAttribute("aria-expanded", showAll ? "true" : "false");
+  }
+  $("boardMore").onclick = () => { showAll = !showAll; renderBoard(); };
+  document.querySelectorAll(".tab").forEach((b) => {
+    b.onclick = () => {
+      tab = b.dataset.tab;
+      document.querySelectorAll(".tab").forEach((x) => x.classList.toggle("on", x === b));
+      renderBoard();
+    };
+  });
+
+  // ---------- Share ----------
+  $("shareBtn").onclick = async () => {
+    const text = session.share;
+    $("copied").hidden = true;
+    // Open the phone's (or computer's) share sheet whenever the browser offers one.
+    if (navigator.share) {
+      try { await navigator.share({ text }); afterShare(); return; }
+      catch (e) { if (e && e.name === "AbortError") return; } // they closed the share sheet
+    }
+    // No share sheet available: copy to the clipboard instead.
+    try { await navigator.clipboard.writeText(text); }
+    catch (e) {
+      const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+      ta.select(); try { document.execCommand("copy"); } catch (e2) {} ta.remove();
+    }
+    $("copied").hidden = false;
+    afterShare();
+  };
+
+  // ---------- Past days (practice) ----------
+  function fillPast() {
+    const sel = $("pastSel"); sel.innerHTML = "";
+    const today = todayCentral();
+    const last = Math.min(daysBetween(START, today) - 1, QUESTIONS.length - 1);
+    for (let i = last; i >= 0; i--) {
+      const d = addDays(START, i);
+      const o = document.createElement("option");
+      o.value = d; o.textContent = "Day " + (i + 1) + " · " + prettyDate(d, true);
+      sel.appendChild(o);
+    }
+    $("pastBtn").disabled = last < 0;
+    if (last < 0) { const o = document.createElement("option"); o.textContent = "No past days yet"; sel.appendChild(o); }
+  }
+  $("pastBtn").onclick = () => { const d = $("pastSel").value; if (d) { store.del("ggg:v1:" + player + ":" + d + ":practice"); begin(d, true); } };
+
+  function setSoundBtn() { $("soundBtn").textContent = Feedback.isOn() ? "🔊" : "🔇"; $("soundBtn").setAttribute("aria-label", Feedback.isOn() ? "Sound on" : "Sound off"); }
+  $("soundBtn").onclick = () => { Feedback.toggle(); setSoundBtn(); };
+  setSoundBtn();
+
+  $("whoBtn").onclick = () => { if (player) openShelf(player); };
+
+  // ---------- Start ----------
+  (async function init() {
+    $("demo").hidden = !!API;
+    $("dateLabel").textContent = prettyDate(todayCentral(), true);
+    setWho();
+    try {
+      const [qs] = await Promise.all([fetch("questions.json").then((r) => r.json()), Globe.load()]);
+      QUESTIONS = qs;
+    } catch (e) { return message("Something went wrong", "The game files didn't load. Try refreshing."); }
+    if (!player) pickPlayer(); else begin(todayCentral(), false);
+    loadHistory().then((ok) => { if (ok) refreshTiers(); });
+    flushShares(); // send any shares saved on this phone while the Sheet was offline or not yet updated
+  })();
+
+  // Exposed for testing only.
+  window.__ggg = { pointsFor, baseScore, emojiFor, computeBoard, milesBetween, globe: Globe };
+})();
