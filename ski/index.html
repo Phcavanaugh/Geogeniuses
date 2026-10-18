@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="robots" content="noindex"></head><body><title>Steamboat Downhill</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover"><meta name="robots" content="noindex"><meta http-equiv="Cache-Control" content="no-cache"></head><body><title>Steamboat Downhill</title>
 <style>
 :root{--ink:#0d1b2a;--paper:#f6f8fb;--blue:#1d5fd1;--red:#d62f2f}
 *{box-sizing:border-box}
@@ -71,7 +71,7 @@ button.alt{width:100%;border:1px solid #c5cfdb;background:#fff;border-radius:12p
   <div class="trail" id="sTrail"></div>
   <div class="stats" id="sStats"></div>
   <p class="help" id="sHelp"><kbd>←</kbd> <kbd>→</kbd> carve · <kbd>↓</kbd> tuck / skate · <kbd>↑</kbd> slow down<br>Go between every gate. A missed gate costs 5 seconds. Trees stop you cold. <kbd>M</kbd> mutes.</p>
-  <label class="tiltrow" id="tiltRow" hidden><input type="checkbox" id="tiltCb" checked> Tilt phone to steer</label>
+  <label class="tiltrow" id="tiltRow" hidden><input type="checkbox" id="tiltCb" checked> Tilt phone to steer <span id="tiltStat" style="font-weight:600;color:#5a6b80;font-size:12px">tap Drop in to allow motion</span></label>
   <button class="go" id="goBtn" disabled>Loading the mountain…</button>
   <div id="loading"></div>
 </div></div>
@@ -606,14 +606,20 @@ addEventListener('keyup',e=>{ keys[e.key]=false; });
 const touch={L:false,R:false,T:false};
 /* tilt steering: phone motion sensor, zeroed at the start gate */
 const TILT={on:false,live:false,raw:0,zero:0,val:0};
-function tiltRaw(e){ const ang=(screen.orientation&&screen.orientation.angle!=null)?screen.orientation.angle:(window.orientation||0);
-  if(ang===90) return e.beta||0; if(ang===-90||ang===270) return -(e.beta||0); return e.gamma||0; }
-addEventListener('deviceorientation',e=>{ if(e.gamma==null&&e.beta==null) return; TILT.raw=tiltRaw(e); TILT.live=true; });
+function tiltRaw(e){ // sideways lean in degrees, from the gravity direction in the phone's frame (works upright, flat or sideways)
+  const b=(e.beta||0)*Math.PI/180, g=(e.gamma||0)*Math.PI/180;
+  const gx=Math.cos(b)*Math.sin(g), gy=-Math.sin(b);
+  let ang=(screen.orientation&&typeof screen.orientation.angle==='number')?screen.orientation.angle:(typeof window.orientation==='number'?window.orientation:0);
+  ang=((ang%360)+360)%360;
+  const s = ang===90 ? -gy : ang===270 ? gy : ang===180 ? -gx : gx;
+  return Math.asin(clamp(s,-1,1))*180/Math.PI; }
+addEventListener('deviceorientation',e=>{ if(e.gamma==null&&e.beta==null) return; TILT.raw=tiltRaw(e); TILT.live=true;
+  const st=$('tiltStat'); if(st && $('startP').style.display!=='none') st.textContent='Sensor working · '+Math.round(TILT.raw)+'°'; });
 async function enableTilt(){
   try{ if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){ const r=await DeviceOrientationEvent.requestPermission(); if(r!=='granted') return false; } }catch(e){ return false; }
   return true; }
 function tiltSteer(){ if(!TILT.on||!TILT.live) return null; let d=TILT.raw-TILT.zero; if(d>90) d-=180; if(d<-90) d+=180;
-  const dz=3; if(Math.abs(d)<dz) return 0; return clamp((d-Math.sign(d)*dz)/20,-1,1); }
+  const dz=3; if(Math.abs(d)<dz) return 0; return clamp((d-Math.sign(d)*dz)/16,-1,1); }
 function setTiltUI(){ const on=TILT.on; $('tL').style.display=on?'none':''; $('tR').style.display=on?'none':''; $('tT').style.display=on?'none':''; $('tiltHint').style.display=on?'block':'none'; }
 if(isTouch){ $('touch').style.display='block';
   const upd=e=>{ touch.L=touch.R=touch.T=false; for(const t of e.touches){ const el=document.elementFromPoint(t.clientX,t.clientY);
@@ -862,7 +868,7 @@ function finish(){ S.done=true; const T=S.t+S.pen;
 async function go(){
   if(isTouch && $('tiltCb').checked){ TILT.on=await enableTilt(); } else TILT.on=false;
   setTiltUI(); start();
-  setTimeout(()=>{ TILT.zero=TILT.raw; if(TILT.on&&!TILT.live){ TILT.on=false; setTiltUI(); flash('Tilt not available here. Use the buttons.',true); } },400);
+  setTimeout(()=>{ TILT.zero=TILT.raw; if(TILT.on&&!TILT.live){ TILT.on=false; setTiltUI(); flash('No motion sensor reading. Using buttons.',true); } },2600);
 }
 $('goBtn').onclick=go; $('againBtn').onclick=go;
 $('shareBtn').onclick=()=>{ const T=S.t+S.pen; const txt=`🎿 Steamboat Downhill · ${RT.title}\n⏱️ ${fmt(T)} · ${S.made}/${GATES.length} gates · top ${Math.round(S.maxSpd*MPH)} mph`;
