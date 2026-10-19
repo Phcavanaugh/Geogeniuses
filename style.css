@@ -441,3 +441,7 @@ p.muted{margin:0 16px 16px}
 .yw-right{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
 .yw-right strong{font:800 22px/1 var(--display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
 .yw-right span{font-size:12px;letter-spacing:1px;white-space:nowrap}
+.winners{display:flex;flex-direction:column}
+.winners:empty{display:none}
+.yw-rest{font-size:12px;color:var(--muted);opacity:.85;line-height:1.35}
+.yw-right span.plain{letter-spacing:0;color:var(--muted);font-size:12px}

@@ -1323,33 +1323,71 @@
 
   // ---------- Yesterday's winner, on the score page ----------
   function renderYesterday() {
-    const box = $("yWin");
-    box.hidden = true;
-    const y = addDays(todayCentral(), -1);
+    const wrap = $("winners");
+    wrap.innerHTML = "";
+    const today = todayCentral(), y = addDays(today, -1);
     const seen = new Set(), rows = [];
     mergedHistory().rows.forEach((r) => {
       const k = r.player + "|" + r.date;
-      if (r.date === y && !seen.has(k)) { seen.add(k); rows.push(r); }
+      if (!seen.has(k)) { seen.add(k); rows.push(r); }
     });
-    if (!rows.length) return;
-    const top = Math.max.apply(null, rows.map((r) => Number(r.total)));
-    const winners = rows.filter((r) => Number(r.total) === top);
-    const art = $("yArt"); art.innerHTML = "";
-    art.appendChild(medal(BADGES.find((b) => b.id === "champ"), 3, 54));
-    const who = $("yWho"); who.innerHTML = "";
-    winners.forEach((r, i) => {
+    // Mondays: last week's winner (Monday to Sunday, most total points), shown first.
+    if (new Date(ymdToUTC(today)).getUTCDay() === 1) {
+      const from = addDays(today, -7), tot = {}, days = {};
+      rows.forEach((r) => {
+        if (r.date < from || r.date > y) return;
+        tot[r.player] = (tot[r.player] || 0) + Number(r.total);
+        days[r.player] = (days[r.player] || 0) + 1;
+      });
+      const list = Object.keys(tot).map((n) => ({ name: n, total: tot[n], extra: days[n] + (days[n] === 1 ? " day" : " days") }));
+      if (list.length) wrap.appendChild(winnerCard({
+        label: "Last week's winner", badge: "weekly", level: 3, list,
+        right: (w) => [fmt(w.total), w.extra + " played"],
+        plain: true,
+        unit: "players",
+      }));
+    }
+    const yRows = rows.filter((r) => r.date === y).map((r) => ({ name: r.player, total: Number(r.total), scores: r.scores || [] }));
+    if (yRows.length) wrap.appendChild(winnerCard({
+      label: "Yesterday's winner", badge: "champ", level: 3, list: yRows,
+      right: (w) => [fmt(w.total), (w.scores || []).map((s, i) => emojiFor(Number(s), MAX_PTS[i])).join("")],
+      unit: "players",
+    }));
+  }
+  // One winner card: badge art, the winner (or tied winners), 2nd and 3rd underneath, and the score.
+  function winnerCard(o) {
+    const list = o.list.slice().sort((a, b) => b.total - a.total);
+    const rank = (t) => 1 + list.filter((x) => x.total > t).length;
+    const top = list[0].total, winners = list.filter((x) => x.total === top);
+    const card = document.createElement("button");
+    card.type = "button"; card.className = "ywin";
+    card.innerHTML = '<span class="yw-art"></span><span class="yw-txt"><span class="lbl"></span><span class="yw-who"></span>' +
+      '<span class="yw-sub"></span><span class="yw-rest"></span></span><span class="yw-right"><strong></strong><span></span></span>';
+    card.querySelector(".yw-art").appendChild(medal(BADGES.find((b) => b.id === o.badge), o.level, 54));
+    card.querySelector(".lbl").textContent = o.label;
+    const who = card.querySelector(".yw-who");
+    winners.forEach((w, i) => {
       if (i) who.appendChild(document.createTextNode(" & "));
-      const w = document.createElement("span"); w.className = "yw-name";
-      w.appendChild(avatar(r.player));
-      const n = document.createElement("b"); n.textContent = r.player; w.appendChild(n);
-      who.appendChild(w);
+      const el = document.createElement("span"); el.className = "yw-name";
+      el.appendChild(avatar(w.name));
+      const n = document.createElement("b"); n.textContent = w.name; el.appendChild(n);
+      who.appendChild(el);
     });
-    $("yScore").textContent = fmt(top);
-    $("yEmoji").textContent = (winners[0].scores || []).map((s, i) => emojiFor(Number(s), MAX_PTS[i])).join("");
-    const me = winners.some((r) => r.player === player);
-    $("ySub").textContent = (winners.length > 1 ? "Tied for 1st" : me ? "That was you!" : "Top score") + " · " + rows.length + (rows.length === 1 ? " player" : " players");
-    box.onclick = () => openShelf(winners[0].player);
-    box.hidden = false;
+    const me = winners.some((w) => w.name === player);
+    card.querySelector(".yw-sub").textContent = (winners.length > 1 ? "Tied for 1st" : me ? "That was you!" : "Top score") +
+      " · " + list.length + (list.length === 1 ? " player" : " players");
+    // 2nd and 3rd place (ties share a place)
+    const rest = list.filter((x) => x.total !== top).filter((x) => rank(x.total) <= 3).slice(0, 3);
+    const restEl = card.querySelector(".yw-rest");
+    if (rest.length) {
+      restEl.textContent = rest.map((x) => { const r = rank(x.total); return (r === 2 ? "2nd" : "3rd") + " " + x.name + " " + fmt(x.total); }).join(" · ");
+    } else restEl.remove();
+    const [big, small] = o.right(winners[0]);
+    card.querySelector(".yw-right strong").textContent = big;
+    card.querySelector(".yw-right span").textContent = small;
+    if (o.plain) card.querySelector(".yw-right span").className = "plain";
+    card.onclick = () => openShelf(winners[0].name);
+    return card;
   }
 
   // ---------- Badge shelf (a player's profile) ----------
