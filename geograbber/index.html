@@ -1436,6 +1436,7 @@ function drawFlag(x,y,wave,col,edge){
 }
 /* ---------- team flag: Blue vs Red, jails and jailbreaks ---------- */
 const TEAMS=[{name:'Blue',color:'#2f6fd6'},{name:'Red',color:'#d94158'}];
+const ROLE_NAMES={attack:'Attacker',turf:'Grabber',defend:'Defender',jailer:'Jailer',rescue:'Rescuer'};
 function setupTeams(map){
   const n=G.ents.length,half=Math.ceil(n/2);
   G.ents.forEach((e,i)=>{e.team=i<half?0:1;e.color=TEAMS[e.team].color;e.pattern='solid';});
@@ -2240,12 +2241,14 @@ function render(dt){
      if(sx<-60||sy<-20||sx>w+60||sy>h+20)continue;
      const wanted=G.bounty===e.id,text=(wanted?'★ ':'')+(e.isPlayer?'You':e.name)+(e.styleName?` · ${e.styleName}`:'');
      const d=Math.hypot(sx-G.headSX,sy-G.headSY),a=e.isPlayer||wanted?1:Math.max(.35,Math.min(1,1.6-d/far));
-     labs.push({x:sx,y:sy,text,w:ctx.measureText(text).width,col:wanted?'#ffd98a':'#ffffff',a,pri:e.isPlayer?0:wanted?1:2+d});}
+     const sub=G.mode==='team'&&!e.isPlayer?(e.reserve?'Reserve':ROLE_NAMES[e.role]||''):'';
+     labs.push({x:sx,y:sy,text,sub,w:ctx.measureText(text).width,col:wanted?'#ffd98a':'#ffffff',a,pri:e.isPlayer?0:wanted?1:2+d});}
    for(const L of G.landmarks){const sx=ox+L.x*cs,sy=oy+(L.y-2.6-(.8+L.val/50)*1.6)*cs;if(sx>-80&&sy>-20&&sx<w+80&&sy<h+20){const o=G.owner[Math.floor(L.y)*G.W+Math.floor(L.x)];const text=`★ ${L.val}%`+(o===1?' ✓':'');labs.push({x:sx,y:sy,text,w:ctx.measureText(text).width,col:o===1?'#9ff0b8':'#ffd98a',a:1,pri:1.5});}}
    labs.sort((p,q)=>p.pri-q.pri);const placed=[];
    for(const l of labs){
-     for(let k=0;k<6;k++){const hit=placed.find(q=>Math.abs(q.x-l.x)<(q.w+l.w)/2+4&&Math.abs(q.y-l.y)<14);if(!hit)break;l.y=hit.y-15;}
-     placed.push(l);ctx.globalAlpha=l.a;ctx.strokeStyle='rgba(5,10,20,.8)';ctx.strokeText(l.text,l.x,l.y);ctx.fillStyle=l.col;ctx.fillText(l.text,l.x,l.y);}
+     for(let k=0;k<6;k++){const hit=placed.find(q=>Math.abs(q.x-l.x)<(q.w+l.w)/2+4&&Math.abs(q.y-l.y)<(q.sub||l.sub?26:14));if(!hit)break;l.y=hit.y-(l.sub?27:15);}
+     placed.push(l);ctx.globalAlpha=l.a;ctx.strokeStyle='rgba(5,10,20,.8)';ctx.strokeText(l.text,l.x,l.y);ctx.fillStyle=l.col;ctx.fillText(l.text,l.x,l.y);
+     if(l.sub){ctx.font=`600 10px ${T.font}`;ctx.lineWidth=2.6;ctx.strokeText(l.sub,l.x,l.y-13);ctx.fillStyle='rgba(255,255,255,.8)';ctx.fillText(l.sub,l.x,l.y-13);ctx.font=`700 12px ${T.font}`;ctx.lineWidth=3;}}
    ctx.globalAlpha=1;}
   drawFloats(dt,ox,oy,cs);
   if(G.twist==='fog'){
@@ -3533,7 +3536,7 @@ function readOpts(){const o={};for(const [k,id] of Object.entries(OPT_IDS))o[k]=
 function optHint(){
   const o=readOpts(),h=[];
   for(const el of document.querySelectorAll('.team-only'))el.hidden=o.mode!=='team';
-  if(o.mode==='team')h.push(`Team flag: you and your Blue teammates against Red. Grab their flag and bring it to your base to score${o.caps==='none'?'; most captures when the clock runs out wins':`; first to ${o.caps} wins`}${o.caps==='none'&&o.clock==='none'?' (5:00 clock)':''}. Get your line cut, or get tagged inside one of their dashed circles (around their flag and their jail, at opposite ends of their side), and you go to their jail until a free teammate runs through it${o.jail==='reserve'?'; if your whole team is locked up, a reserve joins to break you out, then heads home':''}. Each team has a couple of turf grabbers who skip the flag and just carve out land. Every capture also frees your team's prisoners. More turf doesn't make you faster here, and the team that's ahead (on turf and captures) slows down as its lead grows, up to 28% slower. Plays on a bigger map. Twists and targets are off in this mode.`);
+  if(o.mode==='team')h.push(`Team flag: you and your Blue teammates against Red. Grab their flag and bring it to your base to score${o.caps==='none'?'; most captures when the clock runs out wins':`; first to ${o.caps} wins`}${o.caps==='none'&&o.clock==='none'?' (5:00 clock)':''}. Get your line cut, or get tagged inside one of their dashed circles (around their flag and their jail, at opposite ends of their side), and you go to their jail until a free teammate runs through it${o.jail==='reserve'?'; if your whole team is locked up, a reserve joins to break you out, then heads home':''}. Everyone's job shows under their name: Attackers go for the flag, Grabbers skip it and carve out land, Defenders guard your base, Jailers watch the jail and Rescuers break teammates out. Every capture also frees your team's prisoners. More turf doesn't make you faster here, and the team that's ahead (on turf and captures) slows down as its lead grows, up to 28% slower. Plays on a bigger map. Twists and targets are off in this mode.`);
   if(o.mode==='flag')h.push('Flag rush: grab the flag and hold it at the buzzer. Tag or cut off the holder to steal it. Unlimited respawns.'+(o.clock==='none'?' Runs on a 3:00 clock.':''));
   if(o.map==='daily')h.push("Today's daily map keeps its own size and rivals.");
   if(o.map.startsWith('place:'))h.push((o.map==='place:random'?'A random country or US state':o.map.slice(6))+': the sea is off-limits and the size is set by the shape.');
