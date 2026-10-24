@@ -93,6 +93,9 @@ h1.hero{display:none;font:800 24px/1.15 var(--display);letter-spacing:-.02em;mar
 .prac-row .btn{flex:none;padding:11px 26px}
 details>summary{list-style:none;cursor:pointer}
 details>summary::-webkit-details-marker{display:none}
+.res-shot{margin:10px 0 6px;padding:0}
+.res-shot canvas{display:block;width:100%;height:auto;border-radius:12px;border:1px solid rgba(255,255,255,.18);box-shadow:0 6px 18px rgba(0,0,0,.35)}
+.res-shot figcaption{font:600 12px/1.3 var(--body);color:var(--muted);margin-top:6px;text-align:center}
 .opt-wrap>summary,.how-wrap>summary{display:inline-flex;align-items:center;gap:6px;font:600 13px/1 var(--body);color:var(--muted);padding:4px 0}
 .opt-wrap>summary::after,.how-wrap>summary::after{content:"";width:7px;height:7px;border-right:1.6px solid currentColor;border-bottom:1.6px solid currentColor;transform:rotate(45deg) translate(-2px,-2px);transition:transform .2s}
 .opt-wrap[open]>summary::after,.how-wrap[open]>summary::after{transform:rotate(-135deg) translate(-2px,-2px)}
@@ -436,6 +439,7 @@ details>summary::-webkit-details-marker{display:none}
     <div class="card">
       <div class="eyebrow" id="resEyebrow">Run over</div>
       <div class="h2" id="resTitle">Cut off</div>
+      <figure class="res-shot" id="resShot" hidden><figcaption id="resShotCap"></figcaption></figure>
       <div class="big mono" id="resPct">0%</div>
       <div class="muted" id="resBigLbl">Peak share of the map</div>
       <div class="stats" id="resStats"></div>
@@ -888,6 +892,27 @@ function nearestOwn(e){
   return null;
 }
 
+// freeze the last drawn frame around the moment you were cut off, for the round summary
+function snapCut(e,killer){
+  try{
+    const v=G.view,w=cv.clientWidth,h=cv.clientHeight;if(!v||!w||!h)return null;
+    const dpr=cv.width/w,cs=w/(v.x1-v.x0);
+    const px=(e.x-v.x0)*cs,py=(e.y-v.y0)*cs;
+    const hasK=killer&&killer!==e&&killer.alive!==false;
+    let kx=px,ky=py;if(hasK){kx=(killer.x-v.x0)*cs;ky=(killer.y-v.y0)*cs;}
+    const R=.6;let sw=Math.max(220,Math.abs(kx-px)+150,(Math.abs(ky-py)+120)/R);
+    sw=Math.min(sw,w);let sh=sw*R;if(sh>h){sh=h;sw=Math.min(w,sh/R);}
+    const sx=Math.max(0,Math.min(w-sw,(px+kx)/2-sw/2)),sy=Math.max(0,Math.min(h-sh,(py+ky)/2-sh/2));
+    const OW=560,OH=Math.round(OW*sh/sw),f=OW/sw;
+    const c=document.createElement('canvas');c.width=OW;c.height=OH;const x=c.getContext('2d');
+    x.drawImage(cv,sx*dpr,sy*dpr,sw*dpr,sh*dpr,0,0,OW,OH);
+    // ring the spot where your line was crossed (the rival's position), or where you went out
+    const ax=((hasK?kx:px)-sx)*f,ay=((hasK?ky:py)-sy)*f;
+    x.lineWidth=5;x.strokeStyle='rgba(0,0,0,.45)';x.beginPath();x.arc(ax,ay,24,0,7);x.stroke();
+    x.lineWidth=3;x.strokeStyle='#ffd23f';x.beginPath();x.arc(ax,ay,24,0,7);x.stroke();
+    return c;
+  }catch(err){return null;}
+}
 function kill(e,killer){
   if(!e.alive)return;
   if(G.t<(e.invUntil||0))return; // invincible: nothing can take you out
@@ -899,6 +924,7 @@ function kill(e,killer){
     }
   }
   if(G.mode==='team'){jail(e,killer);return;}
+  if(e.isPlayer&&G.mode!=='flag')G.cutShot=snapCut(e,killer);
   e.alive=false;burst(e.x,e.y,e.color,10);splat(e.x,e.y,e.color,e.dark);
   const vtrail=e.trail.slice();clearTrail(e);
   // whoever takes you out inherits your turf and your line; a death with no killer leaves it blank
@@ -3190,6 +3216,8 @@ function endGame(reason){
   $('#resEyebrow').textContent=G.daily?`Daily map · Day ${platNo(S.today)}`:'Practice · Classic';
   if(G.place)$('#resEyebrow').textContent+=' · '+G.place.n;
   if(G.twistObj)$('#resEyebrow').textContent+=' · '+G.twistObj.name;
+  {const fig=$('#resShot');fig.querySelectorAll('canvas').forEach(n=>n.remove());
+   if(reason==='dead'&&G.cutShot){fig.prepend(G.cutShot);$('#resShotCap').textContent=G.deathBy?`The moment ${G.deathBy} got you`:'The moment it ended';fig.hidden=false;}else fig.hidden=true;}
   $('#resTitle').textContent=reason==='last'?'Last one standing':win?'You own the whole map':reason==='time'?"Time's up":reason==='quit'?'Run ended':G.deathBy?`Cut off by ${G.deathBy}`:G.edgeKO?'Caught by the closing edge':'Run over';
   if(X.bonus){$('#resPct').textContent=Math.min(100,peak+X.bonus).toFixed(1)+'%';$('#resBigLbl').textContent=`Peak share ${peak.toFixed(1)}% + landmarks ${X.bonus}%`;}
   else{$('#resPct').textContent=peak.toFixed(1)+'%';$('#resBigLbl').textContent='Peak share of the map';}
