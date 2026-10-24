@@ -894,24 +894,29 @@ function nearestOwn(e){
 
 // freeze the last drawn frame around the moment you were cut off, for the round summary
 function snapCut(e,killer){
+  const saved=G.cam?{x:G.cam.x,y:G.cam.y}:null;
   try{
-    const v=G.view,w=cv.clientWidth,h=cv.clientHeight;if(!v||!w||!h)return null;
-    const dpr=cv.width/w,cs=w/(v.x1-v.x0);
-    const px=(e.x-v.x0)*cs,py=(e.y-v.y0)*cs;
-    const hasK=killer&&killer!==e&&killer.alive!==false;
-    let kx=px,ky=py;if(hasK){kx=(killer.x-v.x0)*cs;ky=(killer.y-v.y0)*cs;}
-    const R=.6;let sw=Math.max(220,Math.abs(kx-px)+150,(Math.abs(ky-py)+120)/R);
-    sw=Math.min(sw,w);let sh=sw*R;if(sh>h){sh=h;sw=Math.min(w,sh/R);}
-    const sx=Math.max(0,Math.min(w-sw,(px+kx)/2-sw/2)),sy=Math.max(0,Math.min(h-sh,(py+ky)/2-sh/2));
-    const OW=560,OH=Math.round(OW*sh/sw),f=OW/sw;
+    const w=cv.clientWidth,h=cv.clientHeight;if(!w||!h)return null;
+    const hasK=!!(killer&&killer!==e);
+    const kx=hasK?killer.x:e.x,ky=hasK?killer.y:e.y;
+    // reframe the camera so you and the rival are both in the picture, then draw one frame
+    const R=.6,cs0=Math.max(4,Math.min(12,Math.min(w,h)/58))*G.zoom;
+    const maxW=Math.min(w,h/R)*.94;
+    const worldW=Math.max(Math.abs(kx-e.x)+16,(Math.abs(ky-e.y)+15)/R,18);
+    const cs=Math.max(1.2,Math.min(cs0,maxW/worldW));
+    G.snapCam={x:(e.x+kx)/2,y:(e.y+ky)/2,cs};render(0);
+    const sw=Math.min(maxW,Math.max(260,worldW*cs)),sh=sw*R;
+    const sx=w/2-sw/2,sy=h/2-sh/2,dpr=cv.width/w;
+    const OW=560,OH=Math.round(OW*R),f=OW/sw;
     const c=document.createElement('canvas');c.width=OW;c.height=OH;const x=c.getContext('2d');
     x.drawImage(cv,sx*dpr,sy*dpr,sw*dpr,sh*dpr,0,0,OW,OH);
     // ring the spot where your line was crossed (the rival's position), or where you went out
-    const ax=((hasK?kx:px)-sx)*f,ay=((hasK?ky:py)-sy)*f;
+    const ax=(w/2+(kx-G.snapCam.x)*cs-sx)*f,ay=(h/2+(ky-G.snapCam.y)*cs-sy)*f;
     x.lineWidth=5;x.strokeStyle='rgba(0,0,0,.45)';x.beginPath();x.arc(ax,ay,24,0,7);x.stroke();
     x.lineWidth=3;x.strokeStyle='#ffd23f';x.beginPath();x.arc(ax,ay,24,0,7);x.stroke();
     return c;
   }catch(err){return null;}
+  finally{G.snapCam=null;if(saved&&G.cam){G.cam.x=saved.x;G.cam.y=saved.y;}}
 }
 function kill(e,killer){
   if(!e.alive)return;
@@ -2120,12 +2125,13 @@ function render(dt){
   if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
   ctx.setTransform(dpr,0,0,dpr,0,0);
   if(dt){const zt=1/(1+Math.max(0,(G.player.mult||1)-1)*.09);G.zoom+=(zt-G.zoom)*Math.min(1,dt*3);}
-  const cs=Math.max(4,Math.min(12,Math.min(w,h)/58))*G.zoom;
+  let cs=Math.max(4,Math.min(12,Math.min(w,h)/58))*G.zoom;
   const p=G.player;
   if(!G.cam)G.cam={x:p.x,y:p.y};
-  if(p.alive||p.jailed){const k=dt?Math.min(1,dt*14):1;G.cam.x+=(p.x-G.cam.x)*k;G.cam.y+=(p.y-G.cam.y)*k;}
+  if(G.snapCam){cs=Math.min(cs,G.snapCam.cs);G.cam.x=G.snapCam.x;G.cam.y=G.snapCam.y;}
+  else if(p.alive||p.jailed){const k=dt?Math.min(1,dt*14):1;G.cam.x+=(p.x-G.cam.x)*k;G.cam.y+=(p.y-G.cam.y)*k;}
   let ox=w/2-G.cam.x*cs,oy=h/2-G.cam.y*cs;
-  if(G.shake>0){G.shake=Math.max(0,G.shake-dt*2.2);if(!calm){const a=G.shake*G.shake*14;ox+=(Math.random()-.5)*a;oy+=(Math.random()-.5)*a;}}
+  if(G.shake>0&&!G.snapCam){G.shake=Math.max(0,G.shake-dt*2.2);if(!calm){const a=G.shake*G.shake*14;ox+=(Math.random()-.5)*a;oy+=(Math.random()-.5)*a;}}
   G.rt+=dt;
   G.view={x0:-ox/cs,y0:-oy/cs,x1:(w-ox)/cs,y1:(h-oy)/cs};
   G.headSX=ox+p.x*cs;G.headSY=oy+p.y*cs;
