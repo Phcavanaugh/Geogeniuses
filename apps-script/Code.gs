@@ -37,6 +37,7 @@ function doPost(e) {
     if (body.action === 'addPlayer') return json_(addPlayer_(body));
     if (body.action === 'grabSubmit') return json_(grabSubmit_(body));
     if (body.action === 'grabSaveProfile') return json_(grabSaveProfile_(body));
+    if (body.action === 'progress') return json_(saveProgress_(body));
     if (body.action !== 'submit') return json_({ ok: false, error: 'Unknown action.' });
 
     var player = String(body.player || '').trim();
@@ -62,12 +63,49 @@ function doPost(e) {
     if (sc.getRange(1, 15).getValue() === '') sc.getRange(1, 15).setValue('Guesses');
     sc.appendRow([new Date(), "'" + date, player].concat(scores).concat([total]).concat(miles).concat([guesses]));
     bust_();
+    try { saveRound_(player, date, scores, true); } catch (err) { /* the Rounds tab is only a log */ }
     return json_({ ok: true });
   } catch (err) {
     return json_({ ok: false, error: 'Server error: ' + err });
   } finally {
     lock.releaseLock();
   }
+}
+
+// ---------- Rounds (for Pete only: who started, how far they got, whether they finished) ----------
+// One row per player per day in the Rounds tab, updated as they answer. Nothing here is shown in the game.
+var ROUNDS = 'Rounds';
+function saveProgress_(body) {
+  var player = String(body.player || '').trim(), date = String(body.date || '');
+  if (getPlayers_().indexOf(player) === -1 || date !== today_()) return { ok: false };
+  var caps = [100, 100, 200, 300, 300];
+  var scores = (body.scores || []).slice(0, 5).map(Number);
+  if (scores.some(function (s, i) { return !(s >= 0 && s <= caps[i]); })) return { ok: false };
+  saveRound_(player, date, scores, false);
+  return { ok: true };
+}
+function saveRound_(player, date, scores, finished) {
+  var sh = sheet_(ROUNDS), now = Utilities.formatDate(new Date(), TZ, 'h:mm a');
+  var total = scores.reduce(function (a, b) { return a + b; }, 0);
+  var q = [0, 1, 2, 3, 4].map(function (i) { return scores[i] != null ? scores[i] : ''; });
+  var answered = scores.length + ' of 5';
+  var n = sh.getLastRow(), row = -1;
+  if (n >= 2) {
+    var keys = sh.getRange(2, 1, n - 1, 2).getValues();
+    for (var i = keys.length - 1; i >= 0; i--) {
+      var d = keys[i][0] instanceof Date ? Utilities.formatDate(keys[i][0], TZ, 'yyyy-MM-dd') : String(keys[i][0]);
+      if (d === date && String(keys[i][1]) === player) { row = i + 2; break; }
+    }
+  }
+  if (row === -1) {
+    sh.appendRow(["'" + date, player, finished ? '' : now, now, answered, total].concat(q).concat([finished ? 'Yes' : 'No']));
+    return;
+  }
+  var cur = sh.getRange(row, 1, 1, 12).getValues()[0];
+  var curAnswered = parseInt(String(cur[4]), 10) || 0;
+  if (cur[11] === 'Yes' && !finished) return;            // already finished: leave it
+  if (!finished && scores.length < curAnswered) return;  // an older update arriving late
+  sh.getRange(row, 4, 1, 9).setValues([[now, answered, total].concat(q).concat([finished ? 'Yes' : 'No'])]);
 }
 
 // ---------- Shares (for the Postcard badge) ----------
@@ -172,6 +210,7 @@ function sheet_(name) {
     sh = ss.insertSheet(name);
     if (name === 'Players') { sh.appendRow(['Name']); sh.appendRow(['Pete']); }
     if (name === 'Shares') sh.appendRow(['Saved at', 'Date', 'Player']);
+    if (name === ROUNDS) sh.appendRow(['Date', 'Player', 'Started', 'Last activity', 'Answered', 'Score so far', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Finished']);
     if (name === GRAB) sh.appendRow(['Saved at', 'Date', 'Player', 'Land %', 'Rivals cut', 'Status', 'Power-up', 'Twist', 'Seconds', 'Played at']);
     if (name === GRAB_PROFILES) sh.appendRow(['Player', 'Updated', 'Coins', 'Profile (coins, skins, power-ups, badges)']);
     if (name === 'Scores') sh.appendRow(['Saved at', 'Date', 'Player', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Total', 'Q1 miles', 'Q2 miles', 'Q3 miles', 'Q4 miles', 'Q5 miles', 'Guesses']);
@@ -234,7 +273,7 @@ function json_(obj) {
 }
 
 /** Run this once from the editor (select "setup" and press Run) to create the tabs. */
-function setup() { sheet_('Players'); sheet_('Scores'); sheet_('Shares'); sheet_(GRAB); sheet_(GRAB_PROFILES); }
+function setup() { sheet_('Players'); sheet_('Scores'); sheet_('Shares'); sheet_(ROUNDS); sheet_(GRAB); sheet_(GRAB_PROFILES); }
 
 // ---------- GeoGrabber (geogeniuses.win/geograbber) ----------
 // One row per player per day. A run is saved as "playing" when it starts and updated when it ends,

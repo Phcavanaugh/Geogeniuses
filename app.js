@@ -91,6 +91,8 @@
       const r = await fetch(API, { method: "POST", body: JSON.stringify({ action: "addPlayer", name }) });
       return r.json();
     },
+    // Quiet progress note for the Sheet's Rounds tab. Fire and forget; keepalive lets it finish if the page closes.
+    progress(p) { try { fetch(API, { method: "POST", keepalive: true, body: JSON.stringify(Object.assign({ action: "progress" }, p)) }).catch(() => {}); } catch (e) {} },
     async history() { const r = await fetch(API + "?action=history"); return r.json(); },
     async day(who, date) { const r = await fetch(API + "?action=day&player=" + encodeURIComponent(who) + "&date=" + encodeURIComponent(date)); return r.json(); },
     async share(p) {
@@ -723,8 +725,14 @@
     showQuestion();
   }
 
+  // Tell the Sheet how today's round is going (never for practice, never shown in the game).
+  function reportProgress() {
+    if (!session || session.practice || !player || !api.progress || session.date !== todayCentral()) return;
+    api.progress({ player, date: session.date, scores: session.progress.guesses.map((x) => x.pts) });
+  }
   function showQuestion() {
     const i = session.progress.guesses.length, q = session.qs[i];
+    if (i === 0) reportProgress(); // they've started
     $("qNum").textContent = "Question " + (i + 1) + " of 5 · " + (i < 2 ? "U.S." : "World");
     $("qPts").textContent = MAX_PTS[i] + " pts";
     $("qClue").textContent = q.clue;
@@ -753,6 +761,7 @@
     const miles = milesBetween(p, ans), pts = pointsFor(miles, MAX_PTS[i]);
     session.progress.guesses.push({ lon: +p[0].toFixed(4), lat: +p[1].toFixed(4), miles: Math.round(miles), pts });
     store.set(session.key, session.progress);
+    if (session.progress.guesses.length < 5) reportProgress(); // the final answer is recorded when the score saves
     $("confirmBtn").disabled = true;
     Feedback.unlock();
     // Fill in the result card now (hidden) so we know how much of the map it will cover.
