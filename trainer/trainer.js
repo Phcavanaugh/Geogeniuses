@@ -198,6 +198,7 @@
         ansMarker = new maplibregl.Marker({ element: pinEl("#3ecf7a", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
         map.easeTo({ center: ans, zoom: Math.max(map.getZoom(), 3), duration: 700 });
       },
+      center(ll) { map.jumpTo({ center: ll }); },
       project(ll) { const r = map.getContainer().getBoundingClientRect(), q = map.project(ll); return [q.x + r.left, q.y + r.top]; },
       onPin(fn) { onPin = fn; },
       tileTemplate() { return ESRI_TILES; },
@@ -347,7 +348,9 @@
     run.place = p; run.busy = false;
     $("clueKind").textContent = KIND[p.k] || "Place";
     $("clueName").textContent = p.n;
-    $("confirmBtn").disabled = true;
+    $("confirmBtn").disabled = true; $("confirmBtn").textContent = "Confirm";
+    $("clueInfo").hidden = true; $("clueInfo").textContent = "";
+    run.waiting = false;
     $("hint").hidden = false;
     $("flash").hidden = true;
     const qc = $("qcard"), top = qc.offsetTop + qc.offsetHeight + 6, bottom = $("bottomBar").offsetHeight;
@@ -379,7 +382,10 @@
 
   function flash(html) { const f = $("flash"); f.innerHTML = html; f.hidden = false; }
 
+  function showInfo(p) { $("clueInfo").textContent = p.d || ""; $("clueInfo").hidden = !p.d; }
+
   async function confirm() {
+    if (run && run.waiting) { nextClue(false); return; }
     if (!run || run.busy) return;
     const g = Globe.getPin(); if (!g) return;
     run.busy = true;
@@ -388,12 +394,13 @@
     const p = run.place, ans = [p.lon, p.lat];
     const miles = milesBetween(g, ans), score = baseScore(miles);
     const pass = score >= PASS;
-    run.results.push({ name: p.n, miles, score, pass, time: run.total - left });
+    run.results.push({ name: p.n, d: p.d, miles, score, pass, time: run.total - left });
     stat();
     const near = miles < 1 ? "spot on" : fmt(Math.round(miles)) + " mi";
     await Globe.reveal(g, ans, {
       fast: true, padBottom: $("bottomBar").offsetHeight,
       onLand() {
+        showInfo(p);
         if (pass) {
           const next = Math.round(FIRST_CLOCK * score) / 100;
           flash('<b class="ok">' + score + '</b><span>' + near + '</span><small>next ' + next.toFixed(1) + 's</small>');
@@ -406,9 +413,11 @@
     });
     if (pass) {
       run.clock = (FIRST_CLOCK * score) / 100;
-      setTimeout(() => { if (run) nextClue(false); }, 650);
+      // Clock stays paused until they tap Next, so there's time to read about the place.
+      run.waiting = true;
+      $("confirmBtn").textContent = "Next"; $("confirmBtn").disabled = false;
     } else {
-      setTimeout(() => endRun("Too far: " + p.n + " was " + near + " away"), 1300);
+      setTimeout(() => endRun("Too far: " + p.n + " was " + near + " away"), 2600);
     }
   }
 
@@ -417,11 +426,12 @@
     run.busy = true;
     const p = run.place;
     $("confirmBtn").disabled = true; $("hint").hidden = true;
-    run.results.push({ name: p.n, miles: null, score: 0, pass: false, time: run.total });
+    run.results.push({ name: p.n, d: p.d, miles: null, score: 0, pass: false, time: run.total });
+    showInfo(p);
     Globe.showAnswer([p.lon, p.lat]);
     flash('<b class="bad">Time’s up</b><span>' + p.n.split(",")[0] + ' is here</span>');
     buzz([60, 50, 60]);
-    setTimeout(() => endRun("Out of time on " + p.n), 1700);
+    setTimeout(() => endRun("Out of time on " + p.n), 2600);
   }
 
   function endRun(why) {
@@ -438,7 +448,8 @@
       const m = r.miles == null ? "time" : r.miles < 1 ? "0 mi" : fmt(Math.round(r.miles)) + " mi";
       li.innerHTML = '<span class="e">' + (i + 1) + '</span><span class="a"></span><span class="m">' + m +
         '</span><span class="p">' + (r.miles == null ? "–" : r.score) + '</span>';
-      li.querySelector(".a").textContent = r.name;
+      const a = li.querySelector(".a"); a.textContent = r.name;
+      if (r.d) { const sm = document.createElement("small"); sm.textContent = r.d; a.appendChild(sm); }
       list.appendChild(li);
     });
     run = null; stat();
@@ -446,14 +457,14 @@
     $("endScreen").scrollTop = 0;
   }
 
-  Globe.onPin(() => { if (run && !run.busy) { $("confirmBtn").disabled = false; $("hint").hidden = true; buzz(8); } });
+  Globe.onPin(() => { if (run && !run.busy && !run.waiting) { $("confirmBtn").disabled = false; $("hint").hidden = true; buzz(8); } });
   $("confirmBtn").onclick = confirm;
   $("startBtn").onclick = startRun;
   $("againBtn").onclick = startRun;
 
   (async function boot() {
     try {
-      const [list] = await Promise.all([fetch("places.json?v=1").then((r) => r.json()), Globe.load()]);
+      const [list] = await Promise.all([fetch("places.json?v=2").then((r) => r.json()), Globe.load()]);
       places = list;
       $("startBtn").disabled = false; $("startBtn").textContent = "Start";
     } catch (e) {

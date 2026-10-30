@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <link rel="stylesheet" href="../style.css?v=44">
-<link rel="stylesheet" href="trainer.css?v=1">
+<link rel="stylesheet" href="trainer.css?v=3">
 </head>
 <body>
 <div id="app">
@@ -43,6 +43,7 @@
         <div class="tr-timer" aria-hidden="true"><i id="timeBar"></i></div>
         <div class="qhead"><span id="clueKind"></span><span id="clueClock" class="tr-clock"></span></div>
         <p id="clueName" class="clue tr-name"></p>
+        <p id="clueInfo" class="tr-info" hidden></p>
       </div>
       <div id="hint" class="hint">Tap to drop a pin · drag to spin · pinch to zoom</div>
       <div id="flash" class="tr-flash" hidden></div>
@@ -69,6 +70,6 @@
 <script src="../vendor/d3.min.js"></script>
 <script src="../vendor/topojson-client.min.js"></script>
 <script src="../vendor/maplibre-gl.js"></script>
-<script src="trainer.js?v=1"></script>
+<script src="trainer.js?v=2"></script>
 </body>
 </html>

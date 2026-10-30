@@ -20,7 +20,7 @@
 .tr-clock.danger{color:var(--red)}
 .tr-name{font:800 23px/1.2 var(--display) !important;letter-spacing:-.02em}
 
-.tr-flash{position:absolute;left:50%;top:calc(var(--qh,140px) + 6px);transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;white-space:nowrap;
+.tr-flash{position:absolute;left:50%;bottom:calc(var(--bb,84px) + 10px);transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;white-space:nowrap;
   background:var(--glass-strong);border:1px solid var(--line-2);border-radius:999px;padding:8px 14px;font:700 14px/1 var(--body);box-shadow:0 6px 18px rgba(0,0,0,.4)}
 .tr-flash[hidden]{display:none}
 .tr-flash b{font:800 16px/1 var(--mono)}
@@ -35,3 +35,8 @@
 .tr-list .e{font:700 12px/1 var(--mono);color:var(--muted);text-align:right}
 .tr-list li.fail .a{color:var(--red)}
 .tr-list li.fail .p{color:var(--red)}
+.tr-info{margin:8px 0 0;font:500 14.5px/1.4 var(--body);color:var(--ink-2)}
+.tr-info[hidden]{display:none}
+.tr-list .a{white-space:normal;overflow:visible}
+.tr-list .a small{display:block;margin-top:3px;font:500 12.5px/1.35 var(--body);color:var(--muted)}
+.tr-list li.fail .a small{color:var(--muted)}
