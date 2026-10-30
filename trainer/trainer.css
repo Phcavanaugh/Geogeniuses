@@ -10,6 +10,7 @@
 .tr-rules b{color:var(--ink)}
 .tr-start .primary{width:calc(100% - 32px);margin:0 16px}
 .tr-note{text-align:center;margin-top:12px !important}
+.tr-disclaim{margin:18px 16px 0 !important;padding:12px 14px;border-radius:12px;border:1px dashed var(--line-2);font-size:13px;line-height:1.45;text-align:center}
 
 .tr-card{padding-top:14px}
 .tr-timer{height:6px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden;margin-bottom:11px}
