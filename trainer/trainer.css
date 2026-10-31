@@ -41,3 +41,11 @@
 .tr-list .a{white-space:normal;overflow:visible}
 .tr-list .a small{display:block;margin-top:3px;font:500 12.5px/1.35 var(--body);color:var(--muted)}
 .tr-list li.fail .a small{color:var(--muted)}
+.tr-pick{margin:0 16px 18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tr-pick label{display:flex;flex-direction:column;gap:6px;font:700 10.5px/1 var(--body);letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+.tr-pick select{appearance:none;-webkit-appearance:none;width:100%;padding:12px 34px 12px 12px;border-radius:12px;border:1px solid var(--line-2);
+  background:rgba(255,255,255,.06) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a9b8cf' stroke-width='2' fill='none'/%3E%3C/svg%3E") no-repeat right 12px center;
+  color:var(--ink);font:600 15px/1.2 var(--body);letter-spacing:0;text-transform:none}
+.tr-pick select option,.tr-pick select optgroup{background:#0e1a2e;color:#e8eef7}
+.tr-count{grid-column:1/-1;margin:0;font:600 13px/1.3 var(--body);color:var(--ink-2)}
+.tr-count.low{color:var(--yellow)}

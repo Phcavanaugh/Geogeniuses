@@ -321,9 +321,42 @@
     return a;
   }
   function nextPlace() {
-    if (cursor >= order.length) { order = shuffle(order.slice()); cursor = 0; }
+    if (cursor >= order.length) return null;   // every place in this set has been used
     return places[order[cursor++]];
   }
+
+  // ---------- Picking what to practice ----------
+  const MIN_POOL = 5;
+  function matches(p, where, what) {
+    if (where.startsWith("ct:") && p.ct !== where.slice(3)) return false;
+    if (where.startsWith("c:") && p.c !== where.slice(2)) return false;
+    if (what === "cities") return p.k === "city" || p.k === "capital";
+    if (what !== "all" && p.k !== what) return false;
+    return true;
+  }
+  function pool() {
+    const where = $("pickWhere").value, what = $("pickWhat").value, out = [];
+    places.forEach((p, i) => { if (matches(p, where, what)) out.push(i); });
+    return out;
+  }
+  function updateCount() {
+    if (!places.length) return;
+    const n = pool().length, el = $("pickCount");
+    el.textContent = n < MIN_POOL ? "Only " + n + " place" + (n === 1 ? "" : "s") + " here. Pick something broader."
+      : fmt(n) + " places in this set";
+    el.classList.toggle("low", n < MIN_POOL);
+    $("startBtn").disabled = n < MIN_POOL;
+    try { localStorage.setItem("trainerPick", JSON.stringify([$("pickWhere").value, $("pickWhat").value])); } catch (e) {}
+  }
+  $("pickWhere").onchange = updateCount;
+  $("pickWhat").onchange = updateCount;
+  try {
+    const saved = JSON.parse(localStorage.getItem("trainerPick") || "null");
+    if (saved) {
+      if ([...$("pickWhere").options].some((o) => o.value === saved[0])) $("pickWhere").value = saved[0];
+      if ([...$("pickWhat").options].some((o) => o.value === saved[1])) $("pickWhat").value = saved[1];
+    }
+  } catch (e) {}
   function show(id) {
     for (const s of ["startScreen", "gameScreen", "endScreen"]) $(s).hidden = s !== id;
     if (id === "gameScreen") { Globe.resize(); Stars.start(); } else Stars.stop();
@@ -336,15 +369,22 @@
   }
 
   function startRun() {
-    order = shuffle(places.map((_, i) => i)); cursor = 0;
+    order = shuffle(pool()); cursor = 0;
+    if (order.length < MIN_POOL) return;
     run = { clock: FIRST_CLOCK, results: [], place: null, deadline: 0, timer: 0, busy: false };
     show("gameScreen");
     stat();
     nextClue(true);
+    // Start the camera over the chosen region.
+    if ($("pickWhere").value !== "all") {
+      const c = d3.geoCentroid({ type: "MultiPoint", coordinates: order.map((i) => [places[i].lon, places[i].lat]) });
+      Globe.center(c);
+    }
   }
 
   function nextClue(first) {
     const p = nextPlace();
+    if (!p) { endRun("You found every place in this set!"); return; }
     run.place = p; run.busy = false;
     $("clueKind").textContent = KIND[p.k] || "Place";
     $("clueName").textContent = p.n;
@@ -437,7 +477,9 @@
   function endRun(why) {
     const ok = run.results.filter((r) => r.pass);
     const pts = ok.reduce((s, r) => s + r.score, 0);
-    $("endWhy").textContent = why;
+    const ws = $("pickWhere"), wt = $("pickWhat");
+    const setName = ws.options[ws.selectedIndex].text + (wt.value === "all" ? "" : " · " + wt.options[wt.selectedIndex].text);
+    $("endWhy").textContent = why + " · " + setName;
     $("endCount").textContent = ok.length;
     $("endUnit").textContent = ok.length === 1 ? "place found" : "places found";
     $("endPts").textContent = fmt(pts) + " points" + (ok.length ? " · average " + Math.round(pts / ok.length) : "");
@@ -464,9 +506,10 @@
 
   (async function boot() {
     try {
-      const [list] = await Promise.all([fetch("places.json?v=2").then((r) => r.json()), Globe.load()]);
+      const [list] = await Promise.all([fetch("places.json?v=3").then((r) => r.json()), Globe.load()]);
       places = list;
-      $("startBtn").disabled = false; $("startBtn").textContent = "Start";
+      $("startBtn").textContent = "Start";
+      updateCount();
     } catch (e) {
       $("startBtn").textContent = "Couldn’t load. Refresh to try again.";
     }

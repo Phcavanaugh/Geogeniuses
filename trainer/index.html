@@ -12,7 +12,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
 <link rel="stylesheet" href="../style.css?v=44">
-<link rel="stylesheet" href="trainer.css?v=4">
+<link rel="stylesheet" href="trainer.css?v=5">
 </head>
 <body>
 <div id="app">
@@ -30,6 +30,47 @@
       <li>Each place scores up to 100. Your next clock is <b>15 seconds × that score ÷ 100</b>, so a 90 gives you 13.5 seconds.</li>
       <li><b>Below 70 ends the run</b> (that's about 1,000 miles off). So does running out of time.</li>
     </ul>
+    <div class="tr-pick">
+      <label><span>Where</span>
+        <select id="pickWhere">
+          <option value="all">Whole world</option>
+          <optgroup label="Continents">
+            <option value="ct:NA">North America</option>
+            <option value="ct:SA">South America</option>
+            <option value="ct:EU">Europe</option>
+            <option value="ct:AF">Africa</option>
+            <option value="ct:AS">Asia</option>
+            <option value="ct:OC">Oceania</option>
+          </optgroup>
+          <optgroup label="Countries">
+            <option value="c:US">United States</option>
+            <option value="c:CN">China</option>
+            <option value="c:IN">India</option>
+            <option value="c:AU">Australia</option>
+            <option value="c:BR">Brazil</option>
+            <option value="c:CA">Canada</option>
+            <option value="c:GB">United Kingdom</option>
+            <option value="c:IT">Italy</option>
+            <option value="c:FR">France</option>
+            <option value="c:JP">Japan</option>
+            <option value="c:MX">Mexico</option>
+            <option value="c:RU">Russia</option>
+            <option value="c:ES">Spain</option>
+            <option value="c:DE">Germany</option>
+          </optgroup>
+        </select>
+      </label>
+      <label><span>What</span>
+        <select id="pickWhat">
+          <option value="all">Everything</option>
+          <option value="cities">Cities &amp; towns</option>
+          <option value="capital">Capitals</option>
+          <option value="landmark">Landmarks</option>
+          <option value="nature">Nature</option>
+        </select>
+      </label>
+      <p id="pickCount" class="tr-count"></p>
+    </div>
     <button id="startBtn" class="primary" type="button" disabled>Loading…</button>
     <p class="muted small tr-note">Just for practice. Nothing is saved.</p>
     <p class="muted small tr-disclaim">These places are not taken from the GeoGeniuses question bank. They're a separate list of cities, landmarks and natural features from around the world, put together without looking at the daily questions. Any overlap is purely coincidence.</p>
@@ -71,6 +112,6 @@
 <script src="../vendor/d3.min.js"></script>
 <script src="../vendor/topojson-client.min.js"></script>
 <script src="../vendor/maplibre-gl.js"></script>
-<script src="trainer.js?v=2"></script>
+<script src="trainer.js?v=3"></script>
 </body>
 </html>
