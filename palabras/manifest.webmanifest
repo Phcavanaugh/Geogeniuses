@@ -1,0 +1,16 @@
+{
+  "name": "¡Hola, Palabras!",
+  "short_name": "Palabras",
+  "description": "Spanish picture words for little kids — flashcards, games and a pet axolotl.",
+  "start_url": "/palabras/",
+  "scope": "/palabras/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FFF8EC",
+  "theme_color": "#FFF8EC",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
