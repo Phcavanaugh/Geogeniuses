@@ -112,6 +112,21 @@
   .choice.miss{border-color:var(--coral);background:#FFE6E2;animation:shake .45s}
   .choices.answered .choice:not(.right):not(.reveal):not(.miss){opacity:.35}
 
+  /* ---------- ¿Qué es? ---------- */
+  .bigpic{align-self:center;width:min(58vw,230px);aspect-ratio:1;background:var(--card);border-radius:34px;box-shadow:var(--shadow);font-size:min(36vw,150px);display:grid;place-items:center;margin:2px 0 14px}
+  .bigpic.pop{animation:pop .45s}
+  .wordopts{display:flex;flex-direction:column;gap:10px;flex:1;justify-content:center}
+  .wopt{display:flex;align-items:stretch;gap:8px}
+  .wopt .hear{flex:none;width:64px;border-radius:20px;background:var(--sun);box-shadow:var(--shadow);font-size:26px;display:grid;place-items:center}
+  .wopt .hear:active{transform:translateY(3px)}
+  .wopt .pick{flex:1;min-height:64px;border-radius:20px;background:var(--card);box-shadow:var(--shadow);font-size:clamp(24px,7vw,32px);font-weight:700;text-align:left;padding:8px 18px;border:5px solid transparent;line-height:1.1}
+  .wopt .pick:active{transform:scale(.98)}
+  .wopt.right .pick{border-color:var(--leaf);background:#EAFBEE;animation:pop .5s}
+  .wopt.reveal .pick{border-color:var(--leaf);background:#EAFBEE;animation:pop .6s .2s}
+  .wopt.miss .pick{border-color:var(--coral);background:#FFE6E2;animation:shake .45s}
+  .wordopts.answered .wopt:not(.right):not(.reveal):not(.miss){opacity:.35}
+  .wordopts.hearing .wopt.playing .hear{animation:wiggle .5s}
+
   /* ---------- Bubbles ---------- */
   .arena{flex:1;min-height:380px;position:relative;overflow:hidden;border-radius:28px;background:linear-gradient(180deg,#BFE9FF 0%,#DDF5FF 60%,#E9FBF3 100%);box-shadow:inset 0 0 0 4px rgba(255,255,255,.7);touch-action:none}
   .bub{position:absolute;left:0;top:0;width:96px;height:96px;border-radius:50%;display:grid;place-items:center;font-size:52px;
@@ -273,6 +288,18 @@
     <div class="choices" id="choices"></div>
   </section>
 
+  <!-- ¿QUÉ ES? (picture → word) -->
+  <section class="view game" id="quees">
+    <div class="topbar">
+      <button class="iconbtn" data-home aria-label="Home">🏠</button>
+      <div class="title gtitle"></div>
+      <button class="iconbtn" data-replay aria-label="Hear again">🔊</button>
+    </div>
+    <div class="hud"></div>
+    <button class="bigpic" id="qpic" aria-label="Hear the question"></button>
+    <div class="wordopts" id="wordopts"></div>
+  </section>
+
   <!-- BUBBLES -->
   <section class="view game" id="bubbles">
     <div class="topbar">
@@ -353,7 +380,7 @@
     <div class="row"><label for="nChoices">Most pictures in ¿Dónde está?</label><select id="nChoices"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="6">6</option></select></div>
     <p style="margin-top:-2px">Each game starts with 2 pictures and adds more as your child gets answers right, up to this number.</p>
     <div class="row"><label>Save every word for offline play</label><button class="smallbtn" id="saveOffline">⬇️ Save</button></div>
-    <p id="offlineStatus" style="margin-top:-4px">Groups are saved automatically after they're played once. This saves all of them now (about 12 MB), so the car or a plane is fine.</p>
+    <p id="offlineStatus" style="margin-top:-4px">Groups are saved automatically after they're played once. This saves all of them now (about 15 MB), so the car or a plane is fine.</p>
     <div class="row"><label>Reset stars &amp; records</label><button class="smallbtn" id="resetStars">Reset</button></div>
     <div class="row"><label>Reset sticker book, pet &amp; practice</label><button class="smallbtn" id="resetAll">Reset</button></div>
     <button class="done" id="closeSheet">Done</button>
@@ -574,6 +601,7 @@ function keyText(k){
     case 'd': return `¿Dónde ${esta(w)} ${phrase(w)}?`;
     case 'b': return `¡Busca ${phrase(w)}!`;
     case 'q': return `¡Quiero ${phrase(w)}!`;
+    case 'e': return `${plural(w)?'Son':'Es'} ${phrase(w)}.`;
     case 'r': return `¡Racha de ${v}!`;
     case 'p': return v==='1' ? 'un punto.' : `${v} puntos.`;
     case 'j': return `en ${v} jugadas.`;
@@ -710,13 +738,14 @@ $('petcard').onclick=()=>{
 const MODES=[
   {id:'cards', e:'🃏', es:'Tarjetas', en:'Look & listen', k:'c|Tarjetas.'},
   {id:'donde', e:'🔎', es:'¿Dónde está?', en:'Find it', k:'c|¿Dónde está?'},
+  {id:'quees', e:'🏷️', es:'¿Qué es?', en:'Pick the word', k:'c|¿Qué es?'},
   {id:'bubbles', e:'🫧', es:'Burbujas', en:'Pop it', k:'c|Burbujas.'},
   {id:'feed', e:'👾', es:'Ñamñam', en:'Feed the monster', k:'c|Ñamñam.'},
   {id:'memory', e:'🧠', es:'Memoria', en:'Find pairs', k:'c|Memoria.'},
 ];
 MODES.forEach(m=>{
   const b=document.createElement('button'); b.className='mode'+(m.id===S.mode?' sel':''); b.dataset.mode=m.id;
-  b.style.background={cards:'#FFE7A3',donde:'#CDEFFF',bubbles:'#D9F7F4',feed:'#E7DEFF',memory:'#FFDDE6'}[m.id];
+  b.style.background={cards:'#FFE7A3',donde:'#CDEFFF',quees:'#FFE9C7',bubbles:'#D9F7F4',feed:'#E7DEFF',memory:'#FFDDE6'}[m.id];
   b.innerHTML=`<span class="e">${m.e}</span>${m.es}<small>${m.en}</small>`;
   b.onclick=()=>{ S.mode=m.id; document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('sel',x===b)); talk([m.k]); };
   $('modes').appendChild(b);
@@ -743,7 +772,7 @@ async function start(key){
   document.querySelectorAll('.gtitle').forEach(t=>t.textContent=c.es);
   if(S.mode==='cards'){ S.list=c.words.slice(); S.i=0; $('cardsTitle').textContent=c.es; show('cards'); renderCard(); return; }
   show(S.mode);
-  ({donde:startDonde, bubbles:startBubbles, feed:startFeed, memory:startMemory})[S.mode]();
+  ({donde:startDonde, quees:startQuees, bubbles:startBubbles, feed:startFeed, memory:startMemory})[S.mode]();
 }
 
 /* ======================= flashcards ======================= */
@@ -871,6 +900,48 @@ async function dondePick(b,w){
   }
   if(run!==S.run) return;
   if(S.lives<=0) gameOver(); else dondeRound();
+}
+
+/* ======================= ¿Qué es? (picture → word) ======================= */
+function startQuees(){ newRun(); queesRound(); }
+function queesRound(){
+  const words=VOCAB[S.cat].words;
+  const target=pickTarget(words);
+  const n=Math.min(4, 2+Math.floor(S.correct/2), words.length);
+  const opts=shuffle([target,...distractors(words,target,n-1)]);
+  S.target=target; S.locked=false;
+  const pic=$('qpic'); pic.textContent=target[2]; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
+  const box=$('wordopts'); box.innerHTML=''; box.className='wordopts';
+  opts.forEach(w=>{
+    const row=document.createElement('div'); row.className='wopt'; row._w=w;
+    row.innerHTML=`<button class="hear" aria-label="Hear this word">🔊</button><button class="pick">${wordHTML(w)}</button>`;
+    row.querySelector('.hear').onclick=()=>{
+      if(S.locked) return;
+      box.querySelectorAll('.wopt').forEach(r=>r.classList.remove('playing'));
+      row.classList.add('playing'); box.classList.add('hearing');
+      talk(['w|'+w[2]]).then(()=>row.classList.remove('playing'));
+    };
+    row.querySelector('.pick').onclick=()=>queesPick(row,w);
+    box.appendChild(row);
+  });
+  S.ask=()=>talk(['c|¿Qué es esto?']); S.ask();
+}
+$('qpic').onclick=()=>{ if(!S.locked && S.ask) S.ask(); };
+async function queesPick(row,w){
+  if(S.locked) return; S.locked=true; const run=S.run;
+  const box=$('wordopts'); box.classList.add('answered');
+  if(w===S.target){
+    row.classList.add('right'); const r=row.getBoundingClientRect();
+    const m=scoreRight(w, r.left+r.width/2, r.top+r.height/2);
+    await Promise.all([talk([m,'w|'+w[2]]), wait(1200)]);
+  } else {
+    row.classList.add('miss');
+    const right=[...box.children].find(x=>x._w===S.target); right&&right.classList.add('reveal');
+    scoreMiss(S.target);
+    await Promise.all([talk(['c|¡Uy!','e|'+S.target[2]]), wait(1800)]);
+  }
+  if(run!==S.run) return;
+  if(S.lives<=0) gameOver(); else queesRound();
 }
 
 /* ======================= Burbujas ======================= */
