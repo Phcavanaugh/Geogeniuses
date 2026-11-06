@@ -112,6 +112,37 @@
   .choice.miss{border-color:var(--coral);background:#FFE6E2;animation:shake .45s}
   .choices.answered .choice:not(.right):not(.reveal):not(.miss){opacity:.35}
 
+  /* ---------- age switch ---------- */
+  .agesw{display:flex;background:var(--card);border-radius:18px;box-shadow:var(--shadow);padding:5px;gap:5px;margin:2px 0 12px}
+  .agesw button{flex:1;border-radius:14px;padding:9px 6px;font-size:17px;font-weight:700;color:var(--muted)}
+  .agesw button.on{background:var(--ink);color:#fff}
+  .mode.wide{grid-column:1/-1;flex-direction:row;justify-content:center;gap:12px;padding:12px 10px;font-size:19px}
+  .mode.wide .e{font-size:40px}
+  .mode.wide .txt{display:flex;flex-direction:column;align-items:flex-start;text-align:left}
+  .mode.wide small{font-size:12px}
+
+  /* ---------- Adivina (riddles) ---------- */
+  .riddle{background:var(--card);border-radius:26px;box-shadow:var(--shadow);padding:14px 16px 12px;margin:0 0 12px;position:relative}
+  .rtext{font-size:clamp(19px,5.2vw,24px);font-weight:600;line-height:1.35}
+  .rtext b{color:var(--coral);font-weight:700}
+  .rtools{display:flex;gap:8px;margin-top:10px}
+  .rtools button{background:#F1EEF6;border-radius:12px;padding:7px 12px;font-size:15px;font-weight:600}
+  .ren{display:none;margin-top:8px;font-size:15px;color:var(--muted);line-height:1.35;border-top:2px dashed #eee;padding-top:8px}
+  .ren.on{display:block}
+  .achoices{flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;align-content:center}
+  .achoices.n4{grid-template-columns:1fr 1fr}
+  .achoice{background:var(--card);border-radius:22px;box-shadow:var(--shadow);border:5px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 4px 6px;transition:opacity .2s}
+  .achoice .pic{font-size:min(15vw,64px);line-height:1.1}
+  .achoices.n4 .achoice .pic{font-size:min(19vw,78px)}
+  .achoice .lab{font-size:14px;font-weight:600;color:var(--muted);margin-top:2px;text-align:center;line-height:1.1}
+  .achoice:active{transform:scale(.97)}
+  .achoice.right{border-color:var(--leaf);background:#EAFBEE;animation:pop .5s}
+  .achoice.reveal{border-color:var(--leaf);background:#EAFBEE;animation:pop .6s .2s}
+  .achoice.miss{border-color:var(--coral);background:#FFE6E2;animation:shake .45s}
+  .achoices.answered .achoice:not(.right):not(.reveal):not(.miss){opacity:.35}
+  .mgrid.big{grid-template-columns:repeat(4,1fr)}
+  .mgrid.big .mcard{font-size:min(11vw,52px)}
+
   /* ---------- ¿Qué es? ---------- */
   .bigpic{align-self:center;width:min(58vw,230px);aspect-ratio:1;background:var(--card);border-radius:34px;box-shadow:var(--shadow);font-size:min(36vw,150px);display:grid;place-items:center;margin:2px 0 14px}
   .bigpic.pop{animation:pop .45s}
@@ -239,6 +270,10 @@
 <main>
   <!-- HOME -->
   <section class="view on" id="home">
+    <div class="agesw" role="tablist" aria-label="Age">
+      <button data-age="4">🧸 4–5 años</button>
+      <button data-age="7">🚀 7 años</button>
+    </div>
     <button class="petcard" id="petcard">
       <span class="petwrap" id="homePet"></span>
       <span class="petinfo">
@@ -286,6 +321,22 @@
     <div class="hud"></div>
     <div class="prompt"><div class="q" id="dq"></div></div>
     <div class="choices" id="choices"></div>
+  </section>
+
+  <!-- ADIVINA (riddles, 7-year-old version) -->
+  <section class="view game" id="adivina">
+    <div class="topbar">
+      <button class="iconbtn" data-home aria-label="Home">🏠</button>
+      <div class="title gtitle"></div>
+      <button class="iconbtn" data-replay aria-label="Hear again">🔊</button>
+    </div>
+    <div class="hud"></div>
+    <div class="riddle">
+      <div class="rtext" id="rtext"></div>
+      <div class="rtools"><button id="rsay">🔊 Otra vez</button><button id="rhelp">🇺🇸 English help</button></div>
+      <div class="ren" id="ren"></div>
+    </div>
+    <div class="achoices" id="achoices"></div>
   </section>
 
   <!-- ¿QUÉ ES? (picture → word) -->
@@ -380,7 +431,7 @@
     <div class="row"><label for="nChoices">Most pictures in ¿Dónde está?</label><select id="nChoices"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="6">6</option></select></div>
     <p style="margin-top:-2px">Each game starts with 2 pictures and adds more as your child gets answers right, up to this number.</p>
     <div class="row"><label>Save every word for offline play</label><button class="smallbtn" id="saveOffline">⬇️ Save</button></div>
-    <p id="offlineStatus" style="margin-top:-4px">Groups are saved automatically after they're played once. This saves all of them now (about 15 MB), so the car or a plane is fine.</p>
+    <p id="offlineStatus" style="margin-top:-4px">Groups are saved automatically after they're played once. This saves all of them now (about 17 MB), so the car or a plane is fine.</p>
     <div class="row"><label>Reset stars &amp; records</label><button class="smallbtn" id="resetStars">Reset</button></div>
     <div class="row"><label>Reset sticker book, pet &amp; practice</label><button class="smallbtn" id="resetAll">Reset</button></div>
     <button class="done" id="closeSheet">Done</button>
@@ -500,14 +551,163 @@ VOCAB.todas.words = uniq(Object.entries(VOCAB).filter(([k])=>k!=='todos'&&k!=='t
 
 
 
+/* ======================= Adivina riddles (7-year-old version) ======================= */
+// emoji -> [Spanish clues, English help]. The question ("¿Quién soy?" etc.) is added automatically.
+const RIDDLES = {
+  /* --- En la granja --- */
+  '🐶':['Tengo cuatro patas y una cola. Digo guau, guau. Soy el mejor amigo de las personas.','I have four legs and a tail. I say woof, woof. I am people\'s best friend.'],
+  '🐱':['Tengo bigotes y una cola larga. Digo miau. Me gusta dormir y jugar con una bola de estambre.','I have whiskers and a long tail. I say meow. I like to sleep and play with a ball of yarn.'],
+  '🐮':['Soy grande y tengo manchas. Digo muu. Doy leche.','I am big and I have spots. I say moo. I give milk.'],
+  '🐷':['Soy rosado y tengo una nariz redonda. Digo oinc, oinc. Me gusta jugar en el lodo.','I am pink and I have a round nose. I say oink, oink. I like to play in the mud.'],
+  '🐴':['Tengo patas largas y una crin. Corro muy rápido. Las personas me montan.','I have long legs and a mane. I run very fast. People ride me.'],
+  '🐑':['Mi lana es blanca y suave. Digo bee, bee. Vivo en la granja.','My wool is white and soft. I say baa, baa. I live on the farm.'],
+  '🐐':['Tengo cuernos y una barbita. Me gusta subir a las rocas. Como casi de todo.','I have horns and a little beard. I like to climb on rocks. I eat almost anything.'],
+  '🐔':['Tengo plumas y pongo huevos. Digo coc, coc. Mis hijos son pollitos.','I have feathers and I lay eggs. I say cluck, cluck. My babies are chicks.'],
+  '🐓':['Tengo una cresta roja en la cabeza. Canto kikirikí en la mañana. Despierto a todos.','I have a red comb on my head. I sing cock-a-doodle-doo in the morning. I wake everyone up.'],
+  '🐤':['Soy pequeño y amarillo. Digo pío, pío. Mi mamá es la gallina.','I am small and yellow. I say peep, peep. My mom is the hen.'],
+  '🦆':['Tengo un pico plano y patas para nadar. Nado en el lago. Digo cuac, cuac.','I have a flat beak and feet for swimming. I swim in the lake. I say quack, quack.'],
+  '🦃':['Soy un pájaro grande de la granja. Tengo algo rojo que cuelga de mi cara. Digo glu, glu.','I am a big farm bird. I have something red hanging from my face. I say gobble, gobble.'],
+  '🐰':['Tengo orejas largas y una cola como algodón. Salto mucho. Me gustan las zanahorias.','I have long ears and a tail like cotton. I hop a lot. I like carrots.'],
+  '🐭':['Soy muy pequeño y gris. Tengo una cola larga. Me encanta el queso.','I am very small and gray. I have a long tail. I love cheese.'],
+  '🦙':['Tengo el cuello largo y lana suave. Vivo en las montañas de Sudamérica. A veces escupo.','I have a long neck and soft wool. I live in the mountains of South America. Sometimes I spit.'],
+  '🐂':['Soy grande y muy fuerte. Tengo dos cuernos. Soy el papá de los becerros.','I am big and very strong. I have two horns. I am the dad of the calves.'],
+  '🫏':['Tengo orejas muy largas. Soy pariente del caballo, pero más pequeño. Llevo cosas pesadas.','I have very long ears. I am related to the horse, but smaller. I carry heavy things.'],
+  '🐏':['Soy el papá de las ovejas. Tengo cuernos grandes y enrollados. Tengo mucha lana.','I am the dad of the sheep. I have big curly horns. I have lots of wool.'],
+  '🐃':['Soy grande y tengo cuernos curvos. Me gusta estar en el agua y en el lodo. Vivo en Asia.','I am big and I have curved horns. I like to be in water and mud. I live in Asia.'],
+  '🐀':['Me parezco a un ratón, pero soy más grande. Mi cola larga no tiene pelo.','I look like a mouse, but I am bigger. My long tail has no fur.'],
+  '🐈‍⬛':['Soy un gato y todo mi pelo es negro, como la noche. Digo miau.','I am a cat and all my fur is black, like the night. I say meow.'],
+  '🐩':['Soy un perro con el pelo muy rizado. A veces me lo cortan como pompones.','I am a dog with very curly fur. Sometimes it gets cut like pom-poms.'],
+  '🐹':['Soy pequeño y redondo. Guardo comida en mis cachetes. Corro en una rueda.','I am small and round. I keep food in my cheeks. I run on a wheel.'],
+  '🧑‍🌾':['Trabajo en la granja. Cuido a los animales y siembro plantas. Me levanto muy temprano.','I work on the farm. I take care of the animals and plant crops. I get up very early.'],
+  '🌾':['Soy una planta alta y dorada. Con mis semillas hacen harina y pan.','I am a tall golden plant. My seeds are made into flour and bread.'],
+  '🪺':['Los pájaros me hacen con ramitas. Estoy en los árboles. Adentro hay huevos.','Birds make me out of little sticks. I am in the trees. There are eggs inside.'],
+  '🪶':['Soy ligera y suave. Los pájaros tienen muchas como yo. El viento me lleva.','I am light and soft. Birds have lots like me. The wind carries me.'],
+  '🐾':['Somos las marcas que dejan las patas de un perro o un gato. Nos ves en la nieve o en el lodo.','We are the marks a dog\'s or cat\'s paws leave behind. You see us in snow or mud.'],
+  '🦮':['Soy un perro que trabaja. Llevo un arnés. Ayudo a las personas que no pueden ver.','I am a dog with a job. I wear a harness. I help people who can\'t see.'],
+
+  /* --- En el zoológico --- */
+  '🦁':['Soy un gato muy grande. Tengo una melena alrededor de la cara. Soy el rey de la selva.','I am a very big cat. I have a mane around my face. I am the king of the jungle.'],
+  '🐯':['Soy un gato grande. Soy anaranjado con rayas negras. Vivo en las selvas de Asia.','I am a big cat. I am orange with black stripes. I live in the jungles of Asia.'],
+  '🐘':['Soy muy grande y gris. Tengo una trompa larga y orejas enormes.','I am very big and gray. I have a long trunk and huge ears.'],
+  '🦒':['Tengo el cuello más largo de todos los animales. Tengo manchas. Como hojas de árboles altos.','I have the longest neck of all animals. I have spots. I eat leaves from tall trees.'],
+  '🦓':['Me parezco a un caballo. Tengo rayas blancas y negras. Vivo en África.','I look like a horse. I have black and white stripes. I live in Africa.'],
+  '🐵':['Me gusta subir a los árboles. Tengo una cola larga. Me encantan los plátanos.','I like to climb trees. I have a long tail. I love bananas.'],
+  '🦍':['Soy el mono más grande y fuerte. Soy negro y peludo. Me golpeo el pecho.','I am the biggest, strongest ape. I am black and furry. I beat my chest.'],
+  '🦛':['Soy enorme y gris. Paso el día en el río. Tengo una boca gigante.','I am huge and gray. I spend the day in the river. I have a giant mouth.'],
+  '🦏':['Soy grande y gris. Tengo uno o dos cuernos en la nariz. Mi piel es muy gruesa.','I am big and gray. I have one or two horns on my nose. My skin is very thick.'],
+  '🐊':['Soy verde y tengo muchos dientes. Vivo en el río. Tengo una cola muy fuerte.','I am green and have lots of teeth. I live in the river. I have a very strong tail.'],
+  '🐫':['Vivo en el desierto. Tengo dos jorobas en la espalda. Puedo pasar días sin agua.','I live in the desert. I have two humps on my back. I can go days without water.'],
+  '🦘':['Salto con mis patas grandes. Llevo a mi bebé en una bolsa. Vivo en Australia.','I hop on my big feet. I carry my baby in a pouch. I live in Australia.'],
+  '🐨':['Soy gris y suave. Vivo en los árboles de Australia. Duermo mucho y como hojas de eucalipto.','I am gray and soft. I live in the trees of Australia. I sleep a lot and eat eucalyptus leaves.'],
+  '🐼':['Soy un oso blanco y negro. Vivo en China. Como bambú todo el día.','I am a black and white bear. I live in China. I eat bamboo all day.'],
+  '🐍':['No tengo patas. Mi cuerpo es muy largo. Hago sss, sss.','I have no legs. My body is very long. I go sss, sss.'],
+  '🦥':['Vivo en los árboles de la selva. Me muevo muy, muy despacio. Duermo mucho.','I live in jungle trees. I move very, very slowly. I sleep a lot.'],
+  '🐆':['Soy un gato grande con manchas negras. Subo a los árboles. Corro muy rápido.','I am a big cat with black spots. I climb trees. I run very fast.'],
+  '🦧':['Soy un mono grande. Mi pelo es largo y anaranjado. Vivo en los árboles de Asia.','I am a big ape. My hair is long and orange. I live in the trees of Asia.'],
+  '🐪':['Vivo en el desierto. Me parezco al camello, pero tengo una sola joroba.','I live in the desert. I look like a camel, but I have just one hump.'],
+  '🦖':['Soy un dinosaurio enorme. Tengo dientes grandes y brazos muy cortos. Viví hace millones de años.','I am a huge dinosaur. I have big teeth and very short arms. I lived millions of years ago.'],
+  '🐉':['No soy real, vivo en los cuentos. Tengo alas y echo fuego por la boca.','I am not real, I live in stories. I have wings and I breathe fire.'],
+  '🦄':['No soy real, vivo en los cuentos. Parezco un caballo con un cuerno mágico en la frente.','I am not real, I live in stories. I look like a horse with a magic horn on my forehead.'],
+
+  /* --- En el mar --- */
+  '🐟':['Vivo en el agua. Tengo aletas y escamas. Nado todo el día.','I live in the water. I have fins and scales. I swim all day.'],
+  '🐙':['Vivo en el mar. Tengo ocho brazos. Puedo echar tinta.','I live in the sea. I have eight arms. I can squirt ink.'],
+  '🐳':['Soy muy grande y vivo en el mar. Echo agua por un agujero en mi cabeza.','I am very big and I live in the sea. I spray water out of a hole in my head.'],
+  '🐬':['Vivo en el mar. Soy muy inteligente y juguetón. Salto sobre las olas.','I live in the sea. I am very smart and playful. I jump over the waves.'],
+  '🦈':['Vivo en el mar. Tengo muchos dientes filosos. Tengo una aleta en la espalda.','I live in the sea. I have lots of sharp teeth. I have a fin on my back.'],
+  '🐢':['Llevo mi casa en la espalda. Camino muy despacio. Algunas como yo viven en el mar.','I carry my house on my back. I walk very slowly. Some like me live in the sea.'],
+  '🦀':['Tengo dos pinzas y muchas patas. Camino de lado en la playa.','I have two claws and lots of legs. I walk sideways on the beach.'],
+  '🦭':['Vivo en el mar frío. Tengo aletas y bigotes. Me encanta comer pescado.','I live in the cold sea. I have flippers and whiskers. I love to eat fish.'],
+  '🦑':['Vivo en el mar. Tengo diez brazos largos. Echo tinta para esconderme.','I live in the sea. I have ten long arms. I squirt ink to hide.'],
+  '🦞':['Soy roja y tengo dos pinzas grandes. Vivo en el fondo del mar. Tengo antenas largas.','I am red and I have two big claws. I live at the bottom of the sea. I have long antennae.'],
+  '🦐':['Soy pequeño y rosado. Vivo en el mar. Tengo antenas y muchas patitas.','I am small and pink. I live in the sea. I have antennae and lots of little legs.'],
+  '🐡':['Soy un pez. Cuando tengo miedo, me inflo como una pelota con picos.','I am a fish. When I am scared, I puff up like a spiky ball.'],
+  '🦦':['Nado boca arriba en el agua. Tengo pelo café y suave. Abro conchas con una piedra.','I swim on my back in the water. I have soft brown fur. I open shells with a rock.'],
+  '🐠':['Soy un pez de muchos colores. Vivo en el mar caliente, cerca del coral.','I am a fish with lots of colors. I live in the warm sea, near the coral.'],
+  '🪼':['Mi cuerpo es suave y transparente. No tengo huesos. ¡Cuidado, puedo picar!','My body is soft and see-through. I have no bones. Careful, I can sting!'],
+  '🐚':['Me encuentras en la playa. Si me pones en tu oreja, parece que oyes el mar.','You find me on the beach. If you put me to your ear, it sounds like the sea.'],
+  '🪸':['Parezco una planta de colores, pero soy un animal. Muchos peces viven conmigo.','I look like a colorful plant, but I am an animal. Lots of fish live with me.'],
+  '🐋':['Soy el animal más grande del mundo. Soy azul y gris. Como animalitos llamados kril.','I am the biggest animal in the world. I am blue and gray. I eat tiny animals called krill.'],
+  '🐻‍❄️':['Soy un oso blanco. Vivo donde hay hielo y nieve. Nado en el agua fría.','I am a white bear. I live where there is ice and snow. I swim in cold water.'],
+
+  /* --- En el bosque --- */
+  '🐻':['Soy grande y peludo. Me encanta la miel. Duermo todo el invierno.','I am big and furry. I love honey. I sleep all winter.'],
+  '🦊':['Soy anaranjado y tengo una cola esponjosa. Soy muy listo. Vivo en el bosque.','I am orange and I have a fluffy tail. I am very clever. I live in the forest.'],
+  '🐺':['Me parezco a un perro grande. Vivo en grupo con mi manada. Le aúllo a la luna.','I look like a big dog. I live in a group with my pack. I howl at the moon.'],
+  '🐿️':['Tengo una cola grande y esponjosa. Subo a los árboles. Guardo bellotas para el invierno.','I have a big fluffy tail. I climb trees. I save acorns for winter.'],
+  '🦔':['Soy pequeño. Mi espalda está cubierta de púas. Me hago bolita cuando tengo miedo.','I am small. My back is covered in spines. I curl into a ball when I am scared.'],
+  '🦉':['Soy un pájaro de la noche. Tengo ojos muy grandes. Digo uh, uh.','I am a night bird. I have very big eyes. I say hoo, hoo.'],
+  '🦇':['Vuelo de noche, pero no soy un pájaro. Duermo colgado de cabeza.','I fly at night, but I am not a bird. I sleep hanging upside down.'],
+  '🦌':['Tengo patas largas y corro rápido. El papá tiene astas en la cabeza. Vivo en el bosque.','I have long legs and run fast. The dad has antlers on his head. I live in the forest.'],
+  '🦫':['Tengo dientes grandes y una cola plana. Corto árboles y hago presas en el río.','I have big teeth and a flat tail. I cut down trees and build dams in the river.'],
+  '🦝':['Tengo un antifaz negro en la cara. Mi cola tiene rayas. Busco comida de noche.','I have a black mask on my face. My tail has stripes. I look for food at night.'],
+  '🐗':['Me parezco a un cerdo, pero tengo pelo grueso y colmillos. Vivo en el bosque.','I look like a pig, but I have thick hair and tusks. I live in the forest.'],
+  '🦡':['Tengo una raya blanca en la cara. Cavo túneles en la tierra con mis garras.','I have a white stripe on my face. I dig tunnels in the ground with my claws.'],
+  '🐸':['Soy verde y salto muy alto. Vivo cerca del agua. Digo croac, croac.','I am green and I jump very high. I live near water. I say ribbit, ribbit.'],
+  '🦬':['Soy grande y peludo, con una joroba. Tengo cuernos. Vivo en las praderas.','I am big and shaggy, with a hump. I have horns. I live on the prairies.'],
+  '🦨':['Soy negro con una raya blanca. Si me asustas, ¡hago un olor horrible!','I am black with a white stripe. If you scare me, I make a terrible smell!'],
+  '🫎':['Soy muy grande y tengo patas largas. El papá tiene astas enormes y planas.','I am very big and I have long legs. The dad has huge, flat antlers.'],
+  '🦎':['Soy pequeña, con cuatro patas y una cola larga. Me gusta tomar el sol en las rocas.','I am small, with four legs and a long tail. I like to sunbathe on rocks.'],
+  '🦣':['Me parezco a un elefante peludo. Tengo colmillos largos y curvos. Viví hace mucho tiempo, en el frío.','I look like a hairy elephant. I have long curved tusks. I lived long ago, in the cold.'],
+
+  /* --- Los bichos --- */
+  '🐝':['Soy amarilla y negra. Vuelo de flor en flor. Hago miel.','I am yellow and black. I fly from flower to flower. I make honey.'],
+  '🦋':['Tengo alas de colores. Antes era una oruga. Vuelo entre las flores.','I have colorful wings. I used to be a caterpillar. I fly among the flowers.'],
+  '🐜':['Soy muy pequeña, pero muy fuerte. Vivo con muchas hermanas. Cargo cosas pesadas.','I am very small, but very strong. I live with lots of sisters. I carry heavy things.'],
+  '🕷️':['Tengo ocho patas. Hago una telaraña para atrapar insectos.','I have eight legs. I make a web to catch insects.'],
+  '🐞':['Soy pequeña y roja, con puntos negros. Vuelo. Vivo en las plantas del jardín.','I am small and red, with black dots. I fly. I live on garden plants.'],
+  '🐛':['Soy larga y como muchas hojas. Un día me convierto en mariposa.','I am long and I eat lots of leaves. One day I turn into a butterfly.'],
+  '🪲':['Tengo un caparazón duro y brillante. Tengo seis patas. Camino por el suelo.','I have a hard, shiny shell. I have six legs. I walk along the ground.'],
+  '🦗':['Soy verde y salto muy lejos con mis patas largas. Vivo en el pasto.','I am green and I jump very far with my long legs. I live in the grass.'],
+  '🪰':['Soy un insecto pequeño. Hago bzzz. Me gusta pararme en la comida.','I am a small insect. I go bzzz. I like to land on food.'],
+  '🦟':['Soy un insecto pequeño y vuelo de noche. ¡Mi piquete da comezón!','I am a small insect and I fly at night. My bite makes you itch!'],
+  '🪱':['Soy largo y no tengo patas. Vivo debajo de la tierra. Salgo cuando llueve.','I am long and I have no legs. I live under the ground. I come out when it rains.'],
+  '🐌':['Llevo mi casa en la espalda. Me muevo muy despacio. Dejo un camino brillante.','I carry my house on my back. I move very slowly. I leave a shiny trail.'],
+  '🦂':['Tengo dos pinzas y una cola con un aguijón. Vivo en el desierto.','I have two pincers and a tail with a stinger. I live in the desert.'],
+  '🪳':['Soy café y corro muy rápido. Tengo antenas largas. Me escondo en lugares oscuros.','I am brown and I run very fast. I have long antennae. I hide in dark places.'],
+  '🦠':['Soy tan pequeño que no me puedes ver. Por eso te lavas las manos con jabón.','I am so small you can\'t see me. That\'s why you wash your hands with soap.'],
+  '🕸️':['La araña me hace con hilos muy finos. Los insectos se quedan pegados en mí.','The spider makes me from very thin threads. Insects get stuck on me.'],
+
+  /* --- Los pájaros --- */
+  '🐦':['Tengo plumas y dos alas. Vuelo en el cielo. Canto en los árboles.','I have feathers and two wings. I fly in the sky. I sing in the trees.'],
+  '🐧':['Soy un pájaro, pero no vuelo. Nado muy bien. Vivo donde hace mucho frío.','I am a bird, but I can\'t fly. I swim very well. I live where it is very cold.'],
+  '🦜':['Soy un pájaro de muchos colores. ¡Puedo repetir palabras! Vivo en la selva.','I am a bird with lots of colors. I can repeat words! I live in the jungle.'],
+  '🦩':['Soy un pájaro rosado. Me paro en una sola pata. Vivo en el agua.','I am a pink bird. I stand on one leg. I live in the water.'],
+  '🦚':['Mi cola es enorme, con plumas verdes y azules. La abro como un abanico.','My tail is huge, with green and blue feathers. I open it like a fan.'],
+  '🦢':['Soy un pájaro blanco y elegante. Tengo el cuello largo. Nado en el lago.','I am a white, graceful bird. I have a long neck. I swim in the lake.'],
+  '🦅':['Soy un ave grande y fuerte. Vuelo muy alto. Veo muy bien desde lejos.','I am a big, strong bird. I fly very high. I can see very well from far away.'],
+  '🕊️':['Soy un pájaro blanco. Soy el símbolo de la paz.','I am a white bird. I am the symbol of peace.'],
+  '🦤':['Era un pájaro gordo que no volaba. Vivía en una isla. Ya no existo.','I was a chubby bird that couldn\'t fly. I lived on an island. I don\'t exist anymore.'],
+  '🪿':['Soy un pájaro grande con el cuello largo. Vuelo en forma de V con mi grupo. Digo honc, honc.','I am a big bird with a long neck. I fly in a V shape with my flock. I say honk, honk.'],
+  '🐦‍⬛':['Soy un pájaro todo negro. Soy muy inteligente. Digo cra, cra.','I am an all-black bird. I am very smart. I say caw, caw.'],
+  '🐣':['Soy un pollito muy nuevo. Estoy rompiendo el cascarón para salir.','I am a brand-new chick. I am breaking out of my shell.'],
+};
+// Things (not animals or people) ask "¿Qué soy?"; plurals ask "¿Qué somos?"
+const RIDDLE_THING = new Set(['🌾','🪺','🪶','🐚','🪸','🦠','🕸️']);
+const RIDDLE_PLURAL = new Set(['🐾']);
+const riddleQ = e => RIDDLE_PLURAL.has(e) ? ['¿Qué somos?','What are we?'] : RIDDLE_THING.has(e) ? ['¿Qué soy?','What am I?'] : ['¿Quién soy?','Who am I?'];
+// Pictures a riddle could also fit — never shown together as choices
+const LOOKALIKES = [
+  ['🐱','🐈‍⬛'],['🐶','🐩','🦮','🐺'],['🐳','🐋'],['🐫','🐪'],['🐭','🐀'],['🐑','🐏','🐐'],['🐔','🐤','🐣','🐓'],
+  ['🐟','🐠','🐡'],['🐮','🐂','🐃','🦬'],['🐴','🫏','🦓','🦄'],['🦌','🫎'],['🐷','🐗'],['🐻','🐻‍❄️','🐼'],
+  ['🦁','🐯','🐆'],['🐵','🦍','🦧'],['🐘','🦣'],['🦑','🐙'],['🦞','🦀','🦐'],['🐢','🐌'],['🦖','🐉','🐊','🦎'],
+  ['🐦','🕊️','🐦‍⬛'],['🦆','🪿','🦢'],['🦃','🦚'],['🐜','🪳','🪲'],['🪰','🦟','🐝'],['🐛','🪱'],['🕷️','🕸️'],['🦭','🦦'],['🐦','🪶','🪺']
+];
+
 /* ======================= storage ======================= */
+// Two ages, each with its own stars, stickers, pet and records. Voice settings are shared.
+const AGE = (()=>{ try{ return localStorage.getItem('hp_age')==='7' ? 7 : 4; }catch(e){ return 4; } })();
+const BIG = AGE===7;
+const PREFIX = BIG ? 'hp7_' : 'hp_';
+const SHARED = new Set(['showEn','sayArt','rate','voiceURI','recVoice']);
 const store = {
-  get(k,d){ try{ const v=localStorage.getItem('hp_'+k); return v===null?d:JSON.parse(v);}catch(e){return d;} },
-  set(k,v){ try{ localStorage.setItem('hp_'+k,JSON.stringify(v)); }catch(e){} }
+  key(k){ return (SHARED.has(k) ? 'hp_' : PREFIX) + k; },
+  get(k,d){ try{ const v=localStorage.getItem(this.key(k)); return v===null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ try{ localStorage.setItem(this.key(k),JSON.stringify(v)); }catch(e){} }
 };
 const $ = id => document.getElementById(id);
 const S = {
-  mode:'cards', cat:null, list:[], i:0, run:0,
+  mode: BIG ? 'adivina' : 'cards', cat:null, list:[], i:0, run:0,
   showEn: store.get('showEn', false),
   sayArt: store.get('sayArt', true),
   rate: store.get('rate', 0.8),
@@ -602,6 +802,7 @@ function keyText(k){
     case 'b': return `¡Busca ${phrase(w)}!`;
     case 'q': return `¡Quiero ${phrase(w)}!`;
     case 'e': return `${plural(w)?'Son':'Es'} ${phrase(w)}.`;
+    case 'a': return RIDDLES[v][0]+' '+riddleQ(v)[0];
     case 'r': return `¡Racha de ${v}!`;
     case 'p': return v==='1' ? 'un punto.' : `${v} puntos.`;
     case 'j': return `en ${v} jugadas.`;
@@ -735,7 +936,8 @@ $('petcard').onclick=()=>{
 };
 
 /* ======================= modes & home ======================= */
-const MODES=[
+const MODES_ALL=[
+  {id:'adivina', e:'🕵️', es:'¡Adivina!', en:'Read the clues, guess the animal', k:'c|¡Adivina!', big:true, only:'big'},
   {id:'cards', e:'🃏', es:'Tarjetas', en:'Look & listen', k:'c|Tarjetas.'},
   {id:'donde', e:'🔎', es:'¿Dónde está?', en:'Find it', k:'c|¿Dónde está?'},
   {id:'quees', e:'🏷️', es:'¿Qué es?', en:'Pick the word', k:'c|¿Qué es?'},
@@ -743,16 +945,22 @@ const MODES=[
   {id:'feed', e:'👾', es:'Ñamñam', en:'Feed the monster', k:'c|Ñamñam.'},
   {id:'memory', e:'🧠', es:'Memoria', en:'Find pairs', k:'c|Memoria.'},
 ];
+const MODES = MODES_ALL.filter(m=>!m.only || (m.only==='big')===BIG);
 MODES.forEach(m=>{
-  const b=document.createElement('button'); b.className='mode'+(m.id===S.mode?' sel':''); b.dataset.mode=m.id;
-  b.style.background={cards:'#FFE7A3',donde:'#CDEFFF',quees:'#FFE9C7',bubbles:'#D9F7F4',feed:'#E7DEFF',memory:'#FFDDE6'}[m.id];
-  b.innerHTML=`<span class="e">${m.e}</span>${m.es}<small>${m.en}</small>`;
-  b.onclick=()=>{ S.mode=m.id; document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('sel',x===b)); talk([m.k]); };
+  const b=document.createElement('button'); b.className='mode'+(m.id===S.mode?' sel':'')+(m.big?' wide':''); b.dataset.mode=m.id;
+  b.style.background={adivina:'#FFD9C2',cards:'#FFE7A3',donde:'#CDEFFF',quees:'#FFE9C7',bubbles:'#D9F7F4',feed:'#E7DEFF',memory:'#FFDDE6'}[m.id];
+  b.innerHTML = m.big ? `<span class="e">${m.e}</span><span class="txt">${m.es}<small>${m.en}</small></span>` : `<span class="e">${m.e}</span>${m.es}<small>${m.en}</small>`;
+  b.onclick=()=>{ S.mode=m.id; document.querySelectorAll('.mode').forEach(x=>x.classList.toggle('sel',x===b)); renderCats(); talk([m.k]); };
   $('modes').appendChild(b);
 });
+document.querySelectorAll('.agesw button').forEach(b=>{
+  b.classList.toggle('on', +b.dataset.age===AGE);
+  b.onclick=()=>{ if(+b.dataset.age===AGE) return; try{ localStorage.setItem('hp_age', b.dataset.age); }catch(e){} location.reload(); };
+});
+const hasRiddles = c => c.words.every(w=>RIDDLES[w[2]]);
 function renderCats(){
   const wrap=$('cats'); wrap.innerHTML='';
-  Object.entries(VOCAB).forEach(([key,c])=>{
+  Object.entries(VOCAB).filter(([k,c])=> S.mode!=='adivina' || hasRiddles(c)).forEach(([key,c])=>{
     const b=document.createElement('button'); b.className='cat'+(key==='todas'?' wide':''); b.style.background=c.color;
     const got=c.words.filter(found).length;
     b.innerHTML=`<span class="e">${c.icon}</span>${c.es}<small>${c.en}</small><span class="prog">📒 ${got}/${c.words.length}</span>`;
@@ -772,7 +980,7 @@ async function start(key){
   document.querySelectorAll('.gtitle').forEach(t=>t.textContent=c.es);
   if(S.mode==='cards'){ S.list=c.words.slice(); S.i=0; $('cardsTitle').textContent=c.es; show('cards'); renderCard(); return; }
   show(S.mode);
-  ({donde:startDonde, quees:startQuees, bubbles:startBubbles, feed:startFeed, memory:startMemory})[S.mode]();
+  ({adivina:startAdivina, donde:startDonde, quees:startQuees, bubbles:startBubbles, feed:startFeed, memory:startMemory})[S.mode]();
 }
 
 /* ======================= flashcards ======================= */
@@ -873,7 +1081,7 @@ function startDonde(){ newRun(); dondeRound(); }
 function dondeRound(){
   const words=VOCAB[S.cat].words;
   const target=pickTarget(words);
-  const n=Math.min(S.nChoices, 2+Math.floor(S.correct/2), words.length);
+  const n=Math.min(S.nChoices, (BIG?4:2)+Math.floor(S.correct/2), words.length);
   const opts=shuffle([target,...distractors(words,target,n-1)]);
   S.target=target; S.locked=false;
   $('dq').innerHTML=`¿Dónde ${esta(target)} ${wordHTML(target)}?`;
@@ -902,12 +1110,59 @@ async function dondePick(b,w){
   if(S.lives<=0) gameOver(); else dondeRound();
 }
 
+/* ======================= ¡Adivina! (riddles) ======================= */
+const LOOK = {}; LOOKALIKES.forEach(g=>g.forEach(e=>{ LOOK[e]=LOOK[e]||new Set(); g.forEach(x=>x!==e&&LOOK[e].add(x)); }));
+function riddleChoices(words, target, n){
+  const bad = LOOK[target[2]] || new Set();
+  const pool = shuffle(uniq(words.filter(w=>w[2]!==target[2] && !bad.has(w[2]))));
+  const out=[];
+  for(const w of pool){ if(out.length>=n) break; if(out.some(o=>(LOOK[o[2]]||new Set()).has(w[2]))) continue; out.push(w); }
+  return out;
+}
+function startAdivina(){ newRun(); adivinaRound(); }
+function adivinaRound(){
+  const words=VOCAB[S.cat].words.filter(w=>RIDDLES[w[2]]);
+  const target=pickTarget(words);
+  const n=Math.min(6, 3+Math.floor(S.correct/2), words.length);
+  const opts=shuffle([target,...riddleChoices(words,target,n-1)]);
+  S.target=target; S.locked=false;
+  const [es,en]=RIDDLES[target[2]], [qes,qen]=riddleQ(target[2]);
+  $('rtext').innerHTML=`${es} <b>${qes}</b>`;
+  $('ren').textContent=`${en} ${qen}`; $('ren').classList.remove('on');
+  const box=$('achoices'); box.innerHTML=''; box.className='achoices n'+opts.length;
+  opts.forEach(w=>{
+    const b=document.createElement('button'); b.className='achoice'; b._w=w;
+    b.innerHTML=`<span class="pic">${w[2]}</span><span class="lab">${w[1]}</span>`;
+    b.onclick=()=>adivinaPick(b,w);
+    box.appendChild(b);
+  });
+  S.ask=()=>talk(['a|'+S.target[2]]); S.ask();
+}
+$('rsay').onclick=()=>{ if(S.ask) S.ask(); };
+$('rhelp').onclick=()=>$('ren').classList.toggle('on');
+async function adivinaPick(b,w){
+  if(S.locked) return; S.locked=true; const run=S.run;
+  const box=$('achoices'); box.classList.add('answered');
+  if(w===S.target){
+    b.classList.add('right'); const r=b.getBoundingClientRect();
+    const m=scoreRight(w, r.left+r.width/2, r.top+r.height/2);
+    await Promise.all([talk([m,'w|'+w[2]]), wait(1200)]);
+  } else {
+    b.classList.add('miss');
+    const right=[...box.children].find(x=>x._w===S.target); right&&right.classList.add('reveal');
+    scoreMiss(S.target);
+    await Promise.all([talk(['c|¡Uy!','e|'+S.target[2]]), wait(2000)]);
+  }
+  if(run!==S.run) return;
+  if(S.lives<=0) gameOver(); else adivinaRound();
+}
+
 /* ======================= ¿Qué es? (picture → word) ======================= */
 function startQuees(){ newRun(); queesRound(); }
 function queesRound(){
   const words=VOCAB[S.cat].words;
   const target=pickTarget(words);
-  const n=Math.min(4, 2+Math.floor(S.correct/2), words.length);
+  const n=Math.min(4, (BIG?3:2)+Math.floor(S.correct/2), words.length);
   const opts=shuffle([target,...distractors(words,target,n-1)]);
   S.target=target; S.locked=false;
   const pic=$('qpic'); pic.textContent=target[2]; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
@@ -986,7 +1241,7 @@ function bubbleFrame(t,run){
   const arena=$('arena');
   if(!S.lastT) S.lastT=t;
   const dt=Math.min(0.05,(t-S.lastT)/1000); S.lastT=t;
-  const speed=Math.min(165, 52 + S.correct*4);
+  const speed=Math.min(BIG?200:165, (BIG?75:52) + S.correct*4);
   const every=Math.max(620, 1350 - S.correct*35);
   const live=S.bubs.filter(b=>!b.dead).length;
   if(t-S.lastSpawn>every && live<8){ spawnBubble(); S.lastSpawn=t; }
@@ -1052,7 +1307,7 @@ function startFeed(){ newRun(); feedRound(); }
 function feedRound(){
   const words=VOCAB[S.cat].words;
   const target=pickTarget(words);
-  const n=Math.min(4, 2+Math.floor(S.correct/2), words.length);
+  const n=Math.min(4, (BIG?3:2)+Math.floor(S.correct/2), words.length);
   const opts=shuffle([target,...distractors(words,target,n-1)]);
   S.target=target; S.locked=false;
   setMonster('open');
@@ -1103,7 +1358,9 @@ function startMemory(){
   S.run++; S.recent=[]; S.moves=0; S.treats=0; S.lvlBefore=petLevel().level; S.flipped=[]; S.locked=false;
   $('over').classList.remove('on'); $('mMoves').textContent=0;
   const words=VOCAB[S.cat].words, picks=[];
-  while(picks.length<6){ const w=pickTarget(words); if(!picks.includes(w)) picks.push(w); }
+  const pairs = BIG ? 8 : 6;
+  $('mgrid').classList.toggle('big', BIG);
+  while(picks.length<pairs){ const w=pickTarget(words); if(!picks.includes(w)) picks.push(w); }
   S.pairsLeft=picks.length;
   const grid=$('mgrid'); grid.innerHTML='';
   shuffle([...picks,...picks]).forEach(w=>{
@@ -1188,7 +1445,7 @@ $('testVoice').onclick=async()=>{
 };
 $('nChoices').onchange=e=>{ S.nChoices=+e.target.value; store.set('nChoices6',S.nChoices); };
 function confirmBtn(id, fn){ const b=$(id); let armed=false; b.onclick=()=>{ if(!armed){ armed=true; b.textContent='Tap again'; setTimeout(()=>{armed=false; b.textContent='Reset';},2500); return; } fn(); b.textContent='Done ✓'; armed=false; }; }
-confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith('hp_best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
+confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+'best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
 confirmBtn('resetAll',()=>{ stats={}; store.set('stats',stats); pet={xp:0,hat:0}; store.set('pet',pet); renderHomePet(); renderCats(); });
 
 setStars(S.stars); renderHomePet(); renderCats();

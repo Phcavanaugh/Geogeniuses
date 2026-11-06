@@ -1,7 +1,7 @@
 // ¡Hola, Palabras! offline support.
 // The page itself: network first (so updates show up), cached copy when offline.
 // Dora's sound packs and fonts: cache first (they never change for a given version).
-const VERSION = 'palabras-v2';
+const VERSION = 'palabras-v3';
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3'];
 
 self.addEventListener('install', e => {
