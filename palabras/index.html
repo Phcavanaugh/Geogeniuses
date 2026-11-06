@@ -63,7 +63,11 @@
   /* ---------- shared game bits ---------- */
   .topbar{display:flex;align-items:center;gap:10px;margin-bottom:8px}
   .topbar .title{flex:1;font-size:19px;font-weight:700;text-align:center;line-height:1.1}
-  .hud{display:flex;align-items:center;gap:7px;margin:0 0 8px}
+  .hud{display:flex;align-items:center;gap:7px;margin:0 0 8px;flex-wrap:wrap}
+  .gprog{flex-basis:100%;display:flex;align-items:center;gap:8px;margin-top:2px}
+  .gprog .track{flex:1;height:12px;border-radius:8px;background:rgba(43,43,58,.1);overflow:hidden}
+  .gprog .track i{display:block;height:100%;width:0;background:linear-gradient(90deg,#7BD389,#5BC0EB);border-radius:8px;transition:width .4s}
+  .gprog .n{font-size:13px;font-weight:700;color:var(--muted);min-width:44px;text-align:right}
   .hearts{flex:1;font-size:27px;letter-spacing:1px;white-space:nowrap}
   .hearts .lost{filter:grayscale(1);opacity:.3;display:inline-block}
   .hearts .breaking{display:inline-block;animation:heartbreak .7s forwards}
@@ -428,6 +432,8 @@
     <div class="row"><label>Show English</label><button class="toggle" id="enToggle" aria-label="Show English"></button></div>
     <div class="row"><label>Say “el / la”</label><button class="toggle on" id="artToggle" aria-label="Say article"></button></div>
     </div>
+    <div class="row"><label for="gameLen">Words per game</label><select id="gameLen"><option value="5">5</option><option value="10">10</option><option value="15">15</option><option value="20">20</option><option value="0">No limit</option></select></div>
+    <p style="margin-top:-2px">A game ends after this many words, or sooner if all 3 hearts are lost. (Memoria always uses its own set of pairs.)</p>
     <div class="row"><label for="nChoices">Most pictures in ¿Dónde está?</label><select id="nChoices"><option value="2">2</option><option value="3">3</option><option value="4">4</option><option value="6">6</option></select></div>
     <p style="margin-top:-2px">Each game starts with 2 pictures and adds more as your child gets answers right, up to this number.</p>
     <div class="row"><label>Save every word for offline play</label><button class="smallbtn" id="saveOffline">⬇️ Save</button></div>
@@ -699,7 +705,7 @@ const LOOKALIKES = [
 const AGE = (()=>{ try{ return localStorage.getItem('hp_age')==='7' ? 7 : 4; }catch(e){ return 4; } })();
 const BIG = AGE===7;
 const PREFIX = BIG ? 'hp7_' : 'hp_';
-const SHARED = new Set(['showEn','sayArt','rate','voiceURI','recVoice']);
+const SHARED = new Set(['showEn','sayArt','rate','voiceURI','recVoice','gameLen']);
 const store = {
   key(k){ return (SHARED.has(k) ? 'hp_' : PREFIX) + k; },
   get(k,d){ try{ const v=localStorage.getItem(this.key(k)); return v===null?d:JSON.parse(v);}catch(e){return d;} },
@@ -713,6 +719,7 @@ const S = {
   rate: store.get('rate', 0.8),
   voiceURI: store.get('voiceURI', ''),
   nChoices: store.get('nChoices6', 6),
+  len: store.get('gameLen', 10),        // words per game (0 = no limit)
   stars: store.get('stars', 0),
 };
 let stats = store.get('stats', {});   // emoji -> {r:right, w:wrong, s:current streak}
@@ -1010,15 +1017,16 @@ document.addEventListener('keydown',e=>{ if(!$('cards').classList.contains('on')
 /* ======================= shared run (lives, score, streak) ======================= */
 const LIVES=3;
 const sec = () => $(S.mode);
-const bestKey = () => `best_${S.mode}_${S.cat}` + (S.mode==='donde' ? '_'+S.nChoices : '');
+const bestKey = () => `best_${S.mode}_${S.cat}` + (S.mode==='donde' ? '_'+S.nChoices : '') + (S.mode==='memory' ? '' : '_L'+S.len);
 function newRun(){
-  S.run++; S.score=0; S.lives=LIVES; S.correct=0; S.streak=0; S.treats=0; S.recent=[]; S.locked=false;
+  S.run++; S.score=0; S.lives=LIVES; S.correct=0; S.streak=0; S.treats=0; S.recent=[]; S.locked=false; S.asked=0;
   S.lvlBefore=petLevel().level;
   S.best=store.get(bestKey(),0);
   $('over').classList.remove('on');
   sec().querySelector('.hud').innerHTML = `<div class="hearts"></div><div class="streak"></div>
     <div class="pts"><span class="lbl">Puntos</span><span class="score">0</span></div>
-    <div class="pts best"><span class="lbl">🏆 Récord</span><span class="bestv">0</span></div>`;
+    <div class="pts best"><span class="lbl">🏆 Récord</span><span class="bestv">0</span></div>
+    ${S.len ? `<div class="gprog"><div class="track"><i></i></div><span class="n"></span></div>` : ''}`;
   renderHud();
   return S.run;
 }
@@ -1030,6 +1038,20 @@ function renderHud(breakIdx){
   h.querySelector('.bestv').textContent=Math.max(S.best,S.score);
   const st=h.querySelector('.streak'), mult=multiplier();
   st.classList.toggle('on', mult>1); st.textContent = `🔥 x${mult}`;
+  const g=h.querySelector('.gprog');
+  if(g){ g.querySelector('i').style.width=(100*Math.min(S.asked,S.len)/S.len)+'%'; g.querySelector('.n').textContent=`${Math.min(S.asked,S.len)}/${S.len}`; }
+}
+// Call once per word answered (right or wrong). Returns true when the game has reached its length.
+function wordDone(){ S.asked++; renderHud(); return !!S.len && S.asked>=S.len; }
+// What to do after a word's feedback has played
+function nextOrEnd(done, nextRound){
+  if(S.lives<=0) gameOver();
+  else if(done) finishGame();
+  else nextRound();
+}
+function finishGame(){
+  gameOver({ title:'¡Terminaste!', emoji: S.lives===LIVES ? '🌟' : '🎉',
+             sayFinish:true });
 }
 const multiplier = () => S.streak>=5 ? 3 : S.streak>=3 ? 2 : 1;
 function bump(cls){ const e=sec().querySelector('.'+cls).parentElement; e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); }
@@ -1060,7 +1082,7 @@ function gameOver(opts={}){
   $('overUnit').textContent = opts.unit || (val===1?'punto':'puntos');
   $('newRec').classList.toggle('on',rec);
   $('overBest').textContent = rec ? '' : `Récord: ${prev}`;
-  $('overEmoji').textContent = opts.emoji || (rec ? '🏆' : (val>=10 ? '🎉' : val>=3 ? '😀' : '💪'));
+  $('overEmoji').textContent = rec ? '🏆' : (opts.emoji || (val>=10 ? '🎉' : val>=3 ? '😀' : '💪'));
   const L=petLevel(), grew = L.level>S.lvlBefore;
   const newHat = grew ? HATS.filter(h=>h.lvl>S.lvlBefore && h.lvl<=L.level).pop() : null;
   $('overPet').innerHTML = `<span class="petwrap">${petHTML(70, S.treats?'eat':'happy')}</span>
@@ -1069,7 +1091,7 @@ function gameOver(opts={}){
       ${grew ? `<div class="lvlup">🎉 ¡Lolo creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
     </div>`;
   $('over').classList.add('on');
-  const line = opts.say ? opts.say.slice() : [rec ? 'c|¡Nuevo récord!' : 'c|¡Fin del juego!', val<=150 ? 'p|'+val : null];
+  const line = opts.say ? opts.say.slice() : [rec ? 'c|¡Nuevo récord!' : (opts.sayFinish ? 'c|¡Lo lograste!' : 'c|¡Fin del juego!'), val<=150 ? 'p|'+val : null];
   if(grew) line.push('c|¡Lolo creció!');
   talk(line);
   if(rec||grew){ for(let k=0;k<3;k++) setTimeout(()=>burst(innerWidth/2, innerHeight/3),k*450); }
@@ -1096,6 +1118,7 @@ function dondeRound(){
 async function dondePick(b,w){
   if(S.locked) return; S.locked=true; const run=S.run;
   $('choices').classList.add('answered');
+  const done = wordDone();
   if(w===S.target){
     b.classList.add('right'); const r=b.getBoundingClientRect();
     const m=scoreRight(w, r.left+r.width/2, r.top+r.height/2);
@@ -1107,7 +1130,7 @@ async function dondePick(b,w){
     await Promise.all([talk(['c|¡Uy!','c|'+thatIs(w),'w|'+w[2],'c|Aquí '+esta(S.target),'w|'+S.target[2]]), wait(1800)]);
   }
   if(run!==S.run) return;
-  if(S.lives<=0) gameOver(); else dondeRound();
+  nextOrEnd(done, dondeRound);
 }
 
 /* ======================= ¡Adivina! (riddles) ======================= */
@@ -1143,6 +1166,7 @@ $('rhelp').onclick=()=>$('ren').classList.toggle('on');
 async function adivinaPick(b,w){
   if(S.locked) return; S.locked=true; const run=S.run;
   const box=$('achoices'); box.classList.add('answered');
+  const done = wordDone();
   if(w===S.target){
     b.classList.add('right'); const r=b.getBoundingClientRect();
     const m=scoreRight(w, r.left+r.width/2, r.top+r.height/2);
@@ -1154,7 +1178,7 @@ async function adivinaPick(b,w){
     await Promise.all([talk(['c|¡Uy!','e|'+S.target[2]]), wait(2000)]);
   }
   if(run!==S.run) return;
-  if(S.lives<=0) gameOver(); else adivinaRound();
+  nextOrEnd(done, adivinaRound);
 }
 
 /* ======================= ¿Qué es? (picture → word) ======================= */
@@ -1185,6 +1209,7 @@ $('qpic').onclick=()=>{ if(!S.locked && S.ask) S.ask(); };
 async function queesPick(row,w){
   if(S.locked) return; S.locked=true; const run=S.run;
   const box=$('wordopts'); box.classList.add('answered');
+  const done = wordDone();
   if(w===S.target){
     row.classList.add('right'); const r=row.getBoundingClientRect();
     const m=scoreRight(w, r.left+r.width/2, r.top+r.height/2);
@@ -1196,7 +1221,7 @@ async function queesPick(row,w){
     await Promise.all([talk(['c|¡Uy!','e|'+S.target[2]]), wait(1800)]);
   }
   if(run!==S.run) return;
-  if(S.lives<=0) gameOver(); else queesRound();
+  nextOrEnd(done, queesRound);
 }
 
 /* ======================= Burbujas ======================= */
@@ -1267,7 +1292,8 @@ function bubbleTap(b){
     const w=b.w;
     const run=S.run;
     S.target=null; $('bq').innerHTML='⭐';
-    talk([m,'w|'+w[2]]).then(()=>{ if(run===S.run && S.lives>0) newBubbleTarget(); });
+    const done=wordDone();
+    talk([m,'w|'+w[2]]).then(()=>{ if(run===S.run && S.lives>0){ if(done) finishGame(); else newBubbleTarget(); } });
   } else if(S.target){
     b.el.classList.add('bad'); setTimeout(()=>b.el.remove(),500);
     scoreMiss(S.target);
@@ -1276,9 +1302,14 @@ function bubbleTap(b){
   } else { b.dead=false; }
 }
 function bubbleEscaped(run){
-  scoreMiss(S.target);
-  if(S.lives<=0){ talk(['c|¡Se fue!','w|'+S.target[2]]); setTimeout(()=>{ if(run===S.run) gameOver(); },1600); }
-  else talk(['c|¡Se fue!','b|'+S.target[2]]);
+  const gone=S.target;
+  scoreMiss(gone);
+  const done=wordDone();
+  S.target=null; $('bq').innerHTML='💨';
+  talk(['c|¡Se fue!','w|'+gone[2]]).then(()=>{
+    if(run!==S.run) return;
+    if(S.lives<=0) gameOver(); else if(done) finishGame(); else newBubbleTarget();
+  });
 }
 
 /* ======================= Ñamñam (feed the monster) ======================= */
@@ -1338,6 +1369,7 @@ function dragStart(e,b){
 }
 async function feedIt(b){
   if(S.locked) return; S.locked=true; const run=S.run; const w=b._w;
+  const done = wordDone();
   if(w===S.target){
     b.classList.add('gone'); setMonster('chomp');
     const r=$('monster').getBoundingClientRect();
@@ -1350,7 +1382,7 @@ async function feedIt(b){
     await Promise.all([talk(['c|¡Puaj!','c|'+thatIs(w),'w|'+w[2],'c|Yo quiero','w|'+S.target[2]]), wait(1800)]);
   }
   if(run!==S.run) return;
-  if(S.lives<=0) gameOver(); else feedRound();
+  nextOrEnd(done, feedRound);
 }
 
 /* ======================= Memoria ======================= */
@@ -1443,6 +1475,8 @@ $('testVoice').onclick=async()=>{
   await talk(['c|Hola, amigo.']);
   $('voiceStatus').textContent = VOICE.status==='ok' ? '✓ Dora is working. No sound? Turn the volume up.' : (VOICE.status || '✓ Played.');
 };
+$('gameLen').value=S.len;
+$('gameLen').onchange=e=>{ S.len=+e.target.value; store.set('gameLen',S.len); };
 $('nChoices').onchange=e=>{ S.nChoices=+e.target.value; store.set('nChoices6',S.nChoices); };
 function confirmBtn(id, fn){ const b=$(id); let armed=false; b.onclick=()=>{ if(!armed){ armed=true; b.textContent='Tap again'; setTimeout(()=>{armed=false; b.textContent='Reset';},2500); return; } fn(); b.textContent='Done ✓'; armed=false; }; }
 confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+'best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
