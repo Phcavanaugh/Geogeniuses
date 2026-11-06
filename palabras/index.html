@@ -504,6 +504,8 @@
   <div class="panel">
     <h2>For grown-ups</h2>
     <div class="warn" id="warn">No Spanish voice found on this device. On iPhone/iPad: Settings → Accessibility → Spoken Content → Voices → Spanish. On Android: Settings → Text-to-speech → install Spanish.</div>
+    <div class="row"><label>🔊 Read questions aloud</label><button class="toggle" id="readToggle" aria-label="Read questions aloud"></button></div>
+    <p style="margin-top:-2px">Turn off for reading practice: questions, riddles and sentences won't be read automatically, but tapping 🔊 still reads them. Answers and cheers are still spoken. In ¡Hermanos! the little kid's turns are always read aloud.</p>
     <div class="row"><label>💨 Modo pedorro (fart sound on wrong answers)</label><button class="toggle" id="fartToggle" aria-label="Fart mode"></button></div>
     <div class="row"><label for="nameBig">🚀 Big kid's name</label><input id="nameBig" maxlength="12" style="font:inherit;font-size:16px;padding:7px 10px;border:2px solid #eee;border-radius:10px;width:9em"></div>
     <div class="row"><label for="nameLittle">🧸 Little kid's name</label><input id="nameLittle" maxlength="12" style="font:inherit;font-size:16px;padding:7px 10px;border:2px solid #eee;border-radius:10px;width:9em"></div>
@@ -911,7 +913,7 @@ const MISS_LINES = [
   ['¡Ups! ¡Hasta el zorrillo se tapa la nariz!',2],['¡Guácala! ¡Esa respuesta tiene mocos!',2],['¡Uy! ¡Esa respuesta huele a popó!',2],
   ['¡Ay, no! ¡Esa respuesta se tiró un pedo!',3],['¡Pum! ¡Se me salió un pedo de la sorpresa!',3],
 ];
-const HIT_LINES = [['¡Excelente! ¡Hueles a rosas!',1],['¡Bravo! ¡Eres más lista que un zorrillo!',2],['¡Genial! ¡Ni un pedo te gana!',3]];
+const HIT_LINES = [['¡Excelente! ¡Hueles a rosas!',1],['¡Bravo! ¡Le ganaste al zorrillo!',2],['¡Genial! ¡Ni un pedo te gana!',3]];
 const SILLY_CLIPS = ['¡Es verdad!','¡Es mentira!','¡Te toca!','¡Felicidades!','¡Empate!','¡Te ganó un pedo!','¿El o la?','¿Verdad o mentira?','¿Cuál no va?','¡Hermanos!'];
 
 /* ======================= storage ======================= */
@@ -935,6 +937,7 @@ const S = {
   nChoices: store.get('nChoices6', 6),
   len: store.get('gameLen', 10),        // words per game (0 = no limit)
   pedorro: store.get('pedorro', BIG),  // fart sound on misses
+  readAloud: store.get('readAloud', true), // read each question out loud automatically
   names: [store.get('nameBig','Grande'), store.get('nameLittle','Peque')],
   stars: store.get('stars', 0),
 };
@@ -1165,10 +1168,10 @@ $('petcard').onclick=()=>{
 
 /* ======================= modes & home ======================= */
 const MODES_ALL=[
-  {id:'adivina', e:'🕵️', es:'¡Adivina!', en:'Read the clues, guess the animal', k:'c|¡Adivina!', big:true, only:'big'},
-  {id:'verdad', e:'🤔', es:'¿Verdad o mentira?', en:'True or false', k:'c|¿Verdad o mentira?', only:'big'},
-  {id:'ella', e:'🔤', es:'¿El o la?', en:'Which little word?', k:'c|¿El o la?', only:'big'},
-  {id:'cual', e:'🙃', es:'¿Cuál no va?', en:'Odd one out', k:'c|¿Cuál no va?', only:'big'},
+  {id:'adivina', e:'🕵️', es:'¡Adivina!', en:'Read the clues, guess the animal', k:'c|¡Adivina!', big:true, tier7:true},
+  {id:'verdad', e:'🤔', es:'¿Verdad o mentira?', en:'True or false', k:'c|¿Verdad o mentira?', tier7:true},
+  {id:'ella', e:'🔤', es:'¿El o la?', en:'Which little word?', k:'c|¿El o la?', tier7:true},
+  {id:'cual', e:'🙃', es:'¿Cuál no va?', en:'Odd one out', k:'c|¿Cuál no va?', tier7:true},
   {id:'cards', e:'🃏', es:'Tarjetas', en:'Look & listen', k:'c|Tarjetas.'},
   {id:'donde', e:'🔎', es:'¿Dónde está?', en:'Find it', k:'c|¿Dónde está?'},
   {id:'quees', e:'🏷️', es:'¿Qué es?', en:'Pick the word', k:'c|¿Qué es?'},
@@ -1177,7 +1180,8 @@ const MODES_ALL=[
   {id:'memory', e:'🧠', es:'Memoria', en:'Find pairs', k:'c|Memoria.'},
   {id:'hermanos', e:'👧🧒', es:'¡Hermanos!', en:'Take turns — big kid vs. little kid', k:'c|¡Hermanos!', big:true},
 ];
-const MODES = MODES_ALL.filter(m=>!m.only || (m.only==='big')===BIG);
+const MODES = BIG ? MODES_ALL
+  : [...MODES_ALL.filter(m=>!m.tier7 && m.id!=='hermanos'), ...MODES_ALL.filter(m=>m.tier7), MODES_ALL.find(m=>m.id==='hermanos')];
 MODES.forEach(m=>{
   const b=document.createElement('button'); b.className='mode'+(m.id===S.mode?' sel':'')+(m.big?' wide':''); b.dataset.mode=m.id;
   b.style.background={hermanos:'#DDEBFF',verdad:'#D7F5DD',ella:'#E9E2FF',cual:'#FFF1B8',adivina:'#FFD9C2',cards:'#FFE7A3',donde:'#CDEFFF',quees:'#FFE9C7',bubbles:'#D9F7F4',feed:'#E7DEFF',memory:'#FFDDE6'}[m.id];
@@ -1312,6 +1316,8 @@ function fartPuff(){
   f.style.left=(innerWidth/2-20)+'px'; f.style.top=(innerHeight/2)+'px';
   document.body.appendChild(f); setTimeout(()=>f.remove(),1200);
 }
+// Questions are read automatically unless Read aloud is off. In ¡Hermanos! the little kid's turns are always read.
+function autoAsk(){ if(S.ask && (S.readAloud || (S.herm && S.herm.turn===1))) S.ask(); }
 const funnyMiss = () => 'c|'+MISS_LINES[Math.floor(Math.random()*MISS_LINES.length)][0];
 function scoreMiss(target){
   fartPuff();
@@ -1361,7 +1367,7 @@ function dondeRound(){
     b.onclick=()=>dondePick(b,w);
     box.appendChild(b);
   });
-  S.ask=()=>talk(['d|'+S.target[2]]); S.ask();
+  S.ask=()=>talk(['d|'+S.target[2]]); autoAsk();
 }
 async function dondePick(b,w){
   if(S.locked) return; S.locked=true; const run=S.run;
@@ -1392,7 +1398,7 @@ function ellaRound(){
   $('eword').textContent=target[1];
   const box=$('ebtns'); box.className='elbtns';
   box.querySelectorAll('button').forEach(b=>b.className=b.textContent);
-  S.ask=()=>talk(['c|¿El o la?']); S.ask();
+  S.ask=()=>talk(['c|¿El o la?']); autoAsk();
 }
 $('ebtns').querySelectorAll('button').forEach(b=>b.onclick=()=>ellaPick(b));
 async function ellaPick(b){
@@ -1427,7 +1433,7 @@ function verdadRound(){
   S.vi=i; S.target=null; S.locked=false;
   $('vpic').textContent=v[0]; $('vtext').textContent=v[1]; $('ven').textContent=v[2]; $('ven').classList.remove('on');
   const box=$('vbtns'); box.className='tfbtns'; box.querySelectorAll('button').forEach(b=>b.classList.remove('right','miss','reveal'));
-  S.ask=()=>talk(['v|'+S.vi]); S.ask();
+  S.ask=()=>talk(['v|'+S.vi]); autoAsk();
 }
 $('vbtns').querySelector('.yes').onclick=e=>verdadPick(e.currentTarget,true);
 $('vbtns').querySelector('.no').onclick=e=>verdadPick(e.currentTarget,false);
@@ -1463,7 +1469,7 @@ function cualRound(){
     b.onclick=()=>cualPick(b,w);
     box.appendChild(b);
   });
-  S.ask=()=>talk(['k|'+S.ki]); S.ask();
+  S.ask=()=>talk(['k|'+S.ki]); autoAsk();
 }
 async function cualPick(b,w){
   if(S.locked) return; S.locked=true; const run=S.run;
@@ -1558,7 +1564,7 @@ function startAdivina(){ newRun(); adivinaRound(); }
 function adivinaRound(){
   const words=VOCAB[S.cat].words.filter(w=>RIDDLES[w[2]]);
   const target=pickTarget(words);
-  const n=Math.min(6, 3+Math.floor(S.correct/2), words.length);
+  const n=Math.min(6, (HARD()?3:2)+Math.floor(S.correct/2), words.length);
   const opts=shuffle([target,...riddleChoices(words,target,n-1)]);
   S.target=target; S.locked=false;
   const [es,en]=RIDDLES[target[2]], [qes,qen]=riddleQ(target[2]);
@@ -1571,7 +1577,7 @@ function adivinaRound(){
     b.onclick=()=>adivinaPick(b,w);
     box.appendChild(b);
   });
-  S.ask=()=>talk(['a|'+S.target[2]]); S.ask();
+  S.ask=()=>talk(['a|'+S.target[2]]); autoAsk();
 }
 $('rsay').onclick=()=>{ if(S.ask) S.ask(); };
 $('rhelp').onclick=()=>$('ren').classList.toggle('on');
@@ -1615,7 +1621,7 @@ function queesRound(){
     row.querySelector('.pick').onclick=()=>queesPick(row,w);
     box.appendChild(row);
   });
-  S.ask=()=>talk(['c|¿Qué es esto?']); S.ask();
+  S.ask=()=>talk(['c|¿Qué es esto?']); autoAsk();
 }
 $('qpic').onclick=()=>{ if(!S.locked && S.ask) S.ask(); };
 async function queesPick(row,w){
@@ -1647,7 +1653,7 @@ function startBubbles(){
 function newBubbleTarget(){
   S.target=pickTarget(VOCAB[S.cat].words);
   $('bq').innerHTML=`¡Busca ${wordHTML(S.target)}!`;
-  S.ask=()=>S.target&&talk(['b|'+S.target[2]]); S.ask();
+  S.ask=()=>S.target&&talk(['b|'+S.target[2]]); autoAsk();
 }
 function spawnBubble(){
   const arena=$('arena'), W=arena.clientWidth, H=arena.clientHeight;
@@ -1761,7 +1767,7 @@ function feedRound(){
     b.addEventListener('pointerdown',e=>dragStart(e,b));
     tray.appendChild(b);
   });
-  S.ask=()=>talk(['q|'+S.target[2]]); S.ask();
+  S.ask=()=>talk(['q|'+S.target[2]]); autoAsk();
 }
 function dragStart(e,b){
   if(S.locked) return;
@@ -1887,6 +1893,8 @@ $('testVoice').onclick=async()=>{
   await talk(['c|Hola, amigo.']);
   $('voiceStatus').textContent = VOICE.status==='ok' ? '✓ Dora is working. No sound? Turn the volume up.' : (VOICE.status || '✓ Played.');
 };
+$('readToggle').classList.toggle('on',S.readAloud);
+$('readToggle').onclick=()=>{ S.readAloud=!S.readAloud; store.set('readAloud',S.readAloud); $('readToggle').classList.toggle('on',S.readAloud); };
 $('fartToggle').classList.toggle('on',S.pedorro);
 $('fartToggle').onclick=()=>{ S.pedorro=!S.pedorro; store.set('pedorro',S.pedorro); $('fartToggle').classList.toggle('on',S.pedorro); if(S.pedorro){ loadGroup('silly').then(()=>talk(['x|fart2'])); } };
 $('nameBig').value=S.names[0]; $('nameLittle').value=S.names[1];
