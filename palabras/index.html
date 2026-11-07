@@ -172,6 +172,33 @@
   .fartpuff{position:fixed;font-size:46px;pointer-events:none;z-index:32;animation:puff 1.1s ease-out forwards}
   @keyframes puff{0%{transform:scale(.4);opacity:0}20%{opacity:1}100%{transform:translate(60px,-40px) scale(1.8);opacity:0}}
 
+  /* ---------- journey map ---------- */
+  .mapbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;gap:10px}
+  .tot{font-weight:700;font-size:20px;background:var(--card);border-radius:15px;box-shadow:var(--shadow);padding:8px 14px}
+  .freebtn{background:var(--card);border-radius:15px;box-shadow:var(--shadow);padding:10px 14px;font-size:16px;font-weight:700}
+  .world{border-radius:30px;margin-bottom:14px;padding:12px 10px 10px;position:relative;overflow:hidden}
+  .wtitle{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:700;position:relative;z-index:1}
+  .wtitle .we{font-size:34px}
+  .wtitle small{margin-left:auto;font-size:14px;color:rgba(43,43,58,.6);font-weight:600}
+  .world.locked .wtitle{opacity:.55}
+  .wpath{position:relative}
+  .wpath > svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+  .node{position:absolute;transform:translate(-50%,-50%);width:66px;height:66px;border-radius:50%;background:#fff;box-shadow:0 5px 0 rgba(43,43,58,.2);display:grid;place-items:center;font-size:26px;font-weight:700;border:4px solid #fff;z-index:1}
+  .node.n-done{background:var(--sun)}
+  .node.n-cur{background:var(--leaf);color:#fff;animation:nodepulse 1.4s infinite}
+  .node.n-lock{background:#E7E3EE;color:#ABA5B8;box-shadow:none;font-size:22px;border-color:#F2EFF6}
+  .node.boss{width:86px;height:86px;font-size:38px}
+  .node .badge{position:absolute;right:-8px;top:-8px;font-size:17px;background:#fff;border-radius:50%;width:30px;height:30px;display:grid;place-items:center;box-shadow:0 2px 5px rgba(0,0,0,.15)}
+  .node .nstars{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:4px;font-size:15px;white-space:nowrap;letter-spacing:-1px}
+  .node.wig{animation:wiggle .4s}
+  @keyframes nodepulse{0%,100%{box-shadow:0 5px 0 rgba(43,43,58,.2),0 0 0 0 rgba(123,211,137,.7)}50%{box-shadow:0 5px 0 rgba(43,43,58,.2),0 0 0 14px rgba(123,211,137,0)}}
+  .lolo{position:absolute;transform:translate(-110%,-95%);pointer-events:none;z-index:2;transition:left 1.1s ease-in-out, top 1.1s ease-in-out}
+  .lolo .petwrap{animation:bob 1.6s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(-7px)}}
+  .deco{position:absolute;font-size:30px;opacity:.28;pointer-events:none;transform:translate(-50%,-50%)}
+  .stars-big{font-size:44px;letter-spacing:4px;margin:6px 0 12px}
+  .star-off{filter:grayscale(1);opacity:.25}
+
   /* ---------- ¡Escríbelo! (10) ---------- */
   .slots{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:5px;margin:0 0 12px;min-height:52px}
   .slots .art{font-size:24px;margin-right:6px;align-self:center}
@@ -317,8 +344,8 @@
 </header>
 
 <main>
-  <!-- HOME -->
-  <section class="view on" id="home">
+  <!-- MAP (home): the journey -->
+  <section class="view on" id="map">
     <div class="agesw" role="tablist" aria-label="Age">
       <button data-age="4">🧸 4–5 años</button>
       <button data-age="7">🚀 7 años</button>
@@ -332,6 +359,20 @@
         <div class="petsub" id="petSub"></div>
       </span>
     </button>
+    <div class="mapbar">
+      <div class="tot">⭐ <span id="mapStars">0</span></div>
+      <button class="freebtn" id="freeBtn">🎮 Juego libre</button>
+    </div>
+    <div id="mapwrap"></div>
+  </section>
+
+  <!-- FREE PLAY (the old home screen) -->
+  <section class="view" id="home">
+    <div class="topbar">
+      <button class="iconbtn" id="toMap" aria-label="Back to the map">🗺️</button>
+      <div class="title">🎮 Juego libre</div>
+      <div style="width:46px"></div>
+    </div>
     <div class="modes" id="modes"></div>
     <div class="label">Pick a group</div>
     <div class="cats" id="cats"></div>
@@ -524,6 +565,18 @@
   </section>
 </main>
 
+<div class="over" id="lvlCard">
+  <div class="overcard turncard">
+    <div class="overemoji" id="lcEmoji"></div>
+    <div class="lvl" id="lcWhere" style="margin:6px 0 0"></div>
+    <div class="who" id="lcName" style="font-size:30px"></div>
+    <div class="lvl" id="lcEn"></div>
+    <div class="stars-big" id="lcStars"></div>
+    <button class="big again" id="lcGo">▶ ¡Jugar!</button>
+    <button class="big homebtn" id="lcClose">✕</button>
+  </div>
+</div>
+
 <div class="over" id="turnOv">
   <div class="overcard turncard">
     <div class="overemoji" id="turnEmoji">🚀</div>
@@ -543,6 +596,7 @@
     <div class="newrec" id="newRec">🏆 ¡Nuevo récord! 🏆</div>
     <div class="overbest" id="overBest"></div>
     <div class="overpet" id="overPet"></div>
+    <button class="big again" id="nextLvl" style="display:none">▶ ¡Siguiente nivel!</button>
     <button class="big again" id="again">🔄 ¡Otra vez!</button>
     <button class="big homebtn" data-home>🏠</button>
   </div>
@@ -1252,12 +1306,18 @@ function renderCats(){
     const b=document.createElement('button'); b.className='cat'+(key==='todas'?' wide':''); b.style.background=c.color;
     const got=c.words.filter(found).length;
     b.innerHTML=`<span class="e">${c.icon}</span>${c.es}<small>${c.en}</small><span class="prog">📒 ${got}/${c.words.length}</span>`;
-    b.onclick=()=>start(key);
+    b.onclick=()=>{ S.from='free'; S.level=null; S.mix=null; start(key); };
     wrap.appendChild(b);
   });
 }
 function show(id){ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id===id)); window.scrollTo(0,0); }
-function goHome(){ synth&&synth.cancel(); stopClips(); S.run++; S.herm=null; $('turnOv').classList.remove('on'); $('over').classList.remove('on'); renderHomePet(); renderCats(); show('home'); }
+function goHome(){
+  synth&&synth.cancel(); stopClips(); S.run++; S.herm=null; S.mix=null;
+  ['turnOv','over','lvlCard'].forEach(id=>$(id).classList.remove('on'));
+  renderHomePet();
+  if(S.from==='free'){ S.level=null; renderCats(); show('home'); }
+  else { const last=S.level; S.level=null; renderMap(last); show('map'); }
+}
 document.querySelectorAll('[data-home]').forEach(b=>b.onclick=goHome);
 document.querySelectorAll('[data-replay]').forEach(b=>b.onclick=()=>S.ask&&S.ask());
 
@@ -1266,14 +1326,140 @@ async function start(key){
   unlockAudio();
   if(VOICE.on){
     const need = (S.mode==='verdad'||S.mode==='cual') ? [loadGroup('silly')]
-               : [loadCat(key), (BIG||S.pedorro||S.mode==='hermanos'||S.mode==='ella') ? loadGroup('silly') : null];
+               : [loadCat(key), (BIG||S.pedorro||S.mode==='hermanos'||S.mode==='ella'||S.mode==='mix') ? loadGroup('silly') : null];
     await Promise.race([Promise.all(need), wait(6000)]);
   }
   document.querySelectorAll('.gtitle').forEach(t=>t.textContent=c.es);
   if(S.mode==='cards'){ S.list=c.words.slice(); S.i=0; $('cardsTitle').textContent=c.es; show('cards'); renderCard(); return; }
   if(S.mode==='hermanos'){ startHermanos(); return; }
+  if(S.mode==='mix'){ startMix(); return; }
   show(S.mode);
   ({escribe:startEscribe, comodice:startComodice, ella:startElla, verdad:startVerdad, cual:startCual, adivina:startAdivina, donde:startDonde, quees:startQuees, bubbles:startBubbles, feed:startFeed, memory:startMemory})[S.mode]();
+}
+
+/* ======================= the journey (map + levels) ======================= */
+const JOURNEY_WORLDS=['granja','zoo','mar','bosque','bichos','aves','comida','casa','juguetes','ropa','cuerpo','afuera','vehiculos'];
+const MIXINFO={e:'👑', es:'¡Desafío!', en:'Boss level: a mix of games', k:'c|¡Desafío!'};
+function buildLevels(){
+  const out=[];
+  JOURNEY_WORLDS.forEach((cat,wi)=>{
+    const A = VOCAB[cat].animal ? 'adivina' : 'quees';     // riddles only exist for animals
+    const VC = wi%2 ? 'cual' : 'verdad';
+    const plan = AGE===4  ? ['donde','quees', wi%2?'feed':'bubbles', wi%2?'bubbles':'feed', 'memory', {mix:['donde','quees','feed']}]
+               : AGE===7  ? ['donde', A, 'ella', VC, wi%2?'memory':'bubbles', {mix:[A,'ella','quees','donde',VC]}]
+               :            ['comodice','escribe', A, 'ella', VC, {mix:['escribe','comodice',A,'ella']}];
+    plan.forEach((p,n)=>out.push({ i:out.length, world:wi, cat, n:n+1, mode: typeof p==='string'?p:null, mix: typeof p==='object'?p.mix:null,
+                                   boss:n===5, boost:Math.min(4,Math.floor(wi/3)) }));
+  });
+  out.push({ i:out.length, world:JOURNEY_WORLDS.length, cat: AGE===7 ? 'todos' : 'todas', n:1, final:true, boss:true, boost:4,
+             mix: AGE===4 ? ['donde','quees','feed'] : AGE===7 ? ['adivina','ella','verdad','cual'] : ['escribe','comodice','ella','verdad','cual'] });
+  return out;
+}
+const LEVELS = buildLevels();
+let J = store.get('journey', {stars:{}, open:0});
+const saveJ = () => store.set('journey', J);
+const modeInfo = L => L.mix ? (L.final ? {...MIXINFO, e:'🏆', es:'¡Gran final!', en:'The final challenge: every game, every word', k:'c|¡Gran final!'} : MIXINFO) : MODES_ALL.find(m=>m.id===L.mode);
+const starStr = (n, max=3) => [0,1,2].slice(0,max).map(k=>`<span class="${k<n?'':'star-off'}">⭐</span>`).join('');
+const NODE_X=[22,50,78,64,36,50];
+function renderMap(prevLevel){
+  const wrap=$('mapwrap'); wrap.innerHTML='';
+  let total=0; Object.values(J.stars).forEach(v=>total+=v);
+  $('mapStars').textContent=`${total} / ${LEVELS.length*3}`;
+  const worlds=[...JOURNEY_WORLDS.map((cat,wi)=>({cat, wi, c:VOCAB[cat]})), {cat:'final', wi:JOURNEY_WORLDS.length, c:{es:'¡Gran final!', en:'The last level', icon:'🏆', color:'#FFE3A3', words:VOCAB.todas.words}}];
+  let curEl=null, prevPos=null, curPos=null;
+  worlds.forEach(W=>{
+    const lv=LEVELS.filter(l=>l.world===W.wi);
+    const got=lv.reduce((t,l)=>t+(J.stars[l.i]||0),0);
+    const box=document.createElement('div'); box.className='world'+(lv[0].i>J.open?' locked':''); box.style.background=W.c.color;
+    box.innerHTML=`<div class="wtitle"><span class="we">${W.c.icon}</span>${W.c.es}<small>${got}/${lv.length*3} ⭐</small></div>`;
+    const path=document.createElement('div'); path.className='wpath';
+    const H=lv.length*100+30; path.style.height=H+'px';
+    const pts=lv.map((l,k)=>[lv.length===1?50:NODE_X[k], 50+k*100]);
+    let svg=`<svg viewBox="0 0 100 ${H}" preserveAspectRatio="none"><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" stroke-dasharray="2 14"/></svg>`;
+    // a few faded pictures from this world as scenery
+    const deco = shuffle(W.c.words).slice(0,4);
+    deco.forEach((w,k)=>{ const x = (k%2? 90 : 9), y = 70 + k*(H-120)/3; svg+=`<span class="deco" style="left:${x}%;top:${y}px">${w[2]}</span>`; });
+    path.innerHTML=svg;
+    lv.forEach((l,k)=>{
+      const st=J.stars[l.i]||0, locked=l.i>J.open, cur=l.i===J.open, info=modeInfo(l);
+      const b=document.createElement('button');
+      b.className='node'+(locked?' n-lock':cur?' n-cur':' n-done')+(l.boss?' boss':'');
+      b.style.left=pts[k][0]+'%'; b.style.top=pts[k][1]+'px';
+      b.innerHTML = locked ? '🔒' : `${l.boss ? (l.final?'🏆':'👑') : l.n}${l.boss?'':`<span class="badge">${info.e}</span>`}${st?`<span class="nstars">${starStr(st)}</span>`:''}`;
+      b.onclick=()=>{ if(locked){ b.classList.remove('wig'); void b.offsetWidth; b.classList.add('wig'); talk(['c|¿Qué será?']); return; } openLevelCard(l); };
+      path.appendChild(b);
+      if(cur){ curEl=b; curPos={path, x:pts[k][0], y:pts[k][1]}; }
+      if(prevLevel && l.i===prevLevel.i) prevPos={path, x:pts[k][0], y:pts[k][1]};
+    });
+    box.appendChild(path); wrap.appendChild(box);
+  });
+  // Lolo stands next to the next level to play (and walks there after a win)
+  if(curPos){
+    const lolo=document.createElement('div'); lolo.className='lolo'; lolo.innerHTML=`<span class="petwrap">${petHTML(52)}</span>`;
+    const from = (prevPos && prevPos.path===curPos.path && prevLevel.i===J.open-1) ? prevPos : curPos;
+    lolo.style.left=from.x+'%'; lolo.style.top=from.y+'px'; curPos.path.appendChild(lolo);
+    if(from!==curPos) requestAnimationFrame(()=>requestAnimationFrame(()=>{ lolo.style.left=curPos.x+'%'; lolo.style.top=curPos.y+'px'; }));
+  }
+  const target = curEl || wrap.lastElementChild;
+  setTimeout(()=>{ try{ target.scrollIntoView({block:'center', behavior: prevLevel ? 'smooth' : 'auto'}); }catch(e){} }, 60);
+}
+function openLevelCard(l){
+  const info=modeInfo(l), W = l.final ? {es:'¡Gran final!'} : VOCAB[l.cat];
+  $('lcEmoji').textContent = info.e;
+  $('lcWhere').textContent = l.final ? 'El último nivel' : `${W.es} · Nivel ${l.n} de 6`;
+  $('lcName').textContent = info.es; $('lcEn').textContent = info.en;
+  $('lcStars').innerHTML = starStr(J.stars[l.i]||0);
+  $('lcGo').onclick=()=>startLevel(l.i);
+  $('lvlCard').classList.add('on');
+  talk([info.k]);
+}
+$('lcClose').onclick=()=>$('lvlCard').classList.remove('on');
+$('freeBtn').onclick=()=>{ S.from='free'; renderCats(); show('home'); talk(['c|Hola, amigo.']); };
+$('toMap').onclick=()=>{ S.from='map'; goHome(); };
+async function startLevel(i){
+  const L=LEVELS[i];
+  S.level=L; S.from='map'; S.mix = L.mix ? L.mix.slice() : null;
+  S.mode = L.mix ? 'mix' : L.mode;
+  ['lvlCard','over'].forEach(id=>$(id).classList.remove('on'));
+  await start(L.cat);
+}
+// boss levels: every word is a different kind of game
+const pickMix = () => { const opts=S.mix.filter(m=>m!==S.lastMix); return opts[Math.floor(Math.random()*opts.length)] || S.mix[0]; };
+function startMix(){ S.mode=pickMix(); newRun(); mixRound(true); }
+function mixRound(first){
+  if(!first){ S.mode=pickMix(); }
+  S.lastMix=S.mode;
+  document.querySelectorAll('.gtitle').forEach(t=>t.textContent = S.level&&S.level.final ? '🏆 ¡Gran final!' : '👑 ¡Desafío!');
+  show(S.mode);
+  sec().querySelector('.hud').innerHTML=hudHTML(); renderHud();
+  ({donde:dondeRound, quees:queesRound, feed:feedRound, adivina:adivinaRound, ella:ellaRound, verdad:verdadRound, cual:cualRound, escribe:escribeRound, comodice:comodiceRound})[S.mode]();
+}
+function levelEnd(pass){
+  S.run++;
+  const L=S.level; let stars=0;
+  if(pass) stars = L.mode==='memory' ? (S.moves<=S.pairsTotal*1.6 ? 3 : S.moves<=S.pairsTotal*2.3 ? 2 : 1) : Math.max(1, S.lives);
+  const better = stars > (J.stars[L.i]||0);
+  if(better) J.stars[L.i]=stars;
+  const unlocked = pass && J.open<=L.i;
+  if(unlocked) J.open=L.i+1;
+  saveJ();
+  const next=LEVELS[L.i+1], worldDone = pass && L.boss && !L.final;
+  $('overTitle').textContent = !pass ? '¡Casi! Inténtalo otra vez' : L.final ? '¡Terminaste la aventura!' : worldDone ? '¡Mundo completado!' : '¡Nivel superado!';
+  $('overEmoji').textContent = !pass ? '💪' : L.final ? '🏆' : worldDone ? '👑' : '🎉';
+  $('overScore').innerHTML = `<span class="stars-big">${starStr(stars)}</span>`;
+  $('overUnit').textContent = L.final ? '¡Gran final!' : `${VOCAB[L.cat].es} · Nivel ${L.n}`;
+  $('newRec').textContent = unlocked && next ? '🔓 ¡Nuevo nivel desbloqueado!' : better && pass ? '⭐ ¡Más estrellas que antes!' : '';
+  $('newRec').classList.toggle('on', !!$('newRec').textContent);
+  $('overBest').textContent = pass ? `${S.score} puntos` : 'Te quedaste sin corazones. ¡Tú puedes!';
+  const Lv=petLevel(), grew=Lv.level>S.lvlBefore, newHat = grew ? HATS.filter(h=>h.lvl>S.lvlBefore && h.lvl<=Lv.level).pop() : null;
+  $('overPet').innerHTML = petPanel(Lv, grew, newHat);
+  $('nextLvl').style.display = pass && next ? '' : 'none';
+  $('again').textContent = pass ? '🔄 Otra vez' : '🔄 ¡Inténtalo otra vez!';
+  $('over').classList.add('on');
+  const line = pass ? [worldDone ? 'c|¡Mundo completado!' : 'c|¡Nivel superado!'] : ['c|¡Inténtalo otra vez!'];
+  if(grew) line.push('c|¡Lolo creció!');
+  talk(line);
+  if(pass){ for(let k=0;k<(worldDone||L.final?5:3);k++) setTimeout(()=>burst(innerWidth/2, innerHeight/3, ['⭐','✨','🎉','👑']),k*400); }
 }
 
 /* ======================= flashcards ======================= */
@@ -1313,12 +1499,18 @@ function newRun(){
   S.lvlBefore=petLevel().level;
   S.best=store.get(bestKey(),0);
   $('over').classList.remove('on');
-  sec().querySelector('.hud').innerHTML = `<div class="hearts"></div><div class="streak"></div>
-    <div class="pts"><span class="lbl">Puntos</span><span class="score">0</span></div>
-    <div class="pts best"><span class="lbl">🏆 Récord</span><span class="bestv">0</span></div>
-    ${S.len ? `<div class="gprog"><div class="track"><i></i></div><span class="n"></span></div>` : ''}`;
+  // journey levels always have an end (bosses are 50% longer) and get harder in later worlds
+  S.runLen = S.level ? Math.round((S.len||10) * (S.level.boss ? 1.5 : 1)) : S.len;
+  if(S.level) S.correct = S.level.boost;
+  sec().querySelector('.hud').innerHTML = hudHTML();
   renderHud();
   return S.run;
+}
+function hudHTML(){
+  return `<div class="hearts"></div><div class="streak"></div>
+    <div class="pts"><span class="lbl">Puntos</span><span class="score">0</span></div>
+    <div class="pts best"><span class="lbl">${S.level ? '🗺️ Nivel' : '🏆 Récord'}</span><span class="bestv">0</span></div>
+    ${S.runLen ? `<div class="gprog"><div class="track"><i></i></div><span class="n"></span></div>` : ''}`;
 }
 function renderHud(breakIdx){
   const h=sec().querySelector('.hud'); if(!h) return;
@@ -1326,17 +1518,18 @@ function renderHud(breakIdx){
   let s=''; for(let k=0;k<LIVES;k++) s+=`<span class="${k===breakIdx?'breaking':(k>=S.lives?'lost':'')}">❤️</span>`;
   h.querySelector('.hearts').innerHTML=s;
   h.querySelector('.score').textContent=S.score;
-  h.querySelector('.bestv').textContent=Math.max(S.best,S.score);
+  h.querySelector('.bestv').textContent = S.level ? (S.level.final ? '🏆' : S.level.n===6 ? '👑' : S.level.n) : Math.max(S.best,S.score);
   const st=h.querySelector('.streak'), mult=multiplier();
   st.classList.toggle('on', mult>1); st.textContent = `🔥 x${mult}`;
   const g=h.querySelector('.gprog');
-  if(g){ g.querySelector('i').style.width=(100*Math.min(S.asked,S.len)/S.len)+'%'; g.querySelector('.n').textContent=`${Math.min(S.asked,S.len)}/${S.len}`; }
+  if(g){ g.querySelector('i').style.width=(100*Math.min(S.asked,S.runLen)/S.runLen)+'%'; g.querySelector('.n').textContent=`${Math.min(S.asked,S.runLen)}/${S.runLen}`; }
 }
 // Call once per word answered (right or wrong). Returns true when the game has reached its length.
-function wordDone(){ S.asked++; renderHud(); return !!S.len && S.asked>=S.len; }
+function wordDone(){ S.asked++; renderHud(); return !!S.runLen && S.asked>=S.runLen; }
 // What to do after a word's feedback has played
 function nextOrEnd(done, nextRound){
   if(S.herm) return hermAfter();
+  if(S.mix) nextRound = mixRound;
   if(S.lives<=0) gameOver();
   else if(done) finishGame();
   else nextRound();
@@ -1379,7 +1572,9 @@ function scoreMiss(target){
   S.streak=0; S.lives--; if(target) record(target,false); renderHud(S.lives);
 }
 function gameOver(opts={}){
+  if(S.level) return levelEnd(!!(opts.sayFinish || opts.lowerBetter));
   S.run++;
+  $('nextLvl').style.display='none'; $('again').textContent='🔄 ¡Otra vez!'; $('newRec').textContent='🏆 ¡Nuevo récord! 🏆';
   const lowerBetter = !!opts.lowerBetter;
   const val = opts.value ?? S.score;
   const prev = store.get(bestKey(), lowerBetter ? 0 : 0);
@@ -1393,18 +1588,22 @@ function gameOver(opts={}){
   $('overEmoji').textContent = rec ? '🏆' : (opts.emoji || (val>=10 ? '🎉' : val>=3 ? '😀' : '💪'));
   const L=petLevel(), grew = L.level>S.lvlBefore;
   const newHat = grew ? HATS.filter(h=>h.lvl>S.lvlBefore && h.lvl<=L.level).pop() : null;
-  $('overPet').innerHTML = `<span class="petwrap">${petHTML(70, S.treats?'eat':'happy')}</span>
-    <div class="t">${S.treats ? `Lolo got ${S.treats} 🍪` : 'Lolo is cheering for you!'}
-      <div class="bar"><i style="width:${100*L.into/L.need}%"></i></div>
-      ${grew ? `<div class="lvlup">🎉 ¡Lolo creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
-    </div>`;
+  $('overPet').innerHTML = petPanel(L, grew, newHat);
   $('over').classList.add('on');
   const line = opts.say ? opts.say.slice() : [rec ? 'c|¡Nuevo récord!' : (opts.sayFinish ? 'c|¡Lo lograste!' : 'c|¡Fin del juego!'), val<=150 ? 'p|'+val : null];
   if(grew) line.push('c|¡Lolo creció!');
   talk(line);
   if(rec||grew){ for(let k=0;k<3;k++) setTimeout(()=>burst(innerWidth/2, innerHeight/3),k*450); }
 }
-$('again').onclick=()=>start(S.cat);
+function petPanel(L, grew, newHat){
+  return `<span class="petwrap">${petHTML(70, S.treats?'eat':'happy')}</span>
+    <div class="t">${S.treats ? `Lolo got ${S.treats} 🍪` : 'Lolo is cheering for you!'}
+      <div class="bar"><i style="width:${100*L.into/L.need}%"></i></div>
+      ${grew ? `<div class="lvlup">🎉 ¡Lolo creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
+    </div>`;
+}
+$('again').onclick=()=>{ if(S.level) startLevel(S.level.i); else start(S.cat); };
+$('nextLvl').onclick=()=>{ const nx=S.level && LEVELS[S.level.i+1]; if(nx) startLevel(nx.i); };
 
 /* ======================= ¿Dónde está? ======================= */
 function startDonde(){ newRun(); dondeRound(); }
@@ -1970,13 +2169,13 @@ async function feedIt(b){
 
 /* ======================= Memoria ======================= */
 function startMemory(){
-  S.run++; S.recent=[]; S.moves=0; S.treats=0; S.lvlBefore=petLevel().level; S.flipped=[]; S.locked=false;
+  S.run++; S.recent=[]; S.moves=0; S.treats=0; S.score=0; S.lvlBefore=petLevel().level; S.flipped=[]; S.locked=false; S.lives=LIVES;
   $('over').classList.remove('on'); $('mMoves').textContent=0;
   const words=VOCAB[S.cat].words, picks=[];
   const pairs = {4:6,7:8,10:10}[AGE];
   $('mgrid').classList.toggle('big', BIG);
   while(picks.length<pairs){ const w=pickTarget(words); if(!picks.includes(w)) picks.push(w); }
-  S.pairsLeft=picks.length;
+  S.pairsLeft=picks.length; S.pairsTotal=picks.length;
   const grid=$('mgrid'); grid.innerHTML='';
   shuffle([...picks,...picks]).forEach(w=>{
     const c=document.createElement('button'); c.className='mcard'; c._w=w;
@@ -2072,7 +2271,7 @@ function confirmBtn(id, fn){ const b=$(id); let armed=false; b.onclick=()=>{ if(
 confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+'best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
 confirmBtn('resetAll',()=>{ stats={}; store.set('stats',stats); pet={xp:0,hat:0}; store.set('pet',pet); renderHomePet(); renderCats(); });
 
-setStars(S.stars); renderHomePet(); renderCats();
+setStars(S.stars); renderHomePet(); renderCats(); S.from='map'; renderMap();
 
 /* ======================= installable app + offline ======================= */
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
