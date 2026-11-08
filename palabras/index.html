@@ -209,13 +209,14 @@
   .slots.ok .slot{border-color:var(--leaf);color:#2E8B47}
   .slots.bad{animation:shake .45s}
   .slots.bad .slot{border-color:var(--coral)}
+  .fix.warn2{color:#E0663A}
   .fix{text-align:center;font-size:22px;font-weight:700;color:#2E8B47;min-height:28px;margin:-4px 0 8px}
   .kbd{margin-top:auto;display:flex;flex-direction:column;gap:6px}
   .krow{display:flex;gap:5px;justify-content:center}
   .key{flex:1;max-width:44px;height:48px;border-radius:10px;background:var(--card);box-shadow:0 3px 0 rgba(43,43,58,.14);font-size:21px;font-weight:600}
   .key:active{transform:translateY(2px);box-shadow:none}
   .key.acc{background:#FFF1B8}.key.wide{max-width:none;flex:2;font-size:17px}
-  .key.go{background:var(--leaf)}.key.del{background:#FFE0DA}
+  .key.go{background:#BFE8C8;font-weight:700}.key.go.ready{background:var(--leaf);animation:pop .5s}.key.del{background:#FFE0DA}
   .enword{text-align:center;font-size:clamp(34px,10vw,48px);font-weight:700;margin:8px 0 2px}
   .enlbl{text-align:center;color:var(--muted);font-size:14px;margin-bottom:12px}
 
@@ -1652,21 +1653,23 @@ const noAcc = t => t.normalize('NFD').replace(/[̀-̂̄-ͯ]/g,'').normalize('NFC
     k.appendChild(r);
   });
   const r=document.createElement('div'); r.className='krow';
-  r.innerHTML='<button class="key wide" id="khint">💡 Pista</button><button class="key wide" id="kskip">🤷 No sé</button>';
+  r.innerHTML='<button class="key wide" id="khint">💡 Pista</button><button class="key wide" id="kskip">🤷 No sé</button><button class="key wide go" id="kgo">✓ ¡Listo!</button>';
   k.appendChild(r);
-  $('khint').onclick=()=>typeCh('💡'); $('kskip').onclick=()=>typeCh('🤷');
+  $('khint').onclick=()=>typeCh('💡'); $('kskip').onclick=()=>typeCh('🤷'); $('kgo').onclick=()=>typeCh('✓');
 })();
 document.addEventListener('keydown',e=>{
   if(!$('escribe').classList.contains('on') || e.metaKey || e.ctrlKey) return;
   if(e.key==='Backspace'){ e.preventDefault(); typeCh('⌫'); }
+  else if(e.key==='Enter'){ e.preventDefault(); typeCh('✓'); }
   else if(e.key.length===1 && /[a-záéíóúüñ]/i.test(e.key)) typeCh(e.key.toLowerCase());
 });
 function startEscribe(){ newRun(); escribeRound(); }
 function escribeRound(){
   const target=pickTarget(VOCAB[S.cat].words);
   S.target=target; S.locked=false; S.typed=[]; S.hints=0;
+  $('kgo').classList.remove('ready');
   const pic=$('spic'); pic.textContent=target[2]; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
-  $('sfix').textContent='';
+  $('sfix').textContent=''; $('sfix').classList.remove('warn2');
   renderSlots();
   S.ask=()=>talk(['w|'+S.target[2]]); autoAsk();
 }
@@ -1684,11 +1687,22 @@ const letters = w => [...w[1]].filter(c=>c!==' ');
 function typeCh(ch){
   if(S.locked || !S.target) return;
   const L=letters(S.target);
-  if(ch==='⌫'){ if(S.typed.length && !S.typed[S.typed.length-1].hint) S.typed.pop(); renderSlots(); return; }   // hint letters stay
+  if(ch==='⌫'){ if(S.typed.length && !S.typed[S.typed.length-1].hint) S.typed.pop(); $('sfix').textContent=''; $('kgo').classList.remove('ready'); renderSlots(); return; }   // hint letters stay
   if(ch==='🤷'){ S.typed=L.map(c=>({ch:'',hint:false})); return escribeCheck(true); }
-  if(ch==='💡'){ const i=S.typed.length; if(i>=L.length) return; S.typed.push({ch:L[i],hint:true}); S.hints++; renderSlots(); }
-  else { if(S.typed.length>=L.length) return; S.typed.push({ch,hint:false}); renderSlots(); }
-  if(S.typed.length>=L.length) escribeCheck(false);
+  if(ch==='✓'){
+    if(S.typed.length<L.length){                     // not finished yet: nudge, don't count it
+      const box=$('slots'); box.classList.remove('bad'); void box.offsetWidth; box.classList.add('bad');
+      $('sfix').textContent = `Faltan ${L.length-S.typed.length} letra${L.length-S.typed.length===1?'':'s'}`; $('sfix').classList.add('warn2');
+      setTimeout(()=>{ if(!S.locked){ $('slots').classList.remove('bad'); $('sfix').textContent=''; } }, 1400);
+      return;
+    }
+    return escribeCheck(false);
+  }
+  if(ch==='💡'){ const i=S.typed.length; if(i>=L.length) return; S.typed.push({ch:L[i],hint:true}); S.hints++; }
+  else { if(S.typed.length>=L.length) return; S.typed.push({ch,hint:false}); }
+  $('sfix').textContent=''; $('sfix').classList.remove('warn2'); $('slots').classList.remove('bad');
+  renderSlots();
+  $('kgo').classList.toggle('ready', S.typed.length>=L.length);
 }
 async function escribeCheck(gaveUp){
   S.locked=true; const run=S.run; const w=S.target;
