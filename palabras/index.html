@@ -243,6 +243,19 @@
   .plevels button{border-radius:12px;padding:7px 12px;font-size:14px;font-weight:700;background:#F1EEF6;color:var(--muted)}
   .plevels button.on{background:var(--ink);color:#fff}
   .pmeta{text-align:center;color:var(--muted);font-size:14px;margin-bottom:8px}
+  .lcard{background:var(--card);border-radius:28px;box-shadow:var(--shadow);padding:16px;text-align:center;margin:2px 0 10px}
+  .lcard .pic{font-size:64px;line-height:1.1}
+  .lcard .es{font-size:clamp(20px,5.6vw,25px);font-weight:600;line-height:1.45;margin-top:6px}
+  .lcard .es .kw{color:#C2571E;font-weight:700;border-bottom:3px dotted #F0A77A;cursor:pointer}
+  .lcard .es .kw.on{background:#FFF1B8;border-radius:6px}
+  .lcard .gloss{min-height:26px;margin-top:8px;font-size:17px;color:#7A5A3A;font-weight:600}
+  .lcard .enx{display:none;margin-top:8px;padding-top:8px;border-top:2px dashed #eee;color:var(--muted);font-size:15px}
+  .lcard .enx.on{display:block}
+  .ldots{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin-bottom:8px}
+  .ldots i{width:9px;height:9px;border-radius:50%;background:rgba(43,43,58,.15)}
+  .ldots i.on{background:#E0663A}.ldots i.past{background:#F6C3A6}
+  .qtag{display:inline-block;background:#FFE1C7;color:#B5531C;border-radius:10px;padding:3px 10px;font-size:13px;font-weight:700;margin-bottom:6px}
+  .lnext{width:100%;height:60px;margin-top:auto;font-size:21px;font-weight:700;background:#FFB98A;border-radius:20px;box-shadow:var(--shadow)}
   .heard{text-align:center;font-size:15px;color:var(--muted);min-height:20px;margin-top:8px}
 
   /* ---------- ¡Escríbelo! (10) ---------- */
@@ -423,6 +436,28 @@
     </div>
     <div class="tintro" id="tIntro"></div>
     <div class="tacts" id="tActs"></div>
+  </section>
+
+  <!-- TAREA: lesson list -->
+  <section class="view" id="tlessons">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tarea" aria-label="Back">⬅️</button>
+      <div class="title">📚 Aprende</div>
+      <div style="width:46px"></div>
+    </div>
+    <div class="tintro">Read each fact in Spanish. Tap the <b style="color:#C2571E">orange words</b> to see them in English. Little questions along the way check what you learned.</div>
+    <div class="tacts" id="lList"></div>
+  </section>
+
+  <!-- TAREA: one lesson -->
+  <section class="view" id="tlesson">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tlessons" aria-label="Back">⬅️</button>
+      <div class="title" id="lTitle"></div>
+      <button class="iconbtn" id="lSay" aria-label="Hear it">🔊</button>
+    </div>
+    <div class="ldots" id="lDots"></div>
+    <div id="lBody"></div>
   </section>
 
   <!-- TAREA: the presentation script -->
@@ -1135,79 +1170,136 @@ const HIT_LINES = [['¡Excelente! ¡Hueles a rosas!',1],['¡Bravo! ¡Le ganaste 
 const SILLY_CLIPS = ['¡Es verdad!','¡Es mentira!','¡Te toca!','¡Felicidades!','¡Empate!','¡Te ganó un pedo!','¿El o la?','¿Verdad o mentira?','¿Cuál no va?','¡Hermanos!'];
 
 /* ======================= Tarea (homework units) ======================= */
-// Unit 1: Cora's presentation about foxes (10 años)
+// Unit 1: Cora's presentation about foxes (10 años). Facts come from the fox book she's using.
+// In lesson text, [[palabra|English]] marks a key word she can tap to see the English.
+// Each fact: [picture, Spanish, English, optional check question [question, English, right, wrong, wrong, wrong]]
 const ZORRO = {
-  id:'zorro', age:10, kid:'Cora', icon:'🦊', title:'El zorro rojo', en:'Get ready for your fox presentation',
-  // The presentation, in the order she'd give it. [Spanish, English]
+  id:'zorro', age:10, kid:'Cora', icon:'🦊', title:'Los zorros', en:'Learn fox facts in Spanish, then practice your presentation',
+  lessons: [
+    {t:'Conoce a los zorros', ten:'Meet the foxes', e:'🦊', facts:[
+      ['🌍','Los zorros viven en muchos [[países|countries]] del [[mundo|world]].','Foxes live in many countries around the world.'],
+      ['🏔️','Viven en la [[costa|seashore]], en las [[montañas|mountains]], en los [[desiertos|deserts]], en el [[Ártico|Arctic]], en el [[campo|countryside]] y en las [[ciudades|cities]].','They live at the seashore, in the mountains, in deserts, in the Arctic, in the countryside and in cities.',
+        ['¿Dónde viven los zorros?','Where do foxes live?','en muchos lugares diferentes','solo en el mar','solo en la luna','solo en los zoológicos']],
+      ['🔢','Hay [[veintiún|twenty-one]] [[tipos|kinds]] de zorros.','There are twenty-one kinds of foxes.',
+        ['¿Cuántos tipos de zorros hay?','How many kinds of foxes are there?','veintiuno','tres','cien','siete']],
+      ['❄️','El [[zorro ártico|Arctic fox]] vive en el norte, donde hace muchísimo [[frío|cold]].','The Arctic fox lives in the far north, where it is very, very cold.'],
+      ['🌎','Siete tipos de zorros viven solamente en [[América del Sur|South America]].','Seven kinds of foxes live only in South America.',
+        ['¿Cuántos tipos de zorros viven solo en América del Sur?','How many kinds of foxes live only in South America?','siete','uno','veinte','ninguno']],
+      ['🦊','El zorro que más conocemos es el [[zorro rojo|red fox]]. Su [[pelaje|fur, coat]] es [[café rojizo|reddish-brown]].','The fox we know best is the red fox. Its fur is reddish-brown.'],
+      ['🤍','Tiene una [[cola|tail]] [[esponjosa|bushy]] con la [[punta|tip]] [[blanca|white]].','It has a bushy tail with a white tip.',
+        ['¿De qué color es la punta de la cola del zorro rojo?','What color is the tip of the red fox\'s tail?','blanca','verde','azul','morada']],
+      ['🧭','El zorro rojo vive sobre todo en el [[hemisferio norte|northern hemisphere]].','The red fox lives mainly in the northern hemisphere.'],
+      ['🇦🇺','También vive en Australia. Lo llevaron desde [[Europa|Europe]] hace más de cien [[años|years]].','It also lives in Australia. People brought it from Europe more than a hundred years ago.',
+        ['¿De dónde llevaron el zorro rojo a Australia?','Where was the red fox brought to Australia from?','de Europa','de la luna','de Antártida','de México']],
+      ['🚻','En inglés, al zorro [[macho|male]] le dicen "dog" y a la [[hembra|female]] le dicen "vixen".','In English, a male fox is called a "dog" and a female is called a "vixen".'],
+    ]},
+    {t:'La familia del perro', ten:'The dog family', e:'🐺', facts:[
+      ['🐕','Los zorros son de la [[familia del perro|dog family]].','Foxes belong to the dog family.',
+        ['¿De qué familia son los zorros?','What family do foxes belong to?','de la familia del perro','de la familia del gato','de la familia del pez','de la familia del pájaro']],
+      ['🐺','En esa familia también están los perros, los [[chacales|jackals]], los [[lobos|wolves]] y los [[coyotes|coyotes]].','That family also includes dogs, jackals, wolves and coyotes.'],
+      ['🥩','Comen otros animales en vez de plantas. Por eso se llaman [[carnívoros|carnivores]].','They eat other animals instead of plants. That is why they are called carnivores.',
+        ['¿Qué quiere decir carnívoro?','What does carnivore mean?','come otros animales','solo come plantas','no come nada','solo toma agua']],
+      ['🐺','Los lobos [[cazan|hunt]] en [[manada|pack]] para atrapar animales grandes.','Wolves hunt in packs to catch big animals.'],
+      ['🐭','Pero los zorros cazan [[solos|alone]] y atrapan animales pequeños, como [[ratones|mice]] e [[insectos|insects]].','But foxes hunt alone and catch small animals, like mice and insects.',
+        ['¿Cómo cazan los zorros?','How do foxes hunt?','solos','en manada','con una red','no cazan']],
+      ['🐾','Tienen cuatro [[dedos|toes]] en cada [[pata|foot]], con una [[garra|claw]] larga en cada dedo.','They have four toes on each foot, with a long claw on each toe.',
+        ['¿Cuántos dedos tiene el zorro en cada pata?','How many toes does a fox have on each foot?','cuatro','diez','dos','ninguno']],
+      ['🐱','No pueden esconder sus garras como los [[gatos|cats]].','They can\'t pull their claws in like cats can.'],
+      ['🦷','Tienen cuatro [[colmillos|canine teeth]] grandes y [[filosos|sharp]].','They have four big, sharp canine teeth.'],
+      ['🐶','Los perros de casa se parecen más a los lobos que a los zorros.','Pet dogs are more like wolves than like foxes.'],
+    ]},
+    {t:'¿Cómo es el zorro?', ten:'What foxes look like', e:'🔍', facts:[
+      ['👃','Todos los zorros tienen el [[hocico|snout]] [[puntiagudo|pointed]], las [[orejas|ears]] grandes y la cola larga y esponjosa.','All foxes have a pointed snout, big ears and a long, bushy tail.',
+        ['¿Cómo es el hocico del zorro?','What is the fox\'s snout like?','puntiagudo','redondo como una pelota','muy corto y plano','no tiene hocico']],
+      ['🏃','Tienen las [[patas|legs]] largas y son buenos [[corredores|runners]].','They have long legs and are good runners.'],
+      ['📏','Los zorros son más [[pequeños|smaller]] que los lobos.','Foxes are smaller than wolves.'],
+      ['🏜️','El [[fénec|fennec fox]] es el zorro más pequeño de todos. [[Pesa|It weighs]] un poco más de un [[kilo|kilogram]].','The fennec fox is the smallest fox of all. It weighs a little more than one kilogram.',
+        ['¿Cuál es el zorro más pequeño?','Which is the smallest fox?','el fénec','el zorro rojo','el zorro ártico','el lobo']],
+      ['⚖️','¡Un lobo gris puede pesar cincuenta [[veces|times]] más que un fénec!','A gray wolf can weigh fifty times more than a fennec fox!'],
+      ['🧥','El pelaje tiene [[pelos|hairs]] largos por fuera y pelos cortos cerca de la [[piel|skin]].','The fur has long hairs on the outside and short hairs close to the skin.'],
+      ['🌷','En la [[primavera|spring]], el zorro rojo pierde su [[abrigo|coat]] de [[invierno|winter]]. Esto se llama [[muda|molting]].','In spring, the red fox loses its winter coat. This is called molting.',
+        ['¿Cómo se llama cuando el zorro pierde su pelaje?','What is it called when a fox loses its fur?','la muda','el baile','la siesta','la cena']],
+      ['🍂','En el [[otoño|autumn]], su pelaje se pone más [[grueso|thick]] y largo para el invierno.','In autumn, its fur gets thicker and longer for the winter.'],
+      ['🎨','El zorro ártico es el único que [[cambia|changes]] de [[color|color]]: es blanco en el invierno y café grisáceo en el [[verano|summer]].','The Arctic fox is the only one that changes color: it is white in winter and brownish-gray in summer.',
+        ['¿Qué zorro cambia de color?','Which fox changes color?','el zorro ártico','el fénec','el zorro gris','ninguno']],
+    ]},
+    {t:'Desiertos y praderas', ten:'Deserts and grasslands', e:'🏜️', facts:[
+      ['🐪','El fénec vive en los desiertos de [[arena|sand]] del norte de [[África|Africa]] y de [[Arabia|Arabia]].','The fennec fox lives in the sandy deserts of North Africa and Arabia.',
+        ['¿Dónde vive el fénec?','Where does the fennec fox live?','en el desierto','en el Ártico','en el mar','en la ciudad de Nueva York']],
+      ['👂','Sus orejas [[enormes|huge]] lo ayudan a perder [[calor|heat]] y estar [[fresco|cool]].','Its huge ears help it lose heat and stay cool.',
+        ['¿Para qué le sirven al fénec sus orejas enormes?','What are the fennec\'s huge ears for?','para estar fresco','para volar','para nadar','para comer']],
+      ['🎭','Su pelaje [[claro|pale]] es del color de la arena. Así se [[esconde|hides]] de sus [[enemigos|enemies]]. Esto se llama [[camuflaje|camouflage]].','Its pale fur is the color of sand. That way it hides from its enemies. This is called camouflage.',
+        ['¿Cómo se llama cuando un animal se esconde con su color?','What is it called when an animal hides using its color?','el camuflaje','la muda','la manada','el desierto']],
+      ['🌙','De día se queda en su [[madriguera|den]], y sale de [[noche|night]] a buscar comida.','During the day it stays in its den, and it comes out at night to look for food.'],
+      ['🧦','Tiene pelo en las [[plantas de las patas|soles of its paws]], para no quemarse con la arena [[caliente|hot]].','It has fur on the soles of its paws, so the hot sand doesn\'t burn it.'],
+      ['🦇','El [[zorro orejudo|bat-eared fox]] y el zorro del Cabo viven en las [[praderas|grasslands]] de África.','The bat-eared fox and the Cape fox live in the grasslands of Africa.'],
+      ['🐜','Con sus orejas grandes, el zorro orejudo [[oye|hears]] a los insectos que se come.','With its big ears, the bat-eared fox hears the insects it eats.'],
+    ]},
+    {t:'El Ártico', ten:'The Arctic', e:'❄️', facts:[
+      ['🧊','El zorro ártico vive en la [[tundra|tundra]], cerca del [[Polo Norte|North Pole]].','The Arctic fox lives on the tundra, near the North Pole.',
+        ['¿Dónde vive el zorro ártico?','Where does the Arctic fox live?','cerca del Polo Norte','en el desierto','en la selva','en África']],
+      ['🌲','En la tundra hace tanto frío que no hay [[árboles|trees]]. Solo crecen [[plantas|plants]] pequeñas.','On the tundra it is so cold that there are no trees. Only small plants grow.'],
+      ['🧥','En el invierno tiene un pelaje muy grueso para estar [[calientito|warm]].','In winter it has very thick fur to keep warm.'],
+      ['👂','Sus orejas son pequeñas y [[redondas|round]], y su hocico y sus patas son [[cortos|short]]. Así no pierde calor.','Its ears are small and round, and its snout and legs are short. That way it doesn\'t lose heat.',
+        ['¿Cómo son las orejas del zorro ártico?','What are the Arctic fox\'s ears like?','pequeñas y redondas','enormes','largas como de conejo','no tiene orejas']],
+      ['🧤','Tiene pelo en las patas, ¡como si usara [[guantes|mittens]]!','It has fur on its paws, as if it were wearing mittens!'],
+      ['⛄','En Alaska y en Siberia es blanco, y es muy difícil verlo en la [[nieve|snow]].','In Alaska and Siberia it is white, and it is very hard to see in the snow.'],
+      ['🏝️','En las [[islas|islands]] del Ártico hay zorros de color gris azulado. Se llaman [[zorros azules|blue foxes]].','On the Arctic islands there are bluish-gray foxes. They are called blue foxes.',
+        ['¿Cómo se llaman los zorros árticos de color gris azulado?','What are the bluish-gray Arctic foxes called?','zorros azules','zorros rojos','fénecs','lobos grises']],
+    ]},
+    {t:'Bosques, granjas y ciudades', ten:'Woods, farmland and cities', e:'🏙️', facts:[
+      ['🌳','El [[zorro gris|gray fox]] americano vive en el [[bosque|forest, woods]], ¡y puede [[trepar|climb]] árboles!','The American gray fox lives in the woods, and it can climb trees!',
+        ['¿Qué zorro puede trepar árboles?','Which fox can climb trees?','el zorro gris americano','el fénec','el zorro ártico','ninguno']],
+      ['🪵','Para subir, clava las garras de sus patas de [[atrás|back]] en el [[tronco|trunk]].','To climb, it digs the claws of its back feet into the trunk.'],
+      ['🛡️','Arriba en el árbol está [[a salvo|safe]] de sus enemigos, como los [[cazadores|hunters]].','Up in the tree it is safe from its enemies, like hunters.'],
+      ['🦀','El zorro [[cangrejero|crab-eating fox]] vive en las [[selvas|tropical forests]] de América del Sur.','The crab-eating fox lives in the tropical forests of South America.'],
+      ['🚜','El zorro rojo vive en las [[granjas|farms]] y en las [[orillas|edges]] de los bosques.','The red fox lives on farms and at the edges of the woods.'],
+      ['🗽','También vive en ciudades grandes, como [[Londres|London]] y [[Nueva York|New York]].','It also lives in big cities, like London and New York.',
+        ['¿En qué ciudades grandes vive el zorro rojo?','What big cities does the red fox live in?','Londres y Nueva York','en la luna','en ninguna','solo en el Polo Norte']],
+      ['🌿','En la ciudad le gustan los [[parques|parks]] y los [[jardines|yards]] grandes con [[arbustos|bushes]] para esconderse.','In the city it likes parks and big yards with bushes to hide in.'],
+      ['🪓','En algunos países hay menos zorros, porque la gente usa su [[tierra|land]] para granjas y ciudades, y [[corta|cuts down]] los bosques.','In some countries there are fewer foxes, because people use their land for farms and towns, and cut down the forests.',
+        ['¿Por qué hay menos zorros en algunos países?','Why are there fewer foxes in some countries?','porque la gente usa su tierra','porque comen mucho','porque hace sol','porque hay muchos ratones']],
+    ]},
+  ],
+  // Her presentation, built only from facts in the lessons. [Spanish, English]
   script: [
     {h:'Introducción', hen:'Introduction', lines:[
-      ['¡Hola! Me llamo Cora y hoy les voy a hablar del zorro rojo.','Hi! My name is Cora and today I\'m going to talk to you about the red fox.'],
+      ['¡Hola! Me llamo Cora y hoy les voy a hablar de los zorros.','Hi! My name is Cora and today I\'m going to talk to you about foxes.'],
+      ['Hay veintiún tipos de zorros, y viven en muchos países del mundo.','There are twenty-one kinds of foxes, and they live in many countries around the world.'],
+      ['Los zorros son de la familia del perro, como los lobos y los coyotes.','Foxes are in the dog family, like wolves and coyotes.'],
     ]},
-    {h:'¿Cómo es?', hen:'What does it look like?', lines:[
-      ['El zorro rojo es un mamífero de la familia de los perros.','The red fox is a mammal in the dog family.'],
-      ['Tiene el pelaje anaranjado y una cola larga y esponjosa.','It has orange fur and a long, bushy tail.'],
-      ['La punta de su cola es blanca.','The tip of its tail is white.'],
-      ['Tiene las orejas grandes y puntiagudas, y un hocico largo.','It has big, pointy ears and a long snout.'],
+    {h:'¿Cómo son?', hen:'What are they like?', lines:[
+      ['Tienen el hocico puntiagudo, las orejas grandes y una cola larga y esponjosa.','They have a pointed snout, big ears and a long, bushy tail.'],
+      ['El zorro rojo tiene el pelaje café rojizo y la punta de la cola blanca.','The red fox has reddish-brown fur and a white tip on its tail.'],
+      ['El fénec es el zorro más pequeño. Pesa un poco más de un kilo.','The fennec fox is the smallest fox. It weighs a little more than one kilogram.'],
     ]},
-    {h:'¿Dónde vive?', hen:'Where does it live?', lines:[
-      ['El zorro rojo vive en América del Norte, Europa, Asia y también en Australia.','The red fox lives in North America, Europe, Asia and also in Australia.'],
-      ['Vive en bosques, praderas, montañas y hasta en las ciudades.','It lives in forests, grasslands, mountains and even in cities.'],
-      ['Su casa se llama madriguera. Es un túnel debajo de la tierra.','Its home is called a den. It\'s a tunnel under the ground.'],
+    {h:'¿Dónde viven?', hen:'Where do they live?', lines:[
+      ['Viven en desiertos, montañas, bosques, en el Ártico y hasta en las ciudades.','They live in deserts, mountains, forests, in the Arctic and even in cities.'],
+      ['El fénec vive en el desierto. Sus orejas enormes lo ayudan a estar fresco.','The fennec fox lives in the desert. Its huge ears help it stay cool.'],
+      ['El zorro ártico vive en la tundra. En el invierno es blanco para esconderse en la nieve.','The Arctic fox lives on the tundra. In winter it is white so it can hide in the snow.'],
     ]},
-    {h:'¿Qué come?', hen:'What does it eat?', lines:[
-      ['El zorro es omnívoro. Come carne y plantas.','The fox is an omnivore. It eats meat and plants.'],
-      ['Come ratones, conejos, insectos, frutas y bayas.','It eats mice, rabbits, insects, fruit and berries.'],
-      ['Caza sobre todo de noche.','It hunts mostly at night.'],
-    ]},
-    {h:'Los bebés', hen:'The babies', lines:[
-      ['Los bebés del zorro se llaman cachorros.','Baby foxes are called kits (cachorros).'],
-      ['La mamá tiene de cuatro a seis cachorros en la primavera.','The mom has four to six kits in the spring.'],
-      ['Los cachorros nacen ciegos y toman la leche de su mamá.','The kits are born blind and drink their mom\'s milk.'],
+    {h:'¿Qué comen?', hen:'What do they eat?', lines:[
+      ['Los zorros son carnívoros. Cazan solos y comen animales pequeños, como ratones e insectos.','Foxes are carnivores. They hunt alone and eat small animals, like mice and insects.'],
     ]},
     {h:'Datos curiosos', hen:'Fun facts', lines:[
-      ['El zorro puede oír a un ratón debajo de la nieve.','The fox can hear a mouse under the snow.'],
-      ['Salta muy alto y cae sobre el ratón para atraparlo.','It jumps very high and lands on the mouse to catch it.'],
-      ['Usa su cola como una cobija para no tener frío en el invierno.','It uses its tail like a blanket to stay warm in winter.'],
-      ['Puede correr a casi cincuenta kilómetros por hora.','It can run almost fifty kilometers per hour.'],
+      ['El zorro gris americano puede trepar árboles.','The American gray fox can climb trees.'],
+      ['El zorro rojo vive en ciudades grandes, como Londres y Nueva York.','The red fox lives in big cities, like London and New York.'],
+      ['En la primavera, los zorros pierden su pelaje de invierno. Esto se llama muda.','In spring, foxes lose their winter fur. This is called molting.'],
     ]},
     {h:'Conclusión', hen:'Conclusion', lines:[
-      ['El zorro es un animal muy listo y muy bonito.','The fox is a very clever and very beautiful animal.'],
+      ['En algunos lugares hay menos zorros porque la gente usa su tierra para granjas y ciudades. ¡Tenemos que cuidarlos!','In some places there are fewer foxes because people use their land for farms and towns. We have to take care of them!'],
       ['¡Gracias por escuchar! ¿Tienen preguntas?','Thank you for listening! Do you have any questions?'],
     ]},
   ],
-  // Words she'll need. [article ('' for verbs/phrases), Spanish, picture, English]
-  vocab: [
-    ['el','zorro','🦊','fox'],['el','mamífero','🍼','mammal'],['el','pelaje','🧡','fur'],['la','cola','🪶','tail'],
-    ['la','punta','👆','tip'],['las','orejas','👂','ears'],['el','hocico','👃','snout'],['los','bigotes','〰️','whiskers'],
-    ['las','patas','🐾','paws / legs'],['la','madriguera','🕳️','den'],['el','bosque','🌲','forest'],['la','pradera','🌾','grassland'],
-    ['la','ciudad','🏙️','city'],['','omnívoro','🍽️','omnivore (eats meat and plants)'],['la','carne','🥩','meat'],['las','bayas','🫐','berries'],
-    ['el','ratón','🐭','mouse'],['el','conejo','🐰','rabbit'],['los','insectos','🐛','insects'],['','cazar','🎯','to hunt'],
-    ['','de noche','🌙','at night'],['los','cachorros','🍼','kits (baby foxes)'],['','ciego','🙈','blind'],['la','primavera','🌷','spring'],
-    ['la','nieve','❄️','snow'],['','oír','👂','to hear'],['','saltar','🦘','to jump'],['el','invierno','⛄','winter'],
-    ['','esponjosa','☁️','fluffy / bushy'],['','puntiagudas','🔺','pointy'],['','listo','🧠','clever'],['la','cobija','🛏️','blanket'],
-  ],
-  // Quiz in Spanish. [question, English, right answer, wrong, wrong, wrong]
-  quiz: [
-    ['¿De qué color es el pelaje del zorro rojo?','What color is the red fox\'s fur?','anaranjado','azul','verde','morado'],
-    ['¿De qué color es la punta de su cola?','What color is the tip of its tail?','blanca','morada','verde','azul'],
-    ['¿Cómo se llama la casa del zorro?','What is the fox\'s home called?','la madriguera','el nido','la colmena','la pecera'],
-    ['¿Qué come el zorro?','What does the fox eat?','ratones, insectos y bayas','solo pasto','solo pescado','piedras'],
-    ['¿Cuándo caza el zorro?','When does the fox hunt?','sobre todo de noche','solo al mediodía','nunca','solo cuando llueve'],
-    ['¿Cómo se llaman los bebés del zorro?','What are baby foxes called?','cachorros','pollitos','renacuajos','becerros'],
-    ['¿Cuántos cachorros tiene la mamá?','How many kits does the mom have?','de cuatro a seis','uno','veinte','cien'],
-    ['¿En qué estación nacen los cachorros?','In what season are the kits born?','en la primavera','en el invierno','en el otoño','en el verano'],
-    ['¿Cómo nacen los cachorros?','How are the kits born?','ciegos','con alas','muy grandes','con dientes de oro'],
-    ['¿Qué puede oír el zorro debajo de la nieve?','What can the fox hear under the snow?','un ratón','un avión','una canción','un elefante'],
-    ['¿Para qué usa la cola en el invierno?','What does it use its tail for in winter?','para no tener frío','para nadar','para volar','para comer'],
-    ['¿Qué tan rápido puede correr?','How fast can it run?','casi 50 km por hora','1 km por hora','500 km por hora','no puede correr'],
-    ['¿De qué familia es el zorro?','What family is the fox in?','de los perros','de los gatos','de los peces','de los pájaros'],
-    ['¿Dónde vive el zorro rojo?','Where does the red fox live?','en bosques, praderas y ciudades','solo en el mar','en la luna','solo en el desierto'],
-    ['¿Qué quiere decir omnívoro?','What does omnivore mean?','come carne y plantas','solo come plantas','solo come carne','no come nada'],
-    ['¿Cómo son las orejas del zorro?','What are the fox\'s ears like?','grandes y puntiagudas','pequeñas y redondas','largas como de conejo','no tiene orejas'],
-    ['¿Qué es una madriguera?','What is a den?','un túnel debajo de la tierra','un árbol muy alto','un barco','una nube'],
-    ['¿Cómo atrapa al ratón en la nieve?','How does it catch a mouse in the snow?','salta y cae sobre el ratón','lo llama por teléfono','espera en el agua','vuela sobre él'],
-  ],
 };
+// Plain Spanish (no [[ ]] markup) for audio and checking
+const plainEs = t => t.replace(/\[\[([^|\]]+)\|[^\]]+\]\]/g,'$1');
+// Every highlighted word in the lessons becomes a vocabulary card: [Spanish, English, picture]
+ZORRO.vocab = (()=>{ const seen=new Set(), out=[];
+  ZORRO.lessons.forEach(L=>L.facts.forEach(f=>{ for(const m of f[1].matchAll(/\[\[([^|\]]+)\|([^\]]+)\]\]/g)){ const k=m[1].toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push([m[1], m[2], f[0]]); } } }));
+  return out; })();
+// Every check question in the lessons is also in the quiz
+ZORRO.quiz = ZORRO.lessons.flatMap((L,li)=>L.facts.map((f,fi)=>f[3] ? {q:f[3], li, fi} : null).filter(Boolean));
 const UNITS = [ZORRO];
 const unitLines = U => U.script.flatMap((sec,si)=>sec.lines.map((l,li)=>({si, li, es:l[0], en:l[1]})));
 
@@ -1329,10 +1421,14 @@ function keyText(k){
     case 'v': return VERDAD[+v][1];
     case 'k': return CUAL[+v][0];
     case 'x': return '';
-    case 'z': { const t=v[0], n=+v.slice(1);
-      if(t==='s') return unitLines(ZORRO)[n].es;
-      if(t==='v'){ const w=ZORRO.vocab[n]; return (w[0]?w[0]+' ':'')+w[1]+'.'; }
-      if(t==='q') return ZORRO.quiz[n][0]; return ''; }
+    case 'z': { const t=v[0], rest=v.slice(1);
+      if(t==='s') return unitLines(ZORRO)[+rest].es;
+      if(t==='v') return ZORRO.vocab[+rest][0]+'.';
+      if(t==='t') return ZORRO.lessons[+rest].t+'.';
+      const [li,fi]=rest.split('_').map(Number), f=ZORRO.lessons[li]&&ZORRO.lessons[li].facts[fi];
+      if(t==='f') return f ? plainEs(f[1]) : '';
+      if(t==='k') return f && f[3] ? f[3][0] : '';
+      return ''; }
     case 'r': return `¡Racha de ${v}!`;
     case 'p': return v==='1' ? 'un punto.' : `${v} puntos.`;
     case 'j': return `en ${v} jugadas.`;
@@ -1677,22 +1773,92 @@ function openUnit(u){
   u=S.unit; const P=TP();
   loadGroup('zorro');
   $('tTitle').textContent=`${u.icon} ${u.title}`;
-  $('tIntro').innerHTML=`<b>Tip:</b> start with <b>Mi presentación</b> to read and hear the whole talk. Then learn the words, rebuild the sentences, take the quiz, and finish by saying it out loud in <b>Practica</b>.`;
+  $('tIntro').innerHTML=`<b>Tip:</b> start with <b>Aprende</b> to learn the fox facts in Spanish, then practice the words and take the quiz. When you're ready, read <b>Mi presentación</b> and say it out loud in <b>Practica</b>.`;
   const L=unitLines(u).length;
   const pr = P.practica||{}; const prDone=Object.keys(pr).length, prMem=Object.values(pr).filter(v=>v>=4).length;
+  const lessDone=u.lessons.filter((L,li)=>(P.lessons||{})[li]).length;
   const acts=[
+    {e:'📚', t:'Aprende', s:`${u.lessons.length} short lessons from your fox book`, chk: lessDone ? `✅ ${lessDone}/${u.lessons.length}` : '', go:openLessons},
     {e:'📜', t:'Mi presentación', s:'Read and listen to the whole talk', chk: P.guion ? '✅' : '', go:openGuion},
-    {e:'📖', t:'Palabras', s:`${u.vocab.length} fox words, then a quick test`, chk: P.palabras!=null ? `⭐ ${P.palabras}/10` : '', go:openPalabras},
+    {e:'📖', t:'Palabras', s:`${u.vocab.length} words from the lessons, then a quick test`, chk: P.palabras!=null ? `⭐ ${P.palabras}/10` : '', go:openPalabras},
     {e:'🧩', t:'Arma la frase', s:'Put the sentences back in order', chk: P.arma!=null ? `⭐ ${P.arma}/8` : '', go:()=>startTPlay('arma')},
-    {e:'❓', t:'Quiz del zorro', s:'Questions about foxes, in Spanish', chk: P.quiz!=null ? `⭐ ${P.quiz}/10` : '', go:()=>startTPlay('quiz')},
+    {e:'❓', t:'Quiz del zorro', s:`${u.quiz.length} questions about foxes, in Spanish`, chk: P.quiz!=null ? `⭐ ${P.quiz}/10` : '', go:()=>startTPlay('quiz')},
     {e:'🎤', t:'Practica', s:'Say it out loud while the words disappear', chk: prMem ? `🙈 ${prMem}/${L} by heart` : prDone ? `🎤 ${prDone}/${L} lines` : '', go:openPractica},
   ];
   const box=$('tActs'); box.innerHTML='';
   acts.forEach(a=>{ const b=document.createElement('button'); b.className='tact'; b.innerHTML=`<span class="e">${a.e}</span><span class="t"><b>${a.t}</b><small>${a.s}</small></span><span class="chk">${a.chk}</span>`; b.onclick=a.go; box.appendChild(b); });
   S.run++; stopClips(); show('tarea');
 }
-document.querySelectorAll('[data-tback]').forEach(b=>b.onclick=()=>{ S.run++; stopClips(); synth&&synth.cancel(); if(b.dataset.tback==='map'){ renderMap(); show('map'); } else openUnit(); });
+document.querySelectorAll('[data-tback]').forEach(b=>b.onclick=()=>{ S.run++; stopClips(); synth&&synth.cancel(); const to=b.dataset.tback; if(to==='map'){ renderMap(); show('map'); } else if(to==='tlessons') openLessons(); else openUnit(); });
 function tReward(x,y){ pet.xp++; store.set('pet',pet); setStars(S.stars+1); burst(x,y,['⭐','✨','🦊'],10); }
+
+/* --- Aprende: lessons from the book --- */
+function openLessons(){
+  const u=S.unit, P=TP(), box=$('lList'); box.innerHTML='';
+  u.lessons.forEach((L,li)=>{
+    const done=(P.lessons||{})[li], qs=L.facts.filter(f=>f[3]).length;
+    const b=document.createElement('button'); b.className='tact';
+    b.innerHTML=`<span class="e">${L.e}</span><span class="t"><b>${li+1}. ${L.t}</b><small>${L.ten} · ${L.facts.length} facts · ${qs} questions</small></span><span class="chk">${done?`✅ ${done.right}/${done.of}`:''}</span>`;
+    b.onclick=()=>startLesson(li);
+    box.appendChild(b);
+  });
+  S.run++; stopClips(); show('tlessons');
+}
+function startLesson(li){
+  S.li=li; S.lstep=0; S.lright=0; S.lqs=0; S.run++;
+  const L=S.unit.lessons[li];
+  // steps: each fact, then its question if it has one
+  S.lsteps=[]; L.facts.forEach((f,fi)=>{ S.lsteps.push({type:'fact', fi}); if(f[3]) S.lsteps.push({type:'q', fi}); });
+  $('lTitle').textContent=`${L.e} ${L.t}`;
+  show('tlesson'); lessonStep();
+}
+function lessonDots(){
+  const box=$('lDots'); box.innerHTML='';
+  S.lsteps.forEach((st,k)=>{ if(st.type!=='fact') return; const i=document.createElement('i'); const cur=S.lsteps[S.lstep]&&S.lsteps[S.lstep].fi===st.fi; i.className=cur?'on':(k<S.lstep?'past':''); box.appendChild(i); });
+}
+function lessonStep(){
+  const L=S.unit.lessons[S.li], st=S.lsteps[S.lstep], body=$('lBody');
+  if(!st) return lessonDone();
+  lessonDots(); S.tlocked=false;
+  const f=L.facts[st.fi];
+  if(st.type==='fact'){
+    const html=f[1].replace(/\[\[([^|\]]+)\|([^\]]+)\]\]/g,(m,w,en)=>`<span class="kw" data-en="${en.replace(/"/g,'&quot;')}">${w}</span>`);
+    body.innerHTML=`<div class="lcard"><div class="pic">${f[0]}</div><div class="es">${html}</div><div class="gloss" id="lGloss">👆 Tap an orange word</div>
+      <div class="rtools" style="justify-content:center"><button id="lEnBtn">🇺🇸 English</button></div><div class="enx" id="lEn">${f[2]}</div></div>
+      <button class="lnext" id="lNext">Siguiente ➡️</button>`;
+    body.querySelectorAll('.kw').forEach(k=>k.onclick=()=>{ body.querySelectorAll('.kw').forEach(x=>x.classList.remove('on')); k.classList.add('on'); $('lGloss').textContent=`${k.textContent} = ${k.dataset.en}`; });
+    $('lEnBtn').onclick=()=>$('lEn').classList.toggle('on');
+    $('lNext').onclick=()=>{ S.lstep++; lessonStep(); };
+    S.ask=()=>talk(['z|f'+S.li+'_'+st.fi]);
+    if(S.readAloud) S.ask();
+  } else {
+    const Q=f[3], opts=shuffle(Q.slice(2));
+    body.innerHTML=`<div class="lcard"><span class="qtag">❓ Pregunta</span><div class="es" style="font-weight:700">${Q[0]}</div><div style="color:var(--muted);font-size:14px;margin-top:4px">${Q[1]}</div></div><div class="wordopts" id="lOpts"></div>`;
+    opts.forEach(o=>{ const row=document.createElement('div'); row.className='wopt'; row.innerHTML=`<button class="pick" style="font-size:20px">${o}</button>`;
+      row.querySelector('.pick').onclick=async()=>{ if(S.tlocked) return; S.tlocked=true; const run=S.run, ok=o===Q[2];
+        $('lOpts').classList.add('answered'); row.classList.add(ok?'right':'miss'); S.lqs++;
+        const r=row.getBoundingClientRect();
+        if(ok){ S.lright++; tReward(r.left+r.width/2, r.top+r.height/2); const p=praise(); banner(p); await Promise.all([talk(['c|'+p]), wait(1000)]); }
+        else { [...$('lOpts').children].find(x=>x.textContent===Q[2]).classList.add('reveal'); fartPuff(); await Promise.all([talk([funnyMiss()]), wait(1900)]); }
+        if(run!==S.run) return; S.lstep++; lessonStep(); };
+      $('lOpts').appendChild(row); });
+    S.ask=()=>talk(['z|k'+S.li+'_'+st.fi]);
+    if(S.readAloud) S.ask();
+  }
+}
+$('lSay').onclick=()=>{ if(S.ask) S.ask(); };
+function lessonDone(){
+  const P=TP(); P.lessons=P.lessons||{};
+  const prev=P.lessons[S.li]; if(!prev || S.lright>prev.right) P.lessons[S.li]={right:S.lright, of:S.lqs}; saveTP();
+  const next=S.unit.lessons[S.li+1];
+  $('lDots').innerHTML='';
+  $('lBody').innerHTML=`<div class="tcard"><span class="pic">🏅</span><span class="w">¡Capítulo completo!</span><span class="en">${S.lqs ? `${S.lright} of ${S.lqs} questions right` : ''}</span></div>
+    <div class="tbtns">${next?`<button class="smallbtn" id="lNextL" style="background:#FFB98A">➡️ ${S.li+2}. ${next.t}</button>`:''}<button class="smallbtn" id="lAgain">🔄 Otra vez</button><button class="smallbtn" id="lList2">📚 All lessons</button></div>`;
+  if(next) $('lNextL').onclick=()=>startLesson(S.li+1);
+  $('lAgain').onclick=()=>startLesson(S.li); $('lList2').onclick=openLessons;
+  talk(['c|¡Capítulo completo!']);
+  for(let j=0;j<3;j++) setTimeout(()=>burst(innerWidth/2, innerHeight/3,['⭐','🦊','🏅']),j*400);
+}
 
 /* --- Mi presentación (script) --- */
 let gEnglish=false;
@@ -1728,10 +1894,10 @@ function openPalabras(){ S.vi2=0; renderVocab(); show('tpalabras'); }
 function renderVocab(){
   const u=S.unit, w=u.vocab[S.vi2];
   $('vCount').textContent=`${S.vi2+1} / ${u.vocab.length} · tap the card to see the English`;
-  $('vPic').textContent=w[2]; $('vWord').innerHTML = w[0] ? `<span class="art">${w[0]}</span> ${w[1]}` : w[1]; $('vEn').textContent='';
+  $('vPic').textContent=w[2]; $('vWord').textContent=w[0]; $('vEn').textContent='';
   talk(['z|v'+S.vi2]);
 }
-$('vCard').onclick=()=>{ $('vEn').textContent = $('vEn').textContent ? '' : S.unit.vocab[S.vi2][3]; };
+$('vCard').onclick=()=>{ $('vEn').textContent = $('vEn').textContent ? '' : S.unit.vocab[S.vi2][1]; };
 $('vPrev').onclick=()=>{ S.vi2=(S.vi2-1+S.unit.vocab.length)%S.unit.vocab.length; renderVocab(); };
 $('vNext').onclick=()=>{ S.vi2=(S.vi2+1)%S.unit.vocab.length; renderVocab(); };
 $('vSay').onclick=()=>talk(['z|v'+S.vi2]);
@@ -1743,7 +1909,7 @@ const TPLAY={ arma:{title:'🧩 Arma la frase', n:8}, quiz:{title:'❓ Quiz del 
 function startTPlay(kind){
   const u=S.unit; S.tk=kind; S.tq=0; S.tright=0; S.run++;
   const pool = kind==='arma' ? shuffle(unitLines(u).map((l,i)=>({...l,i})).filter(l=>l.es.split(' ').length<=13)).slice(0,TPLAY.arma.n)
-             : kind==='quiz' ? shuffle(u.quiz.map((q,i)=>({q,i}))).slice(0,TPLAY.quiz.n)
+             : kind==='quiz' ? shuffle(u.quiz.map(x=>({q:x.q, key:'z|k'+x.li+'_'+x.fi}))).slice(0,TPLAY.quiz.n)
              : shuffle(u.vocab.map((v,i)=>({v,i}))).slice(0,TPLAY.palabras.n);
   S.tpool=pool; $('pTitle').textContent=TPLAY[kind].title;
   show('tplay'); tRound();
@@ -1774,9 +1940,9 @@ function tRound(){
   }
   // multiple choice: fox quiz (Spanish question) or word test (Spanish word → English)
   let q, opts, right, say;
-  if(S.tk==='quiz'){ const Q=it.q; q=`${Q[0]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">${Q[1]}</div>`; right=Q[2]; opts=shuffle(Q.slice(2)); say=['z|q'+it.i]; }
-  else { const v=it.v; q=`<div style="font-size:54px">${v[2]}</div>${v[0]?`<span class="art">${v[0]}</span> `:''}${v[1]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">What does it mean?</div>`;
-    right=v[3]; const others=shuffle(S.unit.vocab.filter(x=>x!==v).map(x=>x[3])).slice(0,3); opts=shuffle([right,...others]); say=['z|v'+it.i]; }
+  if(S.tk==='quiz'){ const Q=it.q; q=`${Q[0]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">${Q[1]}</div>`; right=Q[2]; opts=shuffle(Q.slice(2)); say=[it.key]; }
+  else { const v=it.v; q=`<div style="font-size:54px">${v[2]}</div>${v[0]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">What does it mean?</div>`;
+    right=v[1]; const others=shuffle(S.unit.vocab.filter(x=>x!==v && x[1]!==v[1]).map(x=>x[1])).slice(0,3); opts=shuffle([right,...others]); say=['z|v'+it.i]; }
   S.ask=()=>talk(say);
   body.innerHTML=`<div class="tq">${q}</div><div class="wordopts" id="qOpts"></div>`;
   opts.forEach(o=>{ const row=document.createElement('div'); row.className='wopt'; row.innerHTML=`<button class="pick" style="font-size:20px">${o}</button>`;
