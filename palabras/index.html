@@ -438,6 +438,16 @@
     <div class="tacts" id="tActs"></div>
   </section>
 
+  <!-- TAREA: chapter map -->
+  <section class="view" id="zmap">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tarea" aria-label="Back">⬅️</button>
+      <div class="title">🗺️ Aventura del zorro</div>
+      <div class="tot" id="zStars" style="font-size:15px;padding:6px 10px"></div>
+    </div>
+    <div id="zWrap"></div>
+  </section>
+
   <!-- TAREA: lesson list -->
   <section class="view" id="tlessons">
     <div class="topbar">
@@ -491,7 +501,7 @@
       <div class="title" id="pTitle"></div>
       <button class="iconbtn" id="pSay" aria-label="Hear it">🔊</button>
     </div>
-    <div class="gprog" style="margin-bottom:10px;flex:none"><div class="track"><i id="pBar"></i></div><span class="n" id="pN"></span></div>
+    <div class="hearts" id="pHearts" style="display:none;flex:none;text-align:center;margin-bottom:4px"></div><div class="gprog" style="margin-bottom:10px;flex:none"><div class="track"><i id="pBar"></i></div><span class="n" id="pN"></span></div>
     <div id="pBody"></div>
   </section>
 
@@ -1934,14 +1944,16 @@ function renderTareaSlot(){
 }
 function openUnit(u){
   if(u){ S.unit=u; S.tprog=null; }
-  u=S.unit; const P=TP();
+  u=S.unit; const P=TP(); S.zlevel=null;
   loadGroup('zorro');
   $('tTitle').textContent=`${u.icon} ${u.title}`;
   $('tIntro').innerHTML=`<b>Tip:</b> start with <b>Aprende</b> to learn the fox facts in Spanish, then practice the words and take the quiz. When you're ready, read <b>Mi presentación</b> and say it out loud in <b>Practica</b>.`;
   const L=unitLines(u).length;
   const pr = P.practica||{}; const prDone=Object.keys(pr).length, prMem=Object.values(pr).filter(v=>v>=4).length;
   const lessDone=u.lessons.filter((L,li)=>(P.lessons||{})[li]).length;
+  const zj=P.zmap||{stars:{}}; let zt=0; Object.values(zj.stars).forEach(v=>zt+=v);
   const acts=[
+    {e:'🗺️', t:'Aventura del zorro', s:`${u.lessons.length} chapters × 4 levels, like the main map`, chk: zt ? `⭐ ${zt}/${u.lessons.length*12}` : '', go:openZMap},
     {e:'📚', t:'Aprende', s:`${u.lessons.length} short lessons from your fox book`, chk: lessDone ? `✅ ${lessDone}/${u.lessons.length}` : '', go:openLessons},
     {e:'📜', t:'Mi presentación', s:'Read and listen to the whole talk', chk: P.guion ? '✅' : '', go:openGuion},
     {e:'📖', t:'Palabras', s:`${u.vocab.length} words from the lessons, then a quick test`, chk: P.palabras!=null ? `⭐ ${P.palabras}/10` : '', go:openPalabras},
@@ -1953,7 +1965,7 @@ function openUnit(u){
   acts.forEach(a=>{ const b=document.createElement('button'); b.className='tact'; b.innerHTML=`<span class="e">${a.e}</span><span class="t"><b>${a.t}</b><small>${a.s}</small></span><span class="chk">${a.chk}</span>`; b.onclick=a.go; box.appendChild(b); });
   S.run++; stopClips(); show('tarea');
 }
-document.querySelectorAll('[data-tback]').forEach(b=>b.onclick=()=>{ S.run++; stopClips(); synth&&synth.cancel(); const to=b.dataset.tback; if(to==='map'){ renderMap(); show('map'); } else if(to==='tlessons') openLessons(); else openUnit(); });
+document.querySelectorAll('[data-tback]').forEach(b=>b.onclick=()=>{ S.run++; stopClips(); synth&&synth.cancel(); let to=b.dataset.tback; if(S.zlevel && (to==='tarea'||to==='tlessons')) return openZMap(); if(to==='map'){ renderMap(); show('map'); } else if(to==='tlessons') openLessons(); else openUnit(); });
 function tReward(x,y){ pet.xp++; store.set('pet',pet); setStars(S.stars+1); burst(x,y,['⭐','✨','🦊'],10); }
 
 /* --- Aprende: lessons from the book --- */
@@ -2014,6 +2026,7 @@ $('lSay').onclick=()=>{ if(S.ask) S.ask(); };
 function lessonDone(){
   const P=TP(); P.lessons=P.lessons||{};
   const prev=P.lessons[S.li]; if(!prev || S.lright>prev.right) P.lessons[S.li]={right:S.lright, of:S.lqs}; saveTP();
+  if(S.zlevel && S.zlevel.k==='learn'){ $('lDots').innerHTML=''; const st = !S.lqs || S.lright===S.lqs ? 3 : S.lright>=S.lqs/2 ? 2 : 1; return zResult($('lBody'), st, true); }
   const next=S.unit.lessons[S.li+1];
   $('lDots').innerHTML='';
   $('lBody').innerHTML=`<div class="tcard"><span class="pic">🏅</span><span class="w">¡Capítulo completo!</span><span class="en">${S.lqs ? `${S.lright} of ${S.lqs} questions right` : ''}</span></div>
@@ -2022,6 +2035,123 @@ function lessonDone(){
   $('lAgain').onclick=()=>startLesson(S.li); $('lList2').onclick=openLessons;
   talk(['c|¡Capítulo completo!']);
   for(let j=0;j<3;j++) setTimeout(()=>burst(innerWidth/2, innerHeight/3,['⭐','🦊','🏅']),j*400);
+}
+
+/* --- Aventura del zorro: a map of the chapters --- */
+const ZL_KINDS=[{k:'learn',e:'📚',n:'Aprende'},{k:'words',e:'📖',n:'Palabras'},{k:'ask',e:'❓',n:'Preguntas'},{k:'boss',e:'👑',n:'¡Desafío!'}];
+const zLevels = () => S.unit.lessons.flatMap((L,li)=>ZL_KINDS.map((K,ki)=>({i:li*4+ki, li, ki, ...K})));
+const ZJ = () => { const P=TP(); P.zmap=P.zmap||{stars:{},open:0}; return P.zmap; };
+const VIDX={}; ZORRO.vocab.forEach((v,i)=>{ VIDX[v[0].toLowerCase()]=i; });
+function lessonWords(li){ const out=[], seen=new Set();
+  S.unit.lessons[li].facts.forEach(f=>{ for(const m of f[1].matchAll(/\[\[([^|\]]+)\|([^\]]+)\]\]/g)){ const k=m[1].toLowerCase(); if(!seen.has(k)){ seen.add(k); out.push([m[1],m[2],f[0]]); } } });
+  return out; }
+const ZCOLORS=['#FFE0D6','#E7DEFF','#FFF1B8','#FFE9C7','#D6F0FF','#E3F2D9','#FFE4F0','#E6EEFF','#FBE7FF','#E0F7F1','#FFE1C7','#DDF3FF','#F1E4CF','#FFDDE6','#E3F7DF','#FFF3D6'];
+function openZMap(){
+  S.zlevel=null; S.run++; stopClips();
+  const J=ZJ(), lvls=zLevels(), wrap=$('zWrap'); wrap.innerHTML='';
+  let tot=0; Object.values(J.stars).forEach(v=>tot+=v); $('zStars').textContent=`⭐ ${tot}/${lvls.length*3}`;
+  const X=[24,70,30,64]; let cur=null;
+  S.unit.lessons.forEach((L,li)=>{
+    const lv=lvls.filter(l=>l.li===li), got=lv.reduce((t,l)=>t+(J.stars[l.i]||0),0);
+    const box=document.createElement('div'); box.className='world'+(lv[0].i>J.open?' locked':''); box.style.background=ZCOLORS[li%ZCOLORS.length];
+    box.innerHTML=`<div class="wtitle"><span class="we">${L.e}</span><span>${li+1}. ${L.t}<br><small style="margin:0;font-size:12px">${L.ten}</small></span><small>${got}/12 ⭐</small></div>`;
+    const path=document.createElement('div'); path.className='wpath'; const H=lv.length*100+20; path.style.height=H+'px';
+    const pts=lv.map((l,k)=>[X[k],50+k*100]);
+    path.innerHTML=`<svg viewBox="0 0 100 ${H}" preserveAspectRatio="none"><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="7" stroke-linecap="round" vector-effect="non-scaling-stroke" stroke-dasharray="2 14"/></svg>`
+      + L.facts.slice(0,3).map((f,k)=>`<span class="deco" style="left:${k%2?90:9}%;top:${80+k*120}px">${f[0]}</span>`).join('');
+    lv.forEach((l,k)=>{
+      const st=J.stars[l.i]||0, locked=l.i>J.open, isCur=l.i===J.open;
+      const b=document.createElement('button');
+      b.className='node'+(locked?' n-lock':isCur?' n-cur':' n-done')+(l.k==='boss'?' boss':'');
+      b.style.left=pts[k][0]+'%'; b.style.top=pts[k][1]+'px';
+      b.innerHTML = locked ? '🔒' : `${l.k==='boss'?'👑':l.e}${st?`<span class="nstars">${starStr(st)}</span>`:''}`;
+      b.setAttribute('aria-label', `${L.t}: ${l.n}`);
+      b.onclick=()=>{ if(locked){ b.classList.remove('wig'); void b.offsetWidth; b.classList.add('wig'); return; } startZLevel(l); };
+      path.appendChild(b);
+      if(isCur) cur={path, x:pts[k][0], y:pts[k][1], b};
+    });
+    box.appendChild(path); wrap.appendChild(box);
+  });
+  if(cur){ const lolo=document.createElement('div'); lolo.className='lolo'; lolo.innerHTML=`<span class="petwrap">${petHTML(48)}</span>`; lolo.style.left=cur.x+'%'; lolo.style.top=cur.y+'px'; cur.path.appendChild(lolo); }
+  show('zmap');
+  setTimeout(()=>{ try{ (cur?cur.b:wrap.lastElementChild).scrollIntoView({block:'center'}); }catch(e){} }, 60);
+}
+function startZLevel(lv){
+  S.zlevel=lv; S.run++; $('lBody').innerHTML=''; $('pBody').innerHTML='';
+  if(lv.k==='learn'){ startLesson(lv.li); return; }
+  const li=lv.li, L=S.unit.lessons[li], words=shuffle(lessonWords(li));
+  const qs=shuffle(L.facts.map((f,fi)=>f[3]?fi:null).filter(x=>x!==null));
+  const short=shuffle(L.facts.map((f,fi)=>fi).filter(fi=>plainEs(L.facts[fi][1]).split(' ').length<=12));
+  let items=[];
+  if(lv.k==='words') items=words.slice(0,8).map(w=>({t:'w',w,dir:'es'}));
+  else if(lv.k==='ask'){ items=qs.map(fi=>({t:'q',fi})); words.slice(0,Math.max(2,7-items.length)).forEach(w=>items.push({t:'w',w,dir:'en'})); }
+  else { items=[...short.slice(0,2).map(fi=>({t:'a',fi})), ...qs.slice(0,2).map(fi=>({t:'q',fi})), ...words.slice(0,2).map(w=>({t:'w',w,dir:'es'})), ...words.slice(2,4).map(w=>({t:'w',w,dir:'en'}))];
+         let k=4; while(items.length<8 && k<words.length){ items.push({t:'w',w:words[k],dir:k%2?'es':'en'}); k++; } }
+  S.zitems=shuffle(items); S.zq=0; S.zlives=3; S.zright=0;
+  $('pTitle').textContent=`${lv.k==='boss'?'👑':lv.e} ${L.t}`;
+  show('tplay'); zRound();
+}
+function zHud(){ const n=S.zitems.length; $('pBar').style.width=(100*S.zq/n)+'%'; $('pN').textContent=`${S.zq}/${n}`;
+  const h=$('pHearts'); h.style.display=''; h.innerHTML=[0,1,2].map(k=>`<span class="${k>=S.zlives?'lost':''}">❤️</span>`).join(''); }
+const zPick = (pool, right, n) => { const out=[]; for(const x of shuffle(pool)){ if(x!==right && !out.includes(x)) out.push(x); if(out.length>=n) break; } return out; };
+function zRound(){
+  zHud(); S.tlocked=false;
+  if(S.zlives<=0) return zResult($('pBody'), 0, false);
+  if(S.zq>=S.zitems.length) return zResult($('pBody'), Math.max(1,S.zlives), true);
+  const it=S.zitems[S.zq], li=S.zlevel.li, L=S.unit.lessons[li], body=$('pBody');
+  if(it.t==='a'){
+    const f=L.facts[it.fi], es=plainEs(f[1]), words=es.split(' '), key='z|f'+li+'_'+it.fi;
+    S.tans=[]; S.ask=()=>talk([key]);
+    body.innerHTML=`<div class="tscore">🧩 Put the sentence in order. <span>(${f[2]})</span></div><div class="answer" id="aAns"></div><div class="tiles" id="aTiles"></div>
+      <div class="tbtns"><button class="smallbtn" id="aUndo">↩️ Quitar</button><button class="smallbtn" id="aCheck" style="background:var(--leaf)">✓ ¡Listo!</button></div>`;
+    let order; do { order=shuffle(words.map((w,k)=>k)); } while(words.length>2 && order.every((v,k)=>v===k));
+    const drawAns=()=>{ const a=$('aAns'); a.innerHTML=''; S.tans.forEach((t,j)=>{ const c=document.createElement('button'); c.className='tile'; c.textContent=t.textContent;
+      c.onclick=()=>{ if(S.tlocked) return; S.tans.splice(j).forEach(x=>x.classList.remove('used')); drawAns(); }; a.appendChild(c); }); };
+    order.forEach(k=>{ const t=document.createElement('button'); t.className='tile'; t.textContent=words[k];
+      t.onclick=()=>{ if(S.tlocked||t.classList.contains('used')) return; t.classList.add('used'); S.tans.push(t); drawAns(); }; $('aTiles').appendChild(t); });
+    $('aUndo').onclick=()=>{ if(S.tlocked) return; const t=S.tans.pop(); if(t){ t.classList.remove('used'); drawAns(); } };
+    $('aCheck').onclick=()=>{ if(S.tlocked) return; if(S.tans.length<words.length){ const a=$('aAns'); a.classList.remove('bad'); void a.offsetWidth; a.classList.add('bad'); return; }
+      zAnswer(S.tans.map(t=>t.textContent).join(' ')===es, $('aAns'), [key], es, true); };
+    autoAsk(); return;
+  }
+  let q, right, opts, line=[];
+  if(it.t==='q'){ const Q=L.facts[it.fi][3]; q=`${Q[0]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">${Q[1]}</div>`; right=Q[2]; opts=shuffle(Q.slice(2)); S.ask=()=>talk(['z|k'+li+'_'+it.fi]); }
+  else { const w=it.w, vk='z|v'+VIDX[w[0].toLowerCase()]; line=[vk];
+    const chap=lessonWords(li);
+    if(it.dir==='es'){ q=`<div style="font-size:54px">${w[2]}</div>${w[0]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">What does it mean?</div>`;
+      right=w[1]; let o=zPick(chap.map(x=>x[1]),right,3); if(o.length<3) o=o.concat(zPick(S.unit.vocab.map(x=>x[1]).filter(x=>!o.includes(x)),right,3-o.length)); opts=shuffle([right,...o]); S.ask=()=>talk([vk]); }
+    else { q=`<div style="font-size:14px;color:var(--muted);font-weight:500">How do you say it in Spanish?</div>${w[1]}`;
+      right=w[0]; let o=zPick(chap.map(x=>x[0]),right,3); if(o.length<3) o=o.concat(zPick(S.unit.vocab.map(x=>x[0]).filter(x=>!o.includes(x)),right,3-o.length)); opts=shuffle([right,...o]); S.ask=null; } }
+  body.innerHTML=`<div class="tq">${q}</div><div class="wordopts" id="qOpts"></div>`;
+  opts.forEach(o=>{ const row=document.createElement('div'); row.className='wopt'; row.innerHTML=`<button class="pick" style="font-size:20px">${o}</button>`;
+    row.querySelector('.pick').onclick=()=>{ if(S.tlocked) return; const ok=o===right; $('qOpts').classList.add('answered'); row.classList.add(ok?'right':'miss');
+      if(!ok) [...$('qOpts').children].find(r=>r.textContent===right).classList.add('reveal'); zAnswer(ok,row,line,right,false); };
+    $('qOpts').appendChild(row); });
+  autoAsk();
+}
+async function zAnswer(ok, el, line, rightText, arma){
+  S.tlocked=true; const run=S.run, r=el.getBoundingClientRect();
+  if(ok){ S.zright++; tReward(r.left+r.width/2, r.top+r.height/2); if(arma) el.classList.add('ok'); const p=praise(); banner(p); await Promise.all([talk(['c|'+p, ...line]), wait(1100)]); }
+  else { S.zlives--; zHud(); fartPuff(); if(arma){ el.classList.add('bad'); el.insertAdjacentHTML('afterend',`<div class="fix">${rightText}</div>`); }
+    await Promise.all([talk([funnyMiss(), ...line]), wait(2100)]); }
+  if(run!==S.run) return;
+  S.zq++; zRound();
+}
+function zResult(body, stars, pass){
+  S.run++;
+  [$('pBody'),$('lBody')].forEach(x=>{ if(x!==body) x.innerHTML=''; });
+  const J=ZJ(), lv=S.zlevel; let unlocked=false;
+  if(pass){ if(stars>(J.stars[lv.i]||0)) J.stars[lv.i]=stars; if(J.open<=lv.i){ J.open=lv.i+1; unlocked=true; } }
+  saveTP();
+  const next=zLevels()[lv.i+1], boss=lv.k==='boss';
+  $('pHearts').style.display='none';
+  body.innerHTML=`<div class="tcard"><span class="pic">${pass?(boss?'👑':'🎉'):'💪'}</span><span class="w">${pass?(boss?'¡Capítulo completo!':'¡Nivel superado!'):'¡Casi!'}</span>
+    ${pass?`<span class="stars-big" style="margin:4px 0">${starStr(stars)}</span>`:''}<span class="en">${pass?(unlocked&&next?'🔓 New level unlocked!':''):'You ran out of hearts. ¡Tú puedes!'}</span></div>
+    <div class="tbtns">${pass&&next?`<button class="smallbtn" id="zNext" style="background:#FFB98A">▶ Siguiente nivel</button>`:''}<button class="smallbtn" id="zAgain">🔄 Otra vez</button><button class="smallbtn" id="zMap">🗺️ Mapa</button></div>`;
+  if(pass&&next) $('zNext').onclick=()=>startZLevel(next);
+  $('zAgain').onclick=()=>startZLevel(lv); $('zMap').onclick=openZMap;
+  talk([pass ? (boss?'c|¡Capítulo completo!':'c|¡Nivel superado!') : 'c|¡Inténtalo otra vez!']);
+  if(pass) for(let j=0;j<(boss?5:3);j++) setTimeout(()=>burst(innerWidth/2, innerHeight/3,['⭐','🦊','✨']),j*400);
 }
 
 /* --- Mi presentación (script) --- */
@@ -2071,6 +2201,7 @@ $('pSay').onclick=()=>{ if(!S.tlocked && S.ask) S.ask(); };
 /* --- shared runner for Arma la frase, word test and fox quiz --- */
 const TPLAY={ arma:{title:'🧩 Arma la frase', n:8}, quiz:{title:'❓ Quiz del zorro', n:10}, palabras:{title:'✏️ Palabras: test', n:10} };
 function startTPlay(kind){
+  S.zlevel=null; $('pHearts').style.display='none';
   const u=S.unit; S.tk=kind; S.tq=0; S.tright=0; S.run++;
   const pool = kind==='arma' ? shuffle(unitLines(u).map((l,i)=>({...l,i})).filter(l=>l.es.split(' ').length<=13)).slice(0,TPLAY.arma.n)
              : kind==='quiz' ? shuffle(u.quiz.map(x=>({q:x.q, key:'z|k'+x.li+'_'+x.fi}))).slice(0,TPLAY.quiz.n)
