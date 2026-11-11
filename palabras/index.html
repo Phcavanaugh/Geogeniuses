@@ -199,6 +199,52 @@
   .stars-big{font-size:44px;letter-spacing:4px;margin:6px 0 12px}
   .star-off{filter:grayscale(1);opacity:.25}
 
+  /* ---------- Tarea (homework units) ---------- */
+  .tareacard{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:linear-gradient(135deg,#FFE1C7,#FFF3D6);border-radius:22px;box-shadow:var(--shadow);padding:12px 14px;margin:0 0 12px;border:3px solid #FFB98A}
+  .tareacard .e{font-size:42px}
+  .tareacard b{font-size:18px;display:block}
+  .tareacard small{color:var(--muted);font-size:13px}
+  .tacts{display:flex;flex-direction:column;gap:10px}
+  .tact{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:12px 14px;text-align:left}
+  .tact .e{font-size:34px;width:44px;text-align:center}
+  .tact .t{flex:1}.tact .t b{font-size:18px;display:block}.tact .t small{color:var(--muted);font-size:13px}
+  .tact .chk{font-size:15px;font-weight:700;color:#2E8B47;white-space:nowrap}
+  .tintro{background:#FFF1E2;border-radius:18px;padding:10px 14px;font-size:14px;color:#7A5A3A;margin-bottom:12px;line-height:1.4}
+  .gsec{background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:12px 14px;margin-bottom:12px}
+  .gsec h3{margin:0 0 6px;font-size:17px;display:flex;justify-content:space-between}
+  .gsec h3 small{color:var(--muted);font-weight:600;font-size:13px}
+  .gline{display:flex;gap:8px;align-items:flex-start;padding:7px 0;border-top:1px dashed #eee;font-size:17px;line-height:1.35;text-align:left;width:100%}
+  .gline:first-of-type{border-top:0}
+  .gline .sp{flex:none;font-size:16px;opacity:.7}
+  .gline .en{display:block;color:var(--muted);font-size:14px;margin-top:2px}
+  .gline.playing{background:#FFF8D6;border-radius:10px}
+  .ensw{display:flex;gap:8px;margin-bottom:10px}
+  .tcard{background:var(--card);border-radius:28px;box-shadow:var(--shadow);padding:20px 16px;text-align:center;margin:4px 0 12px;min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px}
+  .tcard .pic{font-size:72px;line-height:1.1}
+  .tcard .w{font-size:clamp(30px,8.5vw,42px);font-weight:700}
+  .tcard .en{font-size:20px;color:var(--muted);min-height:26px}
+  .tnav{display:flex;gap:10px;justify-content:center;margin-bottom:12px}
+  .answer{min-height:64px;background:#F6F3FA;border-radius:18px;padding:10px;display:flex;flex-wrap:wrap;gap:7px;align-content:flex-start;margin-bottom:12px;border:3px dashed #DDD6E8}
+  .answer.ok{border-color:var(--leaf);background:#EAFBEE}.answer.bad{border-color:var(--coral);background:#FFE6E2;animation:shake .45s}
+  .tiles{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:12px}
+  .tile{background:var(--card);border-radius:12px;box-shadow:0 3px 0 rgba(43,43,58,.14);padding:9px 12px;font-size:19px;font-weight:600}
+  .tile:active{transform:translateY(2px)}
+  .tile.used{visibility:hidden}
+  .answer .tile{background:#FFF8D6}
+  .tq{font-size:clamp(20px,5.6vw,26px);font-weight:700;text-align:center;margin:4px 0 12px;line-height:1.3}
+  .tbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+  .tbtns .smallbtn{font-size:16px;padding:10px 14px}
+  .tscore{text-align:center;color:var(--muted);font-weight:600;margin-bottom:8px}
+  .pline{background:var(--card);border-radius:24px;box-shadow:var(--shadow);padding:16px;font-size:clamp(20px,5.8vw,26px);font-weight:600;line-height:1.5;text-align:center;margin-bottom:12px;min-height:120px}
+  .pline .hid{background:#EDE8F5;border-radius:8px;padding:0 6px;color:transparent;cursor:pointer}
+  .pline .hid.peek{color:var(--ink);background:#FFF1B8}
+  .pline .hit{color:#2E8B47}.pline .miss2{color:#E0663A;text-decoration:underline}
+  .plevels{display:flex;gap:6px;justify-content:center;margin-bottom:10px}
+  .plevels button{border-radius:12px;padding:7px 12px;font-size:14px;font-weight:700;background:#F1EEF6;color:var(--muted)}
+  .plevels button.on{background:var(--ink);color:#fff}
+  .pmeta{text-align:center;color:var(--muted);font-size:14px;margin-bottom:8px}
+  .heard{text-align:center;font-size:15px;color:var(--muted);min-height:20px;margin-top:8px}
+
   /* ---------- ¡Escríbelo! (10) ---------- */
   .slots{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:5px;margin:0 0 12px;min-height:52px}
   .slots .art{font-size:24px;margin-right:6px;align-self:center}
@@ -360,11 +406,80 @@
         <div class="petsub" id="petSub"></div>
       </span>
     </button>
+    <div id="tareaSlot"></div>
     <div class="mapbar">
       <div class="tot">⭐ <span id="mapStars">0</span></div>
       <button class="freebtn" id="freeBtn">🎮 Juego libre</button>
     </div>
     <div id="mapwrap"></div>
+  </section>
+
+  <!-- TAREA: homework unit hub -->
+  <section class="view" id="tarea">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="map" aria-label="Back to the map">🗺️</button>
+      <div class="title" id="tTitle"></div>
+      <div style="width:46px"></div>
+    </div>
+    <div class="tintro" id="tIntro"></div>
+    <div class="tacts" id="tActs"></div>
+  </section>
+
+  <!-- TAREA: the presentation script -->
+  <section class="view" id="tguion">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tarea" aria-label="Back">⬅️</button>
+      <div class="title">📜 Mi presentación</div>
+      <button class="iconbtn" id="gPlayAll" aria-label="Listen to the whole presentation">▶️</button>
+    </div>
+    <div class="ensw"><button class="smallbtn" id="gEn">🇺🇸 Show English</button></div>
+    <div id="gBody"></div>
+  </section>
+
+  <!-- TAREA: vocabulary cards + quiz -->
+  <section class="view" id="tpalabras">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tarea" aria-label="Back">⬅️</button>
+      <div class="title">📖 Palabras del zorro</div>
+      <div style="width:46px"></div>
+    </div>
+    <div class="tscore" id="vCount"></div>
+    <button class="tcard" id="vCard"><span class="pic" id="vPic"></span><span class="w" id="vWord"></span><span class="en" id="vEn"></span></button>
+    <div class="tnav"><button class="big" id="vPrev">⬅️</button><button class="big say" id="vSay">🔊</button><button class="big" id="vNext">➡️</button></div>
+    <div class="tbtns"><button class="smallbtn" id="vQuiz">✏️ Test me (10 words)</button></div>
+  </section>
+
+  <!-- TAREA: sentence builder, word quiz and fox quiz share this screen -->
+  <section class="view" id="tplay">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tarea" aria-label="Back">⬅️</button>
+      <div class="title" id="pTitle"></div>
+      <button class="iconbtn" id="pSay" aria-label="Hear it">🔊</button>
+    </div>
+    <div class="gprog" style="margin-bottom:10px;flex:none"><div class="track"><i id="pBar"></i></div><span class="n" id="pN"></span></div>
+    <div id="pBody"></div>
+  </section>
+
+  <!-- TAREA: say the presentation -->
+  <section class="view" id="tpractica">
+    <div class="topbar">
+      <button class="iconbtn" data-tback="tarea" aria-label="Back">⬅️</button>
+      <div class="title">🎤 Practica</div>
+      <div style="width:46px"></div>
+    </div>
+    <div class="plevels" id="prLevels"><button data-l="1">1 · Todo</button><button data-l="2">2 · Huecos</button><button data-l="3">3 · Letras</button><button data-l="4">4 · ¡Sola!</button></div>
+    <div class="pmeta" id="prMeta"></div>
+    <div class="pline" id="prLine"></div>
+    <div class="tbtns">
+      <button class="smallbtn" id="prListen">🔊 Escucha</button>
+      <button class="smallbtn" id="prPeek">👁️ Ver todo</button>
+      <button class="smallbtn" id="prMic" style="display:none">🎙️ Dilo</button>
+    </div>
+    <div class="heard" id="prHeard"></div>
+    <div class="tbtns" style="margin-top:12px">
+      <button class="big" id="prBack" style="height:58px;min-width:70px;font-size:26px">⬅️</button>
+      <button class="big again" id="prOk" style="height:58px;flex:1;font-size:20px;margin:0">✅ ¡Me salió! Siguiente</button>
+    </div>
   </section>
 
   <!-- FREE PLAY (the old home screen) -->
@@ -1019,6 +1134,83 @@ const MISS_LINES = [
 const HIT_LINES = [['¡Excelente! ¡Hueles a rosas!',1],['¡Bravo! ¡Le ganaste al zorrillo!',2],['¡Genial! ¡Ni un pedo te gana!',3]];
 const SILLY_CLIPS = ['¡Es verdad!','¡Es mentira!','¡Te toca!','¡Felicidades!','¡Empate!','¡Te ganó un pedo!','¿El o la?','¿Verdad o mentira?','¿Cuál no va?','¡Hermanos!'];
 
+/* ======================= Tarea (homework units) ======================= */
+// Unit 1: Cora's presentation about foxes (10 años)
+const ZORRO = {
+  id:'zorro', age:10, kid:'Cora', icon:'🦊', title:'El zorro rojo', en:'Get ready for your fox presentation',
+  // The presentation, in the order she'd give it. [Spanish, English]
+  script: [
+    {h:'Introducción', hen:'Introduction', lines:[
+      ['¡Hola! Me llamo Cora y hoy les voy a hablar del zorro rojo.','Hi! My name is Cora and today I\'m going to talk to you about the red fox.'],
+    ]},
+    {h:'¿Cómo es?', hen:'What does it look like?', lines:[
+      ['El zorro rojo es un mamífero de la familia de los perros.','The red fox is a mammal in the dog family.'],
+      ['Tiene el pelaje anaranjado y una cola larga y esponjosa.','It has orange fur and a long, bushy tail.'],
+      ['La punta de su cola es blanca.','The tip of its tail is white.'],
+      ['Tiene las orejas grandes y puntiagudas, y un hocico largo.','It has big, pointy ears and a long snout.'],
+    ]},
+    {h:'¿Dónde vive?', hen:'Where does it live?', lines:[
+      ['El zorro rojo vive en América del Norte, Europa, Asia y también en Australia.','The red fox lives in North America, Europe, Asia and also in Australia.'],
+      ['Vive en bosques, praderas, montañas y hasta en las ciudades.','It lives in forests, grasslands, mountains and even in cities.'],
+      ['Su casa se llama madriguera. Es un túnel debajo de la tierra.','Its home is called a den. It\'s a tunnel under the ground.'],
+    ]},
+    {h:'¿Qué come?', hen:'What does it eat?', lines:[
+      ['El zorro es omnívoro. Come carne y plantas.','The fox is an omnivore. It eats meat and plants.'],
+      ['Come ratones, conejos, insectos, frutas y bayas.','It eats mice, rabbits, insects, fruit and berries.'],
+      ['Caza sobre todo de noche.','It hunts mostly at night.'],
+    ]},
+    {h:'Los bebés', hen:'The babies', lines:[
+      ['Los bebés del zorro se llaman cachorros.','Baby foxes are called kits (cachorros).'],
+      ['La mamá tiene de cuatro a seis cachorros en la primavera.','The mom has four to six kits in the spring.'],
+      ['Los cachorros nacen ciegos y toman la leche de su mamá.','The kits are born blind and drink their mom\'s milk.'],
+    ]},
+    {h:'Datos curiosos', hen:'Fun facts', lines:[
+      ['El zorro puede oír a un ratón debajo de la nieve.','The fox can hear a mouse under the snow.'],
+      ['Salta muy alto y cae sobre el ratón para atraparlo.','It jumps very high and lands on the mouse to catch it.'],
+      ['Usa su cola como una cobija para no tener frío en el invierno.','It uses its tail like a blanket to stay warm in winter.'],
+      ['Puede correr a casi cincuenta kilómetros por hora.','It can run almost fifty kilometers per hour.'],
+    ]},
+    {h:'Conclusión', hen:'Conclusion', lines:[
+      ['El zorro es un animal muy listo y muy bonito.','The fox is a very clever and very beautiful animal.'],
+      ['¡Gracias por escuchar! ¿Tienen preguntas?','Thank you for listening! Do you have any questions?'],
+    ]},
+  ],
+  // Words she'll need. [article ('' for verbs/phrases), Spanish, picture, English]
+  vocab: [
+    ['el','zorro','🦊','fox'],['el','mamífero','🍼','mammal'],['el','pelaje','🧡','fur'],['la','cola','🪶','tail'],
+    ['la','punta','👆','tip'],['las','orejas','👂','ears'],['el','hocico','👃','snout'],['los','bigotes','〰️','whiskers'],
+    ['las','patas','🐾','paws / legs'],['la','madriguera','🕳️','den'],['el','bosque','🌲','forest'],['la','pradera','🌾','grassland'],
+    ['la','ciudad','🏙️','city'],['','omnívoro','🍽️','omnivore (eats meat and plants)'],['la','carne','🥩','meat'],['las','bayas','🫐','berries'],
+    ['el','ratón','🐭','mouse'],['el','conejo','🐰','rabbit'],['los','insectos','🐛','insects'],['','cazar','🎯','to hunt'],
+    ['','de noche','🌙','at night'],['los','cachorros','🍼','kits (baby foxes)'],['','ciego','🙈','blind'],['la','primavera','🌷','spring'],
+    ['la','nieve','❄️','snow'],['','oír','👂','to hear'],['','saltar','🦘','to jump'],['el','invierno','⛄','winter'],
+    ['','esponjosa','☁️','fluffy / bushy'],['','puntiagudas','🔺','pointy'],['','listo','🧠','clever'],['la','cobija','🛏️','blanket'],
+  ],
+  // Quiz in Spanish. [question, English, right answer, wrong, wrong, wrong]
+  quiz: [
+    ['¿De qué color es el pelaje del zorro rojo?','What color is the red fox\'s fur?','anaranjado','azul','verde','morado'],
+    ['¿De qué color es la punta de su cola?','What color is the tip of its tail?','blanca','morada','verde','azul'],
+    ['¿Cómo se llama la casa del zorro?','What is the fox\'s home called?','la madriguera','el nido','la colmena','la pecera'],
+    ['¿Qué come el zorro?','What does the fox eat?','ratones, insectos y bayas','solo pasto','solo pescado','piedras'],
+    ['¿Cuándo caza el zorro?','When does the fox hunt?','sobre todo de noche','solo al mediodía','nunca','solo cuando llueve'],
+    ['¿Cómo se llaman los bebés del zorro?','What are baby foxes called?','cachorros','pollitos','renacuajos','becerros'],
+    ['¿Cuántos cachorros tiene la mamá?','How many kits does the mom have?','de cuatro a seis','uno','veinte','cien'],
+    ['¿En qué estación nacen los cachorros?','In what season are the kits born?','en la primavera','en el invierno','en el otoño','en el verano'],
+    ['¿Cómo nacen los cachorros?','How are the kits born?','ciegos','con alas','muy grandes','con dientes de oro'],
+    ['¿Qué puede oír el zorro debajo de la nieve?','What can the fox hear under the snow?','un ratón','un avión','una canción','un elefante'],
+    ['¿Para qué usa la cola en el invierno?','What does it use its tail for in winter?','para no tener frío','para nadar','para volar','para comer'],
+    ['¿Qué tan rápido puede correr?','How fast can it run?','casi 50 km por hora','1 km por hora','500 km por hora','no puede correr'],
+    ['¿De qué familia es el zorro?','What family is the fox in?','de los perros','de los gatos','de los peces','de los pájaros'],
+    ['¿Dónde vive el zorro rojo?','Where does the red fox live?','en bosques, praderas y ciudades','solo en el mar','en la luna','solo en el desierto'],
+    ['¿Qué quiere decir omnívoro?','What does omnivore mean?','come carne y plantas','solo come plantas','solo come carne','no come nada'],
+    ['¿Cómo son las orejas del zorro?','What are the fox\'s ears like?','grandes y puntiagudas','pequeñas y redondas','largas como de conejo','no tiene orejas'],
+    ['¿Qué es una madriguera?','What is a den?','un túnel debajo de la tierra','un árbol muy alto','un barco','una nube'],
+    ['¿Cómo atrapa al ratón en la nieve?','How does it catch a mouse in the snow?','salta y cae sobre el ratón','lo llama por teléfono','espera en el agua','vuela sobre él'],
+  ],
+};
+const UNITS = [ZORRO];
+const unitLines = U => U.script.flatMap((sec,si)=>sec.lines.map((l,li)=>({si, li, es:l[0], en:l[1]})));
+
 /* ======================= storage ======================= */
 // Two ages, each with its own stars, stickers, pet and records. Voice settings are shared.
 const AGE = (()=>{ try{ const a=localStorage.getItem('hp_age'); return a==='10' ? 10 : a==='7' ? 7 : 4; }catch(e){ return 4; } })();
@@ -1137,6 +1329,10 @@ function keyText(k){
     case 'v': return VERDAD[+v][1];
     case 'k': return CUAL[+v][0];
     case 'x': return '';
+    case 'z': { const t=v[0], n=+v.slice(1);
+      if(t==='s') return unitLines(ZORRO)[n].es;
+      if(t==='v'){ const w=ZORRO.vocab[n]; return (w[0]?w[0]+' ':'')+w[1]+'.'; }
+      if(t==='q') return ZORRO.quiz[n][0]; return ''; }
     case 'r': return `¡Racha de ${v}!`;
     case 'p': return v==='1' ? 'un punto.' : `${v} puntos.`;
     case 'j': return `en ${v} jugadas.`;
@@ -1462,6 +1658,211 @@ function levelEnd(pass){
   talk(line);
   if(pass){ for(let k=0;k<(worldDone||L.final?5:3);k++) setTimeout(()=>burst(innerWidth/2, innerHeight/3, ['⭐','✨','🎉','👑']),k*400); }
 }
+
+/* ======================= Tarea: homework units ======================= */
+const myUnits = () => UNITS.filter(u=>u.age===AGE);
+const TP = () => { const u=S.unit; S.tprog = S.tprog || store.get('tarea_'+u.id, {}); return S.tprog; };
+const saveTP = () => store.set('tarea_'+S.unit.id, S.tprog);
+function renderTareaSlot(){
+  const slot=$('tareaSlot'); slot.innerHTML='';
+  myUnits().forEach(u=>{
+    const b=document.createElement('button'); b.className='tareacard';
+    b.innerHTML=`<span class="e">${u.icon}</span><span><b>📚 Tarea de ${u.kid}: ${u.title}</b><small>${u.en}</small></span>`;
+    b.onclick=()=>openUnit(u);
+    slot.appendChild(b);
+  });
+}
+function openUnit(u){
+  if(u){ S.unit=u; S.tprog=null; }
+  u=S.unit; const P=TP();
+  loadGroup('zorro');
+  $('tTitle').textContent=`${u.icon} ${u.title}`;
+  $('tIntro').innerHTML=`<b>Tip:</b> start with <b>Mi presentación</b> to read and hear the whole talk. Then learn the words, rebuild the sentences, take the quiz, and finish by saying it out loud in <b>Practica</b>.`;
+  const L=unitLines(u).length;
+  const pr = P.practica||{}; const prDone=Object.keys(pr).length, prMem=Object.values(pr).filter(v=>v>=4).length;
+  const acts=[
+    {e:'📜', t:'Mi presentación', s:'Read and listen to the whole talk', chk: P.guion ? '✅' : '', go:openGuion},
+    {e:'📖', t:'Palabras', s:`${u.vocab.length} fox words, then a quick test`, chk: P.palabras!=null ? `⭐ ${P.palabras}/10` : '', go:openPalabras},
+    {e:'🧩', t:'Arma la frase', s:'Put the sentences back in order', chk: P.arma!=null ? `⭐ ${P.arma}/8` : '', go:()=>startTPlay('arma')},
+    {e:'❓', t:'Quiz del zorro', s:'Questions about foxes, in Spanish', chk: P.quiz!=null ? `⭐ ${P.quiz}/10` : '', go:()=>startTPlay('quiz')},
+    {e:'🎤', t:'Practica', s:'Say it out loud while the words disappear', chk: prMem ? `🙈 ${prMem}/${L} by heart` : prDone ? `🎤 ${prDone}/${L} lines` : '', go:openPractica},
+  ];
+  const box=$('tActs'); box.innerHTML='';
+  acts.forEach(a=>{ const b=document.createElement('button'); b.className='tact'; b.innerHTML=`<span class="e">${a.e}</span><span class="t"><b>${a.t}</b><small>${a.s}</small></span><span class="chk">${a.chk}</span>`; b.onclick=a.go; box.appendChild(b); });
+  S.run++; stopClips(); show('tarea');
+}
+document.querySelectorAll('[data-tback]').forEach(b=>b.onclick=()=>{ S.run++; stopClips(); synth&&synth.cancel(); if(b.dataset.tback==='map'){ renderMap(); show('map'); } else openUnit(); });
+function tReward(x,y){ pet.xp++; store.set('pet',pet); setStars(S.stars+1); burst(x,y,['⭐','✨','🦊'],10); }
+
+/* --- Mi presentación (script) --- */
+let gEnglish=false;
+function openGuion(){
+  const u=S.unit, body=$('gBody'); body.innerHTML='';
+  let idx=0;
+  u.script.forEach(sec=>{
+    const d=document.createElement('div'); d.className='gsec';
+    d.innerHTML=`<h3>${sec.h} <small>${sec.hen}</small></h3>`;
+    sec.lines.forEach(l=>{
+      const i=idx++; const b=document.createElement('button'); b.className='gline'; b.dataset.i=i;
+      b.innerHTML=`<span class="sp">🔊</span><span>${l[0]}${gEnglish?`<span class="en">${l[1]}</span>`:''}</span>`;
+      b.onclick=()=>{ document.querySelectorAll('.gline').forEach(x=>x.classList.remove('playing')); b.classList.add('playing'); talk(['z|s'+i]).then(()=>b.classList.remove('playing')); };
+      d.appendChild(b);
+    });
+    body.appendChild(d);
+  });
+  $('gEn').textContent = gEnglish ? '🇺🇸 Hide English' : '🇺🇸 Show English';
+  TP().guion=true; saveTP();
+  show('tguion');
+}
+$('gEn').onclick=()=>{ gEnglish=!gEnglish; openGuion(); };
+$('gPlayAll').onclick=async()=>{
+  const run=++S.run, rows=[...document.querySelectorAll('.gline')];
+  for(const b of rows){ if(run!==S.run || !$('tguion').classList.contains('on')) return;
+    rows.forEach(x=>x.classList.remove('playing')); b.classList.add('playing'); b.scrollIntoView({block:'center',behavior:'smooth'});
+    await talk(['z|s'+b.dataset.i]); await wait(350); }
+  rows.forEach(x=>x.classList.remove('playing'));
+};
+
+/* --- Palabras (vocab cards) --- */
+function openPalabras(){ S.vi2=0; renderVocab(); show('tpalabras'); }
+function renderVocab(){
+  const u=S.unit, w=u.vocab[S.vi2];
+  $('vCount').textContent=`${S.vi2+1} / ${u.vocab.length} · tap the card to see the English`;
+  $('vPic').textContent=w[2]; $('vWord').innerHTML = w[0] ? `<span class="art">${w[0]}</span> ${w[1]}` : w[1]; $('vEn').textContent='';
+  talk(['z|v'+S.vi2]);
+}
+$('vCard').onclick=()=>{ $('vEn').textContent = $('vEn').textContent ? '' : S.unit.vocab[S.vi2][3]; };
+$('vPrev').onclick=()=>{ S.vi2=(S.vi2-1+S.unit.vocab.length)%S.unit.vocab.length; renderVocab(); };
+$('vNext').onclick=()=>{ S.vi2=(S.vi2+1)%S.unit.vocab.length; renderVocab(); };
+$('vSay').onclick=()=>talk(['z|v'+S.vi2]);
+$('vQuiz').onclick=()=>startTPlay('palabras');
+$('pSay').onclick=()=>{ if(!S.tlocked && S.ask) S.ask(); };
+
+/* --- shared runner for Arma la frase, word test and fox quiz --- */
+const TPLAY={ arma:{title:'🧩 Arma la frase', n:8}, quiz:{title:'❓ Quiz del zorro', n:10}, palabras:{title:'✏️ Palabras: test', n:10} };
+function startTPlay(kind){
+  const u=S.unit; S.tk=kind; S.tq=0; S.tright=0; S.run++;
+  const pool = kind==='arma' ? shuffle(unitLines(u).map((l,i)=>({...l,i})).filter(l=>l.es.split(' ').length<=13)).slice(0,TPLAY.arma.n)
+             : kind==='quiz' ? shuffle(u.quiz.map((q,i)=>({q,i}))).slice(0,TPLAY.quiz.n)
+             : shuffle(u.vocab.map((v,i)=>({v,i}))).slice(0,TPLAY.palabras.n);
+  S.tpool=pool; $('pTitle').textContent=TPLAY[kind].title;
+  show('tplay'); tRound();
+}
+function tBar(){ const n=S.tpool.length; $('pBar').style.width=(100*S.tq/n)+'%'; $('pN').textContent=`${S.tq}/${n}`; }
+function tRound(){
+  tBar(); S.tlocked=false;
+  if(S.tq>=S.tpool.length) return tDone();
+  const it=S.tpool[S.tq], body=$('pBody');
+  if(S.tk==='arma'){
+    const words=it.es.split(' ');
+    S.tans=[]; S.ask=()=>talk(['z|s'+it.i]);
+    body.innerHTML=`<div class="tscore">Tap the words in the right order. <span style="color:var(--muted)">(${it.en})</span></div><div class="answer" id="aAns"></div><div class="tiles" id="aTiles"></div>
+      <div class="tbtns"><button class="smallbtn" id="aUndo">↩️ Quitar</button><button class="smallbtn" id="aHint">💡 Pista</button><button class="smallbtn" id="aCheck" style="background:var(--leaf)">✓ ¡Listo!</button></div>`;
+    let order; do { order=shuffle(words.map((w,k)=>k)); } while(words.length>2 && order.every((v,k)=>v===k));
+    order.forEach(k=>{ const t=document.createElement('button'); t.className='tile'; t.textContent=words[k]; t._k=k;
+      t.onclick=()=>{ if(S.tlocked||t.classList.contains('used')) return; t.classList.add('used'); S.tans.push(t); drawAns(); };
+      $('aTiles').appendChild(t); });
+    const drawAns=()=>{ const a=$('aAns'); a.innerHTML=''; S.tans.forEach((t,j)=>{ const c=document.createElement('button'); c.className='tile'; c.textContent=t.textContent;
+      c.onclick=()=>{ if(S.tlocked) return; S.tans.splice(j).forEach(x=>x.classList.remove('used')); drawAns(); }; a.appendChild(c); }); };
+    $('aUndo').onclick=()=>{ if(S.tlocked) return; const t=S.tans.pop(); if(t){ t.classList.remove('used'); drawAns(); } };
+    $('aHint').onclick=()=>{ if(S.tlocked) return; const need=S.tans.length; // put the next right word in place (removing wrong ones after it)
+      const okSoFar=S.tans.every((t,j)=>words[t._k]===words[j]); if(!okSoFar){ while(S.tans.length && !S.tans.every((t,j)=>words[t._k]===words[j])) S.tans.pop().classList.remove('used'); }
+      const nxt=[...$('aTiles').children].find(t=>!t.classList.contains('used') && t.textContent===words[S.tans.length]); if(nxt){ nxt.classList.add('used'); S.tans.push(nxt); } drawAns(); };
+    $('aCheck').onclick=()=>{ if(S.tlocked) return; if(S.tans.length<words.length){ const a=$('aAns'); a.classList.remove('bad'); void a.offsetWidth; a.classList.add('bad'); return; }
+      const ok = S.tans.map(t=>t.textContent).join(' ')===it.es; tAnswer(ok, $('aAns'), ['z|s'+it.i], it.es); };
+    autoAsk(); return;
+  }
+  // multiple choice: fox quiz (Spanish question) or word test (Spanish word → English)
+  let q, opts, right, say;
+  if(S.tk==='quiz'){ const Q=it.q; q=`${Q[0]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">${Q[1]}</div>`; right=Q[2]; opts=shuffle(Q.slice(2)); say=['z|q'+it.i]; }
+  else { const v=it.v; q=`<div style="font-size:54px">${v[2]}</div>${v[0]?`<span class="art">${v[0]}</span> `:''}${v[1]}<div style="font-size:14px;color:var(--muted);font-weight:500;margin-top:4px">What does it mean?</div>`;
+    right=v[3]; const others=shuffle(S.unit.vocab.filter(x=>x!==v).map(x=>x[3])).slice(0,3); opts=shuffle([right,...others]); say=['z|v'+it.i]; }
+  S.ask=()=>talk(say);
+  body.innerHTML=`<div class="tq">${q}</div><div class="wordopts" id="qOpts"></div>`;
+  opts.forEach(o=>{ const row=document.createElement('div'); row.className='wopt'; row.innerHTML=`<button class="pick" style="font-size:20px">${o}</button>`;
+    row.querySelector('.pick').onclick=()=>{ if(S.tlocked) return; const ok=o===right; $('qOpts').classList.add('answered'); row.classList.add(ok?'right':'miss');
+      if(!ok) [...$('qOpts').children].find(r=>r.textContent===right).classList.add('reveal'); tAnswer(ok,row,null,right); };
+    $('qOpts').appendChild(row); });
+  autoAsk();
+}
+async function tAnswer(ok, el, okLine, rightText){
+  S.tlocked=true; const run=S.run; const r=el.getBoundingClientRect();
+  if(ok){ S.tright++; tReward(r.left+r.width/2, r.top+r.height/2); if(S.tk==='arma') el.classList.add('ok'); const p=praise(); banner(p);
+    await Promise.all([talk(['c|'+p, ...(okLine||[])]), wait(1100)]); }
+  else { fartPuff(); if(S.tk==='arma'){ el.classList.add('bad'); el.insertAdjacentHTML('afterend',`<div class="fix">${rightText}</div>`); }
+    await Promise.all([talk([funnyMiss(), ...(S.tk==='arma'?okLine:[])]), wait(2000)]); }
+  if(run!==S.run) return;
+  S.tq++; tRound();
+}
+function tDone(){
+  const n=S.tpool.length, P=TP(), k=S.tk;
+  if(P[k]==null || S.tright>P[k]) P[k]=S.tright; saveTP();
+  const great = S.tright>=n-1;
+  $('pBody').innerHTML=`<div class="tcard"><span class="pic">${great?'🏆':S.tright>=n/2?'🦊':'💪'}</span><span class="w">${S.tright} / ${n}</span><span class="en">${great?'¡Excelente!':S.tright>=n/2?'¡Muy bien! Keep practicing.':'¡Tú puedes! Try again.'}</span></div>
+    <div class="tbtns"><button class="smallbtn" id="tAgain">🔄 Otra vez</button><button class="smallbtn" id="tBack">⬅️ Back to the fox unit</button></div>`;
+  $('tAgain').onclick=()=>startTPlay(k); $('tBack').onclick=()=>openUnit();
+  talk([great?'c|¡Excelente!':'c|¡Muy bien!']); if(great) for(let j=0;j<3;j++) setTimeout(()=>burst(innerWidth/2, innerHeight/3,['⭐','🦊','✨']),j*400);
+}
+
+/* --- Practica: say the presentation, words fade away --- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const normW = t => t.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-zñ0-9 ]/g,' ').split(/\s+/).filter(Boolean);
+function openPractica(){
+  S.pi = S.pi||0; S.plevel = S.plevel||1;
+  $('prMic').style.display = SR ? '' : 'none';
+  renderPractica(); show('tpractica');
+}
+function renderPractica(){
+  const lines=unitLines(S.unit), l=lines[S.pi], sec=S.unit.script[l.si], P=TP(), pr=P.practica||{};
+  document.querySelectorAll('#prLevels button').forEach(b=>b.classList.toggle('on', +b.dataset.l===S.plevel));
+  $('prMeta').textContent=`${sec.h} · line ${S.pi+1} of ${lines.length}` + (pr[S.pi] ? ` · ✅ up to level ${pr[S.pi]}` : '');
+  const words=l.es.split(' ');
+  $('prLine').innerHTML = S.plevel===4 ? `<span style="color:var(--muted);font-size:18px">🙈 Say it from memory!<br><small>${l.en}</small></span>`
+    : words.map((w,k)=>{
+        const hide = S.plevel===2 ? (k%3===1) : S.plevel===3 ? true : false;
+        if(!hide) return `<span data-k="${k}">${w}</span>`;
+        if(S.plevel===3){ const m=w.match(/^([¡¿]?)(.)(.*?)([.,!?]*)$/); return `<span data-k="${k}" class="hid3">${m?m[1]+m[2]+'<span style="letter-spacing:2px;color:#C9C3D6">'+'_'.repeat(Math.max(1,m[3].length))+'</span>'+m[4]:w}</span>`; }
+        return `<span class="hid" data-k="${k}" data-w="${w}">${w}</span>`;
+      }).join(' ');
+  $('prLine').querySelectorAll('.hid').forEach(h=>h.onclick=()=>h.classList.toggle('peek'));
+  $('prHeard').textContent='';
+  if(S.plevel===1 && S.readAloud) talk(['z|s'+S.pi]);
+}
+document.querySelectorAll('#prLevels button').forEach(b=>b.onclick=()=>{ S.plevel=+b.dataset.l; renderPractica(); });
+$('prListen').onclick=()=>talk(['z|s'+S.pi]);
+$('prPeek').onclick=()=>{ const l=unitLines(S.unit)[S.pi]; $('prLine').innerHTML=l.es+`<div style="font-size:15px;color:var(--muted);font-weight:500;margin-top:6px">${l.en}</div>`; };
+$('prBack').onclick=()=>{ if(S.pi>0){ S.pi--; renderPractica(); } };
+$('prOk').onclick=()=>{
+  const lines=unitLines(S.unit), P=TP(); P.practica=P.practica||{};
+  P.practica[S.pi]=Math.max(P.practica[S.pi]||0, S.plevel); saveTP();
+  const r=$('prOk').getBoundingClientRect(); tReward(r.left+r.width/2, r.top);
+  if(S.pi<lines.length-1){ S.pi++; renderPractica(); }
+  else { banner(S.plevel<4 ? `¡Nivel ${S.plevel} completo!` : '¡Excelente presentación!');
+         talk([S.plevel<4 ? 'c|¡Muy bien!' : 'c|¡Excelente presentación!']);
+         for(let j=0;j<3;j++) setTimeout(()=>burst(innerWidth/2, innerHeight/3,['⭐','🦊','🎤']),j*400);
+         if(S.plevel<4){ S.plevel++; } S.pi=0; setTimeout(renderPractica, 1400); }
+};
+// 🎙️ Dilo: the phone listens and marks the words it heard
+$('prMic').onclick=()=>{
+  if(!SR) return;
+  const l=unitLines(S.unit)[S.pi], target=normW(l.es);
+  let rec; try{ rec=new SR(); }catch(e){ $('prHeard').textContent='The microphone isn\'t available here.'; return; }
+  rec.lang='es-MX'; rec.interimResults=false; rec.maxAlternatives=1;
+  stopClips(); $('prHeard').textContent='🎙️ Te escucho… (listening)'; $('prMic').disabled=true;
+  rec.onresult=e=>{
+    const said=normW(e.results[0][0].transcript);
+    let j=0, hits=new Set();                       // words said in order
+    target.forEach((w,k)=>{ const f=said.indexOf(w,j); if(f>=0){ hits.add(k); j=f+1; } });
+    const pct=Math.round(100*hits.size/target.length);
+    const words=l.es.split(' ');
+    $('prLine').innerHTML=words.map((w,k)=>`<span class="${hits.has(k)?'hit':'miss2'}">${w}</span>`).join(' ');
+    $('prHeard').textContent = pct>=85 ? `✅ ¡Excelente! ${pct}%` : pct>=60 ? `👍 ¡Casi! ${pct}% — try the orange words again` : `🔁 ${pct}% — listen and try again`;
+    if(pct>=85){ const r=$('prLine').getBoundingClientRect(); burst(r.left+r.width/2, r.top+r.height/2, ['⭐','🎤','✨'], 10); talk(['c|¡Excelente!']); }
+  };
+  rec.onerror=e=>{ $('prHeard').textContent = e.error==='not-allowed' ? 'Allow the microphone to use 🎙️ Dilo.' : 'I didn\'t catch that. Tap 🎙️ and try again.'; };
+  rec.onend=()=>{ $('prMic').disabled=false; };
+  try{ rec.start(); }catch(e){ $('prMic').disabled=false; }
+};
 
 /* ======================= flashcards ======================= */
 function renderCard(dir){
@@ -2285,7 +2686,7 @@ function confirmBtn(id, fn){ const b=$(id); let armed=false; b.onclick=()=>{ if(
 confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+'best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
 confirmBtn('resetAll',()=>{ stats={}; store.set('stats',stats); pet={xp:0,hat:0}; store.set('pet',pet); renderHomePet(); renderCats(); });
 
-setStars(S.stars); renderHomePet(); renderCats(); S.from='map'; renderMap();
+setStars(S.stars); renderHomePet(); renderCats(); S.from='map'; renderTareaSlot(); renderMap();
 
 /* ======================= installable app + offline ======================= */
 if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
