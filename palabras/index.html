@@ -1474,6 +1474,25 @@ ZORRO.vocab = (()=>{ const seen=new Set(), out=[];
   return out; })();
 // Every check question in the lessons is also in the quiz
 ZORRO.quiz = ZORRO.lessons.flatMap((L,li)=>L.facts.map((f,fi)=>f[3] ? {q:f[3], li, fi} : null).filter(Boolean));
+// Arma la frase: sentences that get longer. [chapter index, Spanish, English]
+ZORRO.frases = [
+  [0,'El zorro es rojo.','The fox is red.'],[0,'Hay muchos zorros.','There are many foxes.'],[0,'La cola es blanca.','The tail is white.'],[0,'El zorro rojo vive en Australia.','The red fox lives in Australia.'],[0,'Hay veintiún tipos de zorros.','There are twenty-one kinds of foxes.'],
+  [1,'Los zorros cazan solos.','Foxes hunt alone.'],[1,'El lobo es grande.','The wolf is big.'],[1,'El zorro tiene garras.','The fox has claws.'],[1,'El zorro es de la familia del perro.','The fox is in the dog family.'],[1,'Los lobos cazan en manada.','Wolves hunt in packs.'],
+  [2,'El fénec es pequeño.','The fennec fox is small.'],[2,'Tiene orejas grandes.','It has big ears.'],[2,'El zorro corre rápido.','The fox runs fast.'],[2,'El zorro ártico cambia de color.','The Arctic fox changes color.'],[2,'En la primavera pierde su pelaje.','In spring it loses its fur.'],
+  [3,'El desierto es caliente.','The desert is hot.'],[3,'El fénec sale de noche.','The fennec comes out at night.'],[3,'Su pelaje es del color de la arena.','Its fur is the color of sand.'],
+  [4,'Hace mucho frío.','It is very cold.'],[4,'El zorro ártico es blanco.','The Arctic fox is white.'],[4,'No hay árboles en la tundra.','There are no trees on the tundra.'],
+  [5,'El zorro gris trepa árboles.','The gray fox climbs trees.'],[5,'Vive en la ciudad.','It lives in the city.'],[5,'Al zorro le gustan los parques.','The fox likes parks.'],
+  [6,'El zorro come fruta.','The fox eats fruit.'],[6,'Le gustan los huevos.','It likes eggs.'],[6,'El zorro entierra la comida.','The fox buries the food.'],[6,'En el otoño come manzanas.','In autumn it eats apples.'],
+  [7,'El zorro salta alto.','The fox jumps high.'],[7,'Caza de noche.','It hunts at night.'],[7,'El zorro atrapa un ratón.','The fox catches a mouse.'],[7,'Escucha a los ratones en el pasto.','It listens for mice in the grass.'],
+  [8,'La mamá busca una madriguera.','The mom looks for a den.'],[8,'Los zorros cavan hoyos.','Foxes dig holes.'],[8,'Regresan a la misma madriguera.','They return to the same den.'],
+  [9,'Los cachorros son pequeños.','The cubs are small.'],[9,'Los cachorros toman leche.','The cubs drink milk.'],[9,'Los cachorros juegan afuera.','The cubs play outside.'],[9,'El papá trae comida.','The dad brings food.'],
+  [10,'El zorro ladra.','The fox barks.'],[10,'Mueve la cola.','It wags its tail.'],[10,'Los zorros se huelen.','The foxes sniff each other.'],[10,'La mamá avisa del peligro.','The mom warns of danger.'],
+  [11,'La rabia es peligrosa.','Rabies is dangerous.'],[11,'Los perros reciben vacunas.','Dogs get vaccines.'],[11,'La vacuna nos ayuda.','The vaccine helps us.'],
+  [12,'El zorro roba gallinas.','The fox steals chickens.'],[12,'Los cachorros aplastan las flores.','The cubs squash the flowers.'],[12,'Las águilas se llevan a los cachorros.','Eagles carry off the cubs.'],
+  [13,'El zorro es astuto.','The fox is sly.'],[13,'El cuervo tiene queso.','The crow has cheese.'],[13,'El cuervo abre el pico.','The crow opens its beak.'],[13,'El zorro engaña al cuervo.','The fox tricks the crow.'],
+  [14,'Busca sus huellas.','Look for its tracks.'],[14,'Quédate muy callado.','Stay very quiet.'],[14,'Ve al amanecer o al atardecer.','Go at dawn or dusk.'],
+  [15,'El zorro es nocturno.','The fox is nocturnal.'],[15,'La tundra es muy fría.','The tundra is very cold.'],
+];
 const UNITS = [ZORRO];
 const unitLines = U => U.script.flatMap((sec,si)=>sec.lines.map((l,li)=>({si, li, es:l[0], en:l[1]})));
 
@@ -1596,6 +1615,7 @@ function keyText(k){
     case 'k': return CUAL[+v][0];
     case 'x': return '';
     case 'z': { const t=v[0], rest=v.slice(1);
+      if(t==='r') return ZORRO.frases[+rest][1];
       if(t==='s') return unitLines(ZORRO)[+rest].es;
       if(t==='v') return ZORRO.vocab[+rest][0]+'.';
       if(t==='t') return ZORRO.lessons[+rest].t+'.';
@@ -1957,7 +1977,7 @@ function openUnit(u){
     {e:'📚', t:'Aprende', s:`${u.lessons.length} short lessons from your fox book`, chk: lessDone ? `✅ ${lessDone}/${u.lessons.length}` : '', go:openLessons},
     {e:'📜', t:'Mi presentación', s:'Read and listen to the whole talk', chk: P.guion ? '✅' : '', go:openGuion},
     {e:'📖', t:'Palabras', s:`${u.vocab.length} words from the lessons, then a quick test`, chk: P.palabras!=null ? `⭐ ${P.palabras}/10` : '', go:openPalabras},
-    {e:'🧩', t:'Arma la frase', s:'Put the sentences back in order', chk: P.arma!=null ? `⭐ ${P.arma}/8` : '', go:()=>startTPlay('arma')},
+    {e:'🧩', t:'Arma la frase', s:'Build sentences: short ones first, then longer', chk: P.arma!=null ? `⭐ ${P.arma}/10` : '', go:()=>startTPlay('arma')},
     {e:'❓', t:'Quiz del zorro', s:`${u.quiz.length} questions about foxes, in Spanish`, chk: P.quiz!=null ? `⭐ ${P.quiz}/10` : '', go:()=>startTPlay('quiz')},
     {e:'🎤', t:'Practica', s:'Say it out loud while the words disappear', chk: prMem ? `🙈 ${prMem}/${L} by heart` : prDone ? `🎤 ${prDone}/${L} lines` : '', go:openPractica},
   ];
@@ -2085,12 +2105,18 @@ function startZLevel(lv){
   let items=[];
   if(lv.k==='words') items=words.slice(0,8).map(w=>({t:'w',w,dir:'es'}));
   else if(lv.k==='ask'){ items=qs.map(fi=>({t:'q',fi})); words.slice(0,Math.max(2,7-items.length)).forEach(w=>items.push({t:'w',w,dir:'en'})); }
-  else { items=[...short.slice(0,2).map(fi=>({t:'a',fi})), ...qs.slice(0,2).map(fi=>({t:'q',fi})), ...words.slice(0,2).map(w=>({t:'w',w,dir:'es'})), ...words.slice(2,4).map(w=>({t:'w',w,dir:'en'}))];
+  else { const simple=shuffle(S.unit.frases.map((f,i)=>({f,i})).filter(x=>x.f[0]===li));
+         const arma=[...simple.slice(0,1).map(x=>({t:'a', es:x.f[1], en:x.f[2], key:'z|r'+x.i})), ...short.slice(0, simple.length?1:2).map(fi=>({t:'a', es:plainEs(L.facts[fi][1]), en:L.facts[fi][2], key:'z|f'+li+'_'+fi}))];
+         items=[...arma, ...qs.slice(0,2).map(fi=>({t:'q',fi})), ...words.slice(0,2).map(w=>({t:'w',w,dir:'es'})), ...words.slice(2,4).map(w=>({t:'w',w,dir:'en'}))];
          let k=4; while(items.length<8 && k<words.length){ items.push({t:'w',w:words[k],dir:k%2?'es':'en'}); k++; } }
-  S.zitems=shuffle(items); S.zq=0; S.zlives=3; S.zright=0;
+  S.zitems=shuffle(items).sort((a,b)=>(a.t==='a'?a.es.split(' ').length:0)-(b.t==='a'?b.es.split(' ').length:0) || 0); S.zitems=interleaveArma(S.zitems); S.zq=0; S.zlives=3; S.zright=0;
   $('pTitle').textContent=`${lv.k==='boss'?'👑':lv.e} ${L.t}`;
   show('tplay'); zRound();
 }
+// keep sentence puzzles spread out, shortest first
+function interleaveArma(items){ const a=items.filter(x=>x.t==='a').sort((x,y)=>x.es.split(' ').length-y.es.split(' ').length), o=shuffle(items.filter(x=>x.t!=='a'));
+  if(!a.length) return o; const gap=Math.max(1,Math.floor(o.length/a.length)); const out=[]; let ai=0;
+  o.forEach((x,k)=>{ out.push(x); if((k+1)%gap===0 && ai<a.length) out.push(a[ai++]); }); while(ai<a.length) out.push(a[ai++]); return out; }
 function zHud(){ const n=S.zitems.length; $('pBar').style.width=(100*S.zq/n)+'%'; $('pN').textContent=`${S.zq}/${n}`;
   const h=$('pHearts'); h.style.display=''; h.innerHTML=[0,1,2].map(k=>`<span class="${k>=S.zlives?'lost':''}">❤️</span>`).join(''); }
 const zPick = (pool, right, n) => { const out=[]; for(const x of shuffle(pool)){ if(x!==right && !out.includes(x)) out.push(x); if(out.length>=n) break; } return out; };
@@ -2100,7 +2126,7 @@ function zRound(){
   if(S.zq>=S.zitems.length) return zResult($('pBody'), Math.max(1,S.zlives), true);
   const it=S.zitems[S.zq], li=S.zlevel.li, L=S.unit.lessons[li], body=$('pBody');
   if(it.t==='a'){
-    const f=L.facts[it.fi], es=plainEs(f[1]), words=es.split(' '), key='z|f'+li+'_'+it.fi;
+    const es=it.es, words=es.split(' '), key=it.key, f=[null,null,it.en];
     S.tans=[]; S.ask=()=>talk([key]);
     body.innerHTML=`<div class="tscore">🧩 Put the sentence in order. <span>(${f[2]})</span></div><div class="answer" id="aAns"></div><div class="tiles" id="aTiles"></div>
       <div class="tbtns"><button class="smallbtn" id="aUndo">↩️ Quitar</button><button class="smallbtn" id="aCheck" style="background:var(--leaf)">✓ ¡Listo!</button></div>`;
@@ -2199,11 +2225,22 @@ $('vQuiz').onclick=()=>startTPlay('palabras');
 $('pSay').onclick=()=>{ if(!S.tlocked && S.ask) S.ask(); };
 
 /* --- shared runner for Arma la frase, word test and fox quiz --- */
-const TPLAY={ arma:{title:'🧩 Arma la frase', n:8}, quiz:{title:'❓ Quiz del zorro', n:10}, palabras:{title:'✏️ Palabras: test', n:10} };
+const TPLAY={ arma:{title:'🧩 Arma la frase', n:10}, quiz:{title:'❓ Quiz del zorro', n:10}, palabras:{title:'✏️ Palabras: test', n:10} };
+// 2 sentences of 3 words, 2 of 4, 2 of 5–6, 2 of 7–8 (or short book facts), then 2 presentation lines
+function armaLadder(u){
+  const F=u.frases.map((f,i)=>({es:f[1], en:f[2], key:'z|r'+i})), n=x=>x.es.split(' ').length;
+  const facts=u.lessons.flatMap((L,li)=>L.facts.map((f,fi)=>({es:plainEs(f[1]), en:f[2], key:'z|f'+li+'_'+fi}))).filter(x=>n(x)>=7 && n(x)<=10);
+  const pres=unitLines(u).map((l,i)=>({es:l.es, en:l.en, key:'z|s'+i})).filter(x=>n(x)<=13);
+  const take=(list,k)=>shuffle(list).slice(0,k);
+  const out=[...take(F.filter(x=>n(x)===3),2), ...take(F.filter(x=>n(x)===4),2), ...take(F.filter(x=>n(x)>=5&&n(x)<=6),2),
+             ...take([...F.filter(x=>n(x)>=7), ...facts],2), ...take(pres,2)];
+  out.forEach((x,k)=>x.step=k<2?1:k<4?2:k<6?3:k<8?4:5);
+  return out;
+}
 function startTPlay(kind){
   S.zlevel=null; $('pHearts').style.display='none';
   const u=S.unit; S.tk=kind; S.tq=0; S.tright=0; S.run++;
-  const pool = kind==='arma' ? shuffle(unitLines(u).map((l,i)=>({...l,i})).filter(l=>l.es.split(' ').length<=13)).slice(0,TPLAY.arma.n)
+  const pool = kind==='arma' ? armaLadder(u)
              : kind==='quiz' ? shuffle(u.quiz.map(x=>({q:x.q, key:'z|k'+x.li+'_'+x.fi}))).slice(0,TPLAY.quiz.n)
              : shuffle(u.vocab.map((v,i)=>({v,i}))).slice(0,TPLAY.palabras.n);
   S.tpool=pool; $('pTitle').textContent=TPLAY[kind].title;
@@ -2216,8 +2253,8 @@ function tRound(){
   const it=S.tpool[S.tq], body=$('pBody');
   if(S.tk==='arma'){
     const words=it.es.split(' ');
-    S.tans=[]; S.ask=()=>talk(['z|s'+it.i]);
-    body.innerHTML=`<div class="tscore">Tap the words in the right order. <span style="color:var(--muted)">(${it.en})</span></div><div class="answer" id="aAns"></div><div class="tiles" id="aTiles"></div>
+    S.tans=[]; S.ask=()=>talk([it.key]);
+    body.innerHTML=`<div class="tscore">${'⭐'.repeat(it.step)} Nivel ${it.step} · Tap the words in order.<br><span style="color:var(--muted)">(${it.en})</span></div><div class="answer" id="aAns"></div><div class="tiles" id="aTiles"></div>
       <div class="tbtns"><button class="smallbtn" id="aUndo">↩️ Quitar</button><button class="smallbtn" id="aHint">💡 Pista</button><button class="smallbtn" id="aCheck" style="background:var(--leaf)">✓ ¡Listo!</button></div>`;
     let order; do { order=shuffle(words.map((w,k)=>k)); } while(words.length>2 && order.every((v,k)=>v===k));
     order.forEach(k=>{ const t=document.createElement('button'); t.className='tile'; t.textContent=words[k]; t._k=k;
@@ -2230,7 +2267,7 @@ function tRound(){
       const okSoFar=S.tans.every((t,j)=>words[t._k]===words[j]); if(!okSoFar){ while(S.tans.length && !S.tans.every((t,j)=>words[t._k]===words[j])) S.tans.pop().classList.remove('used'); }
       const nxt=[...$('aTiles').children].find(t=>!t.classList.contains('used') && t.textContent===words[S.tans.length]); if(nxt){ nxt.classList.add('used'); S.tans.push(nxt); } drawAns(); };
     $('aCheck').onclick=()=>{ if(S.tlocked) return; if(S.tans.length<words.length){ const a=$('aAns'); a.classList.remove('bad'); void a.offsetWidth; a.classList.add('bad'); return; }
-      const ok = S.tans.map(t=>t.textContent).join(' ')===it.es; tAnswer(ok, $('aAns'), ['z|s'+it.i], it.es); };
+      const ok = S.tans.map(t=>t.textContent).join(' ')===it.es; tAnswer(ok, $('aAns'), [it.key], it.es); };
     autoAsk(); return;
   }
   // multiple choice: fox quiz (Spanish question) or word test (Spanish word → English)
