@@ -582,7 +582,7 @@ const groundMat=new THREE.MeshLambertMaterial({map:groundTex,...STENCIL_GROUND})
 const ground=new THREE.Mesh(new THREE.PlaneGeometry(W,W).rotateX(-Math.PI/2),groundMat);
 ground.position.set(W/2,0,W/2);ground.receiveShadow=true;ground.renderOrder=-1;scene.add(ground);
 const outer=new THREE.Mesh(new THREE.PlaneGeometry(W*6,W*6).rotateX(-Math.PI/2),new THREE.MeshLambertMaterial({color:'#83c98a',...STENCIL_GROUND}));
-outer.position.set(W/2,-0.5,W/2);outer.renderOrder=-1;outer.receiveShadow=true;scene.add(outer);
+outer.position.set(W/2,-3,W/2);outer.renderOrder=-1;outer.receiveShadow=true;scene.add(outer);
 
 function rr(x,y,w,h,r){g.beginPath();if(g.roundRect)g.roundRect(x,y,w,h,r);else g.rect(x,y,w,h);}
 function disk(x,y,r,col){g.fillStyle=col;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}
@@ -863,7 +863,7 @@ function runSpawner(dt){const f=1-timeLeft/roundLen;
    Only things near a mouth are simulated. Each mouth carries a ring-shaped piece of
    ground with a real opening in it; things too big to fit also hit a "lid" a little
    way down, so they wedge and tip instead of falling through.               */
-const GRAV=-260,PSTEP=1/60,MAX_ACTIVE=160,RING_OUT=460;
+const GRAV=-260,PSTEP=1/60,MAX_ACTIVE=120,RING_OUT=460;
 let world=null,pAcc=0;const active=new Set();
 const G_OBJ=1,grp=(mem,f)=>((mem&0xffff)<<16)|(f&0xffff),ringBit=i=>1<<(1+i),lidBit=i=>1<<(7+i);
 const lidDepth=h=>clamp(h.r*.45,6,70);
@@ -875,12 +875,18 @@ function buildRing(h){for(const c of h.pcols)world.removeCollider(c,false);h.pco
   const wedge=(Ra,ya,Rb,yb,a0,a1)=>{const c0=Math.cos(a0),s0=Math.sin(a0),c1=Math.cos(a1),s1=Math.sin(a1);
     return new Float32Array([Ra*c0,ya,Ra*s0,Ra*c1,ya,Ra*s1,Rb*c0,yb,Rb*s0,Rb*c1,yb,Rb*s1,Ra*c0,ya-TH,Ra*s0,Ra*c1,ya-TH,Ra*s1,Rb*c0,yb-TH,Rb*s0,Rb*c1,yb-TH,Rb*s1]);};
   for(let k=0;k<N;k++){const a0=k/N*TAU,a1=(k+1)/N*TAU;
-    h.pcols.push(world.createCollider(RAPIER.ColliderDesc.convexHull(wedge(r,-sd,Rf,0,a0,a1)).setFriction(.6).setCollisionGroups(gs),h.pb));
+    h.pcols.push(world.createCollider(RAPIER.ColliderDesc.convexHull(wedge(r,-sd,Rf,0,a0,a1)).setFriction(.2).setCollisionGroups(gs),h.pb));
     h.pcols.push(world.createCollider(RAPIER.ColliderDesc.convexHull(wedge(Rf,0,R1,0,a0,a1)).setFriction(.9).setCollisionGroups(gs),h.pb));}
   const ld=lidDepth(h);
   h.pcols.push(world.createCollider(RAPIER.ColliderDesc.cylinder(4,h.r*1.22).setTranslation(0,-ld-4,0).setFriction(.9).setCollisionGroups(grp(lidBit(h.idx),G_OBJ)),h.pb));
   h.pR=h.r;}
 const tooBig=(o,h)=>o.r>=h.rTo*.92;
+// lowest corner of an object's box (world y)
+function lowestY(o,t,q){const m10=2*(q.x*q.y+q.w*q.z),m11=1-2*(q.x*q.x+q.z*q.z),m12=2*(q.y*q.z-q.w*q.x);
+  return t.y-(Math.abs(m10)*o.t.w/2+Math.abs(m11)*o.h/2+Math.abs(m12)*o.t.d/2);}
+// is any part of it over some mouth's opening or sloped lip?
+function overAnyMouth(o,t){for(const h of holes){if(!h.alive)continue;const lip=h.r*1.18+Math.max(10,h.r*.45);
+  if(Math.hypot(t.x-h.x,t.z-h.y)<lip+o.r/.75)return true;}return false;}
 const groupsFor=(o,h)=>grp(G_OBJ,G_OBJ|ringBit(h.idx)|(tooBig(o,h)?lidBit(h.idx):0));
 function restPose(o){if(o.pose)return o.pose;_qy.setFromAxisAngle(_up,objYaw(o));return{x:o.x,y:o.h/2,z:o.y,q:{x:_qy.x,y:_qy.y,z:_qy.z,w:_qy.w}};}
 window.__dbg={act:0,eat:0,reset:0,deact:0,stuck:0};
@@ -911,9 +917,14 @@ function stepPhysics(dt){
     if(Math.abs(h.r-h.pR)>h.pR*.03)buildRing(h);
     h.pb.setTranslation({x:h.x,y:h.alive?0:-50000,z:h.y},true);}
   // wake up things a mouth has reached
-  for(const h of holes){if(!h.alive)continue;const reach=h.r+30;
-    for(const o of objs){if(o.body||o.gone||o.spawnT<1||active.size>=MAX_ACTIVE)continue;const rr=reach+o.r;
-      const dx=o.x-h.x,dy=o.y-h.y;if(dx>rr||dx<-rr||dy>rr||dy<-rr||dx*dx+dy*dy>rr*rr)continue;activate(o,h);}}
+  for(const h of holes){if(!h.alive)continue;const reach=h.r+30,tiny=h.rTo*.2;
+    for(const o of objs){if(o.body||o.gone||o.fall||o.spawnT<1)continue;const rr=reach+o.r;
+      const dx=o.x-h.x,dy=o.y-h.y;if(dx>rr||dx<-rr||dy>rr||dy<-rr)continue;const d2=dx*dx+dy*dy;if(d2>rr*rr)continue;
+      if(o.r<tiny){const m=h.r*1.1-o.r*.4;if(d2<m*m){o.pose=null;o.eaten=true;startFall(o,h);creditEat(o,h);}continue;}
+      if(active.size<MAX_ACTIVE)activate(o,h);}}
+  let anyFell=false;
+  for(const o of objs)if(o.fall){o.fall.t+=dt/o.fall.dur;if(o.fall.t>=1){o.gone=true;anyFell=true;removeInst(o);}}
+  if(anyFell)objs=objs.filter(o=>!o.gone);
   // the ground under a sleeping body can move away (the mouth slid under it): keep those awake
   for(const o of active){if(o.eaten||!o.body.isSleeping())continue;const h=o.hole;if(!h.alive)continue;
     const d=Math.hypot(o.x-h.x,o.y-h.y);if(d<h.r+o.r+8)o.body.wakeUp();}
@@ -927,9 +938,13 @@ function stepPhysics(dt){
     const[nh,nd]=nearestHole(o);
     if(nh&&nh!==h&&t.y>o.h*.3&&nd<Math.hypot(h.x-o.x,h.y-o.y)-h.r-4){o.hole=h=nh;o.big=tooBig(o,h);o.col.setCollisionGroups(groupsFor(o,h));}
     const big=tooBig(o,h);if(big!==o.big){o.big=big;o.col.setCollisionGroups(groupsFor(o,h));}
-    // something that fits but is jammed across the opening: let it drop
+    const q=o.body.rotation(),low=lowestY(o,t,q);
+    // left behind partly underground (the mouth moved away): ease it back up onto the street
+    if(low<-.8&&!overAnyMouth(o,t)){o.body.setTranslation({x:t.x,y:t.y+Math.min(-low,1.5-low*.3),z:t.z},true);
+      const v=o.body.linvel();o.body.setLinvel({x:v.x*.8,y:Math.max(0,v.y),z:v.z*.8},true);continue;}
+    // something that fits but is jammed in the opening or on the lip: let it drop
     if(!big){const dc=Math.hypot(t.x-h.x,t.z-h.y);
-      if(dc<h.r*.7&&t.y<o.h*.5-1&&o.body.linvel().y>-8){o.stuckT=(o.stuckT||0)+dt;if(o.stuckT>.7){o.col.setCollisionGroups(grp(G_OBJ,0));o.stuckT=0;}}
+      if(dc<h.r*1.2&&low<-1&&o.body.linvel().y>-8){o.stuckT=(o.stuckT||0)+dt;if(o.stuckT>.6){o.col.setCollisionGroups(grp(G_OBJ,0));o.stuckT=0;}}
       else o.stuckT=0;}
     // fell below the ground: inside a mouth = eaten; outside one = put it back
     if(!big&&t.y<-(o.h*.5)-3){
@@ -937,7 +952,7 @@ function stepPhysics(dt){
       else{__dbg.reset++;(__dbg.rl=__dbg.rl||[]).length<6&&__dbg.rl.push([o.k,h.name,Math.hypot(t.x-h.x,t.z-h.y).toFixed(1),h.r.toFixed(1),t.y.toFixed(1)]);o.body.setTranslation({x:t.x,y:o.h/2+1,z:t.z},true);o.body.setLinvel({x:0,y:0,z:0},true);o.body.setAngvel({x:0,y:0,z:0},true);}
       continue;}
     // fall back asleep once every mouth has moved on
-    if(nd>o.r+70&&t.y>-2){const v=o.body.linvel(),w=o.body.angvel();
+    if(nd>o.r+70&&t.y>-2&&low>-.8){const v=o.body.linvel(),w=o.body.angvel();
       if(o.body.isSleeping()||(v.x*v.x+v.y*v.y+v.z*v.z<9&&w.x*w.x+w.y*w.y+w.z*w.z<.4))deactivate(o);}}
   if(anyGone)objs=objs.filter(o=>!o.gone);
 }
@@ -1005,18 +1020,21 @@ const _p=new THREE.Vector3();
 let shadowHalf=0;
 function toScreen(x,y,z){_p.set(x,y,z).project(camera);return _p.z>1?null:[(_p.x+1)/2*CW,(1-_p.y)/2*CH];}
 function syncScene(now,dt){
-  for(const o of objs){if(o.spawnT<1)o.spawnT=Math.min(1,o.spawnT+dt*2.2);if(o.body||o.moving||o.spawnT<1||(o.wb&&(o.vx||o.vy)))setInst(o);}
+  for(const o of objs){if(o.spawnT<1)o.spawnT=Math.min(1,o.spawnT+dt*2.2);if(o.body||o.fall||o.moving||o.spawnT<1||(o.wb&&(o.vx||o.vy)))setInst(o);}
   updateGhosts(dt);
   for(const im of dirty)im.instanceMatrix.needsUpdate=true;dirty.clear();
   shake=Math.max(0,shake-dt*20);
   const sx=shake?(Math.random()-.5)*shake:0,sz=shake?(Math.random()-.5)*shake:0;
   const D=cam.D,cx=cam.x+sx,cz=cam.y+sz;
   camera.position.set(cx,D*Math.sin(PITCH),cz+D*Math.cos(PITCH));camera.lookAt(cx,0,cz);
-  scene.fog.near=D*1.15;scene.fog.far=D*2.7;camera.far=D*3+1500;camera.updateProjectionMatrix();
+  scene.fog.near=D*1.15;scene.fog.far=D*2.7;camera.near=clamp(D*.04,10,220);camera.far=D*3+1500;camera.updateProjectionMatrix();
   // sun follows the view
   const half=Math.round(D*.62*Math.max(1,camera.aspect)/50)*50+150;
-  if(half!==shadowHalf){shadowHalf=half;const sc=sun.shadow.camera;sc.left=-half;sc.right=half;sc.top=half;sc.bottom=-half;sc.updateProjectionMatrix();}
-  const tz=cz-D*.12;sun.target.position.set(cx,0,tz);sun.position.set(cx+SUN_DIR.x*1400,SUN_DIR.y*1400,tz+SUN_DIR.z*1400);
+  if(half!==shadowHalf){shadowHalf=half;const sc=sun.shadow.camera;sc.left=-half;sc.right=half;sc.top=half;sc.bottom=-half;sc.updateProjectionMatrix();
+    sun.shadow.normalBias=clamp(2*half/sun.shadow.mapSize.x*1.2,.6,6);}
+  // snap the shadow to its own pixel grid so it doesn't shimmer as the camera glides
+  const texel=2*shadowHalf/sun.shadow.mapSize.x,scx=Math.round(cx/texel)*texel;
+  const tz=Math.round((cz-D*.12)/texel)*texel;sun.target.position.set(scx,0,tz);sun.position.set(scx+SUN_DIR.x*1400,SUN_DIR.y*1400,tz+SUN_DIR.z*1400);
   // holes & labels
   const lead=rank()[0];
   for(const h of holes){syncHole(h,now);
