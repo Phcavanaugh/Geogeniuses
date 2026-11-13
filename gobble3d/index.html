@@ -113,6 +113,7 @@
       <button class="opt" data-v="60">1 min</button>
       <button class="opt on" data-v="120">2 min</button>
       <button class="opt" data-v="180">3 min</button>
+      <button class="opt" data-v="300">5 min</button>
     </div>
     <button class="go" id="play" disabled>Loading…</button>
     <div class="how">📱 Drag your finger anywhere to steer<br>🖱️ Point with the mouse · ⌨️ or use arrow keys / WASD</div>
@@ -158,23 +159,27 @@ const T={
   icecream:{w:44,d:22,h:38,pts:14}, garbage:{w:52,d:24,h:24,pts:18}, fire:{w:60,d:24,h:28,pts:22},
   carousel:{w:80,d:80,h:58,pts:70}, ferris:{w:130,d:90,h:135,pts:160},
   rowhouse:{w:26,d:44,h:44,pts:12},
+  person:{w:6,d:6,h:16,pts:1}, median:{w:60,d:10,h:8,pts:4},
+  rocket:{w:60,d:60,h:150,pts:70}, duckstatue:{w:90,d:80,h:90,pts:80}, bean:{w:130,d:80,h:54,pts:90}, dino:{w:150,d:50,h:112,pts:110},
+  supertall:{w:130,d:130,h:580,pts:600,rr:215}, robot:{w:120,d:90,h:330,pts:700,rr:225}, stadium:{w:286,d:286,h:82,pts:800,rr:235},
   diner:{w:84,d:60,h:42,pts:35}, gas:{w:110,d:90,h:40,pts:55}, apartment:{w:100,d:80,h:100,pts:65},
   firestation:{w:104,d:84,h:72,pts:70}, school:{w:130,d:100,h:70,pts:90}, office:{w:116,d:116,h:230,pts:150},
 };
-for(const k in T){T[k].r=Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;}
+for(const k in T){T[k].r=T[k].rr||Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;}   // rr: giants that need level 30+
 const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'],['icecream','🍦','ICE CREAM TRUCKS!'],['garbage','🚛','GARBAGE TRUCKS!'],
   ['fire','🚒','FIRE TRUCKS!'],['bus','🚌','BUSES are yummy now!'],['rowhouse','🏘️','ROW HOUSES!'],['house','🏠','You can eat HOUSES!'],['carousel','🎠','The CAROUSEL!'],
   ['shop','🏪','STORES too!'],['diner','🍔','DINERS!'],['apartment','🏢','APARTMENTS!'],['gas','⛽','GAS STATIONS!'],
-  ['firestation','🚒','FIRE STATIONS!'],['school','🏫','SCHOOLS!'],['office','🌆','GLASS TOWERS!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
-const WSPD={duck:[10,25],dog:[18,42],cat:[8,22],pigeon:[6,16]};
+  ['firestation','🚒','FIRE STATIONS!'],['school','🏫','SCHOOLS!'],['office','🌆','GLASS TOWERS!'],['rocket','🚀','ROCKET STATUES!'],['duckstatue','🦆','The GIANT DUCK!'],
+  ['bean','🫘','The BIG SILVER BEAN!'],['dino','🦖','The DINOSAUR!'],['supertall','🗼','MEGA TOWERS!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
+const WSPD={duck:[10,25],dog:[18,42],cat:[8,22],pigeon:[6,16],person:[10,20]};
 const CAR_COLS=['#e74c3c','#3498db','#2ecc71','#9b59b6','#f1c40f','#ecf0f1','#ff8c42','#1abc9c'];
 const ROOFS=['#c0392b','#8e4b2f','#5d6d7e','#2e4053','#a04000','#b5523b'];
 const WALLS=['#ffe6a7','#ffd1dc','#cde7ff','#d5f5d0','#f6e3c6','#e8d9ff'];
 const SHOPS=['#ff8a80','#80d8ff','#ffd180','#b9f6ca','#ea80fc','#ffab91'];
 const TOWERS=['#7f8c8d','#5d7fa3','#6c7a89','#4f6d7a','#8a8fb0'];
 const TOWER_H=[125,155,140,175,148];
-const OFFICE_H=[195,215,235],APT_H=[70,86,78];
-const VARIANTS={rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2};
+const OFFICE_H=[195,215,235],APT_H=[70,86,78],SUPER_H=[360,400];
+const VARIANTS={person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2};
 
 let objs=[],blocks=[];
 function mk(k,x,y,o){const t=T[k];
@@ -185,6 +190,7 @@ function mk(k,x,y,o){const t=T[k];
   if(o)Object.assign(ob,o);
   if(k==='tower')ob.h=TOWER_H[ob.v]+12;
   if(k==='office')ob.h=OFFICE_H[ob.v]+16;
+  if(k==='supertall')ob.h=SUPER_H[ob.v]+190;
   if(k==='apartment')ob.h=APT_H[ob.v]+14;
   ob.tilt=0;ob.tv=0;ob.tgt=0;ob.spawnT=1;
   if(ob.vert){const s=ob.w;ob.w=ob.d;ob.d=s;}
@@ -197,9 +203,10 @@ function place(list,k,x0,y0,x1,y1,extra){const t=T[k];
 function genTown(){
   objs=[];blocks=[];
   const mid=(N-1)/2,fun=new Set();
-  const civic=new Set();
+  const civic=new Set();let stadiumAt=null,robotAt=null,superLeft=2;const sculpts=['bean','duckstatue','dino','rocket'].sort(()=>Math.random()-.5);
   while(fun.size<2){const i=ri(0,N-1),j=ri(0,N-1);if(!(i===mid&&j===mid))fun.add(i+','+j);}
-  while(civic.size<2){const i=ri(0,N-1),j=ri(0,N-1),k=i+','+j;if(!(i===mid&&j===mid)&&!fun.has(k))civic.add(k);}
+  do{stadiumAt=ri(1,N-2)+','+ri(1,N-2);}while(stadiumAt===mid+','+mid||fun.has(stadiumAt));
+  while(civic.size<2){const i=ri(0,N-1),j=ri(0,N-1),k=i+','+j;if(!(i===mid&&j===mid)&&!fun.has(k)&&k!==stadiumAt)civic.add(k);}
   const wander=(list,k,x0,y0,x1,y1)=>place(list,k,x0,y0,x1,y1,{wb:[x0,y0,x1,y1],moveT:rnd(0,1)});
   for(let i=0;i<N;i++)for(let j=0;j<N;j++){
     const bx=ROAD+i*(BLOCK+ROAD),by=ROAD+j*(BLOCK+ROAD);
@@ -208,6 +215,7 @@ function genTown(){
     if(i===mid&&j===mid)type='park';
     else if(fun.has(i+','+j))type='fun';
     else if(civic.has(i+','+j))type='civic';
+    else if(stadiumAt===i+','+j)type='stadium';
     else{const r=Math.random();
       if(dc<1.6)type=r<.55?'downtown':r<.85?'shops':'park';
       else if(dc<2.6)type=r<.2?'downtown':r<.5?'shops':r<.65?'houses':r<.82?'rows':'park';
@@ -216,7 +224,11 @@ function genTown(){
     const list=[],x0=bx+16,y0=by+16,x1=bx+BLOCK-16,y1=by+BLOCK-16,cs=(x1-x0)/2;
     const cell=(ci,cj)=>[x0+(ci+.5)*cs,y0+(cj+.5)*cs];
     if(type==='park'){
-      if(i===mid&&j===mid||Math.random()<.4)list.push(mk('fountain',bx+BLOCK/2,by+BLOCK/2));
+      // park centerpiece: a fountain or a big sculpture; one park gets the giant robot
+      if(!robotAt&&!(i===mid&&j===mid)){robotAt=i+','+j;list.push(mk('robot',bx+BLOCK/2,by+BLOCK/2));}
+      else if(i===mid&&j===mid)list.push(mk('fountain',bx+BLOCK/2,by+BLOCK/2));
+      else if(sculpts.length)list.push(mk(sculpts.pop(),bx+BLOCK/2,by+BLOCK/2));
+      else if(Math.random()<.5)list.push(mk('fountain',bx+BLOCK/2,by+BLOCK/2));
       for(let n=ri(6,10);n--;)place(list,'tree',x0,y0,x1,y1);
       for(let n=ri(4,7);n--;)place(list,'bush',x0,y0,x1,y1);
       for(let n=3;n--;)place(list,'bench',x0,y0,x1,y1);
@@ -227,6 +239,8 @@ function genTown(){
       for(let n=ri(1,2);n--;)place(list,'picnic',x0,y0,x1,y1);
       for(let n=ri(1,2);n--;)wander(list,'dog',x0,y0,x1,y1);
       if(Math.random()<.35)place(list,'cart',x0,y0,x1,y1);
+    }else if(type==='stadium'){
+      list.push(mk('stadium',bx+BLOCK/2,by+BLOCK/2));
     }else if(type==='rows'){
       for(const ry of[y0+48,y0+178])for(let n=0;n<10;n++)list.push(mk('rowhouse',x0+14+n*27,ry));
       for(let n=ri(3,5);n--;)place(list,'tree',x0,y0,x1,y1);
@@ -283,7 +297,7 @@ function genTown(){
     }else{
       const diag=Math.random()<.5;
       for(let ci=0;ci<2;ci++)for(let cj=0;cj<2;cj++){const[cx,cy]=cell(ci,cj);
-        if((ci===cj)===diag){list.push(mk(Math.random()<.5?'tower':'office',cx,cy));continue;}
+        if((ci===cj)===diag){list.push(mk(superLeft-->0&&Math.random()<.6?'supertall':Math.random()<.5?'tower':'office',cx,cy));continue;}
         const r=Math.random();list.push(mk(r<.35?'office':r<.65?'apartment':'shop',cx,cy));}
       for(let n=ri(2,4);n--;)place(list,'trash',x0,y0,x1,y1);
       for(let n=ri(2,4);n--;)place(list,'cone',x0,y0,x1,y1);
@@ -294,6 +308,11 @@ function genTown(){
     }
     for(const[cx,cy]of[[bx+7,by+7],[bx+BLOCK-7,by+7],[bx+7,by+BLOCK-7],[bx+BLOCK-7,by+BLOCK-7]])
       if(Math.random()<.35&&fits(list,cx,cy,9,9))list.push(mk('sign',cx,cy));
+    // people strolling the sidewalks (and the park paths)
+    for(let n=ri(3,6);n--;){const side=ri(0,3),a=bx+10,b=bx+BLOCK-10,c=by+10,d=by+BLOCK-10;
+      const wb=side===0?[a,by+2,b,by+12]:side===1?[a,by+BLOCK-12,b,by+BLOCK-2]:side===2?[bx+2,c,bx+12,d]:[bx+BLOCK-12,c,bx+BLOCK-2,d];
+      mk('person',rnd(wb[0],wb[2]),rnd(wb[1],wb[3]),{wb,moveT:rnd(0,1)});}
+    if(type==='park'||type==='fun'||type==='civic')for(let n=ri(2,4);n--;)wander(list,'person',x0,y0,x1,y1);
     const edges=[[bx,by+7,1,0],[bx,by+BLOCK-7,1,0],[bx+7,by,0,1],[bx+BLOCK-7,by,0,1]];
     for(const[ex,ey,ux,uy]of edges)for(let s=24;s<BLOCK-20;s+=34){
       if(Math.random()<.3){const k=pick(['lamp','lamp','hydrant','trash','cone','cone','mailbox','flower']);
@@ -306,6 +325,11 @@ function genTown(){
         const o={vert,moving:true};
         if(vert)mk(k,c+lane*18,p,Object.assign(o,{vy:sp}));else mk(k,p,c+lane*18,Object.assign(o,{vx:sp}));}
     }}
+  // planted medians down the middle of a few boulevards
+  const blvd=[...Array(N-1).keys()].map(i=>i+1).sort(()=>Math.random()-.5);
+  for(const[ri_,vert]of[[blvd[0],false],[blvd[1],false],[blvd[2],true],[blvd[3],true]]){const c=ROAD/2+ri_*(BLOCK+ROAD);
+    for(let k=0;k<N;k++){const s0=ROAD+k*(BLOCK+ROAD)+20;for(let m=0;m<4;m++){const p=s0+30+m*70;
+      if(vert)mk('median',c,p,{vert:true,yaw:Math.PI/2});else mk('median',p,c);}}}
   for(let n=40;n--;){const i=ri(0,N),c=ROAD/2+i*(BLOCK+ROAD),p=rnd(30,W-30);
     if(Math.random()<.5)mk('cone',p,c+pick([-34,34]));else mk('cone',c+pick([-34,34]),p);}
 }
@@ -524,6 +548,62 @@ Object.assign(BUILD,{
     p.box(96,10,96,shade(c,-.3),0,H);p.box(70,14,70,'#dfe6ec',0,H+10);p.cyl(1.2,1.2,30,6,'#9aa3ad',0,H+24);p.ball(2.6,'#ff5252',0,H+55,0,0);
     p.box(30,22,2,'#2f4a5c',0,0,57);p.box(26,18,2.2,'#bfe8f5',0,0,57.2);},
 });
+Object.assign(BUILD,{
+  person(p,v){const shirt=['#e53935','#1e88e5','#43a047','#fdd835','#8e24aa','#fb8c00','#00acc1','#ec407a'][v],skin=['#f1c27d','#c68642','#8d5524','#ffdbac','#e0ac69'][v%5],
+      pants=['#37474f','#3e2723','#1a237e','#455a64'][v%4],hair=['#3e2723','#212121','#f9a825','#6d4c41','#b71c1c'][v%5];
+    p.box(1.8,6.5,1.8,pants,0,0,-1.1);p.box(1.8,6.5,1.8,pants,0,0,1.1);p.box(3.2,6.4,4.8,shirt,0,6.4);
+    p.box(1.4,5.2,1.3,shirt,0,7.2,3);p.box(1.4,5.2,1.3,shirt,0,7.2,-3);p.ball(2.2,skin,0,15.1,0,1);p.ball(2.3,hair,-.5,16.1,0,1,1,.55,1);
+    p.box(.5,.5,.5,'#1d2733',2,15.4,.8);p.box(.5,.5,.5,'#1d2733',2,15.4,-.8);},
+  median(p){p.box(60,2.6,10,'#cfc8b6');p.box(57,1.2,7.6,'#79c068',0,2.6);
+    for(const x of[-21,-7,7,21])p.ball(3.4,x%2?'#3f9a4d':'#4caf50',x,5.6,0,0);
+    for(const x of[-14,0,14])p.box(1.6,1.6,1.6,x?'#ff87b0':'#ffe381',x,3.8,1.6);},
+  rocket(p){p.box(56,8,56,'#b9b2a3');p.box(48,4,48,'#d6d0c2',0,8);p.cyl(14,14,92,16,'#f4f4f4',0,12);p.add(new THREE.ConeGeometry(14,36,16),'#e53935',0,122);
+    p.cyl(14.4,14.4,6,16,'#e53935',0,40);p.add(new THREE.CylinderGeometry(5.5,5.5,1.2,16),'#4fc3f7',0,82,13.6,HP);p.add(new THREE.CylinderGeometry(6.4,6.4,.8,16),'#9aa3ad',0,82,13.2,HP);
+    for(let a=0;a<3;a++){const r=a*TAU/3;p.box(3,26,16,'#e53935',Math.cos(r)*17,12,Math.sin(r)*17,-r);}
+    p.add(new THREE.ConeGeometry(10,16,12),'#ffb300',0,4,0,Math.PI);},
+  duckstatue(p){p.cyl(40,42,8,24,'#b9b2a3');p.ball(1,'#ffd23a',0,36,0,2,36,26,30);p.ball(1,'#ffdf5e',-6,46,0,1,22,10,24);
+    p.ball(21,'#ffd23a',20,68,0,2);p.add(new THREE.ConeGeometry(9,20,10),'#fb8c00',44,63,0,0,0,-HP);
+    for(const z of[-9,9]){p.ball(4.2,'#ffffff',34,74,z,1);p.ball(2.4,'#1d2733',37.5,74.5,z*1.05,1);}
+    p.add(new THREE.ConeGeometry(10,22,8),'#ffd23a',-38,50,0,0,0,HP*1.4);},
+  bean(p){p.box(150,1.2,96,'#e8e3d6');p.ball(1,'#cfd8e0',0,30,0,3,62,26,36);p.ball(1,'#eef3f7',-14,40,-6,2,30,10,18);
+    p.ball(1,'#a7b4c0',8,18,10,2,40,10,22);p.ball(5,'#ffffff',-24,48,-8,1);},
+  dino(p){const g='#58b368',dk='#3f8f50';
+    for(const x of[-10,14])for(const z of[-11,11])p.box(14,34,12,dk,x,0,z);
+    p.box(64,36,32,g,0,30);p.box(30,14,26,shade(g,.15),2,24);
+    p.box(26,26,22,g,32,52);p.box(32,22,26,g,46,76);p.box(26,7,22,'#f2e7d5',50,73);
+    for(let i=0;i<5;i++)p.box(3,4,1.4,'#ffffff',38+i*5,73,12);for(const z of[-10,10]){p.ball(3.4,'#ffffff',58,90,z,1);p.ball(1.8,'#1d2733',60.5,90.5,z*1.05,0);}
+    p.box(8,12,6,g,28,48,15);p.box(8,12,6,g,28,48,-15);
+    let w=28,h=24,x=-32;for(let i=0;i<5;i++){p.box(18,h,w,g,x,40-i*5);x-=16;w*=.75;h*=.72;}
+    for(let i=0;i<7;i++)p.add(new THREE.ConeGeometry(4,9,4),'#ff8f00',36-i*12,70-Math.max(0,i-3)*6+(i<2?14:0));},
+  supertall(p,v){const c=['#6fb7e0','#8fa3cf'][v],H=SUPER_H[v],fin=shade(c,-.35);
+    p.box(124,H,124,shade(c,.08));p.box(132,6,132,'#d9dee3');
+    for(let y=12;y<H;y+=14)p.box(125,1.8,125,shade(c,-.22),0,y);
+    for(let x=-50;x<=50;x+=20){p.box(2,H,1.4,fin,x,0,62.4);p.box(1.4,H,2,fin,62.4,0,x);p.box(1.4,H,2,fin,-62.4,0,x);}
+    p.box(96,60,96,shade(c,-.05),0,H);for(let y=H+12;y<H+60;y+=14)p.box(97,1.6,97,shade(c,-.25),0,y);
+    p.box(64,44,64,shade(c,.12),0,H+60);p.box(68,4,68,'#d9dee3',0,H+104);
+    p.cyl(4,1.2,86,8,'#cfd8dc',0,H+108);p.ball(4,'#ff5252',0,H+196,0,1);
+    p.box(36,30,2,'#2f4a5c',0,0,63);p.box(30,24,2.2,'#bfe8f5',0,0,63.2);},
+  robot(p){const m='#9aa7b4',dk='#5b6773',ac='#ff7043';
+    p.box(110,10,84,'#b9b2a3');
+    for(const z of[-20,20]){p.box(30,16,36,dk,0,10,z);p.box(26,90,28,m,0,26,z);p.box(30,14,32,ac,0,64,z);}
+    p.box(80,30,70,dk,0,116);p.box(90,96,76,m,0,146);p.box(60,40,4,'#cfd8dc',0,176,38.5);
+    for(const[x,c]of[[-16,'#4fc3f7'],[0,'#ffd23a'],[16,'#ff5252']])p.ball(6,c,x,196,40,1);
+    for(const z of[-50,50]){p.ball(16,dk,0,232,z,1);p.box(22,80,22,m,0,160,z*1.12,0,z>0?-.15:.15);p.box(28,24,28,ac,0,150,z*1.2);}
+    p.box(56,10,50,dk,0,242);p.box(64,52,58,m,0,252);p.box(50,14,1.6,'#263238',0,272,29.5);
+    for(const z of[-12,12])p.ball(6,'#ffeb3b',0,279,29.5+0*z,1);
+    p.ball(6,'#ffeb3b',-14,279,30,1);p.ball(6,'#ffeb3b',14,279,30,1);p.box(30,3,1.6,'#90a4ae',0,262,29.6);
+    p.cyl(1.6,1.6,30,6,'#cfd8dc',0,304);p.ball(5,'#ff5252',0,336,0,1);
+    for(const z of[-33,33])p.box(6,16,10,ac,0,262,z);},
+  stadium(p){const R=128,seg=28;p.box(286,1.4,286,'#d9d6cf');
+    for(let i=0;i<seg;i++){const a=i/seg*TAU,x=Math.cos(a),z=Math.sin(a);
+      p.box(32,52,16,'#e3e6ea',x*R,0,z*R,-a+HP);p.box(32,6,17,i%2?'#1e88e5':'#e53935',x*R,46,z*R,-a+HP);
+      p.box(30,12,26,i%2?'#ef5350':'#42a5f5',x*(R-18),26,z*(R-18),-a+HP,0,0);p.box(30,10,22,i%2?'#ffca28':'#66bb6a',x*(R-36),14,z*(R-36),-a+HP);}
+    p.box(170,2,110,'#4caf50',0,1.4);for(let x=-70;x<=70;x+=28)p.box(14,.4,110,'#5cbf60',x,3.4);
+    p.box(170,.6,1.6,'#ffffff',0,3.6,-54);p.box(170,.6,1.6,'#ffffff',0,3.6,54);p.box(1.6,.6,110,'#ffffff',0,3.6);
+    p.add(new THREE.TorusGeometry(14,.8,4,24),'#ffffff',0,3.8,0,HP);
+    for(const[x,z]of[[-120,-120],[120,-120],[-120,120],[120,120]]){p.cyl(2.4,3,80,8,'#90a4ae',x,0,z);p.box(26,12,4,'#fff59d',x,80,z,Math.atan2(x,z));}
+    p.box(70,20,4,'#263238',0,56,-140);p.box(64,14,4.4,'#4fc3f7',0,59,-140);},
+});
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();BUILD[k](p,v);g=p.build();geoCache.set(key,g);}return g;}
 const OBJ_MAT=new THREE.MeshLambertMaterial({vertexColors:true});
@@ -596,7 +676,7 @@ function paintGround(){
     rounded(b.x-3,b.y-3,BLOCK+6,BLOCK+6,10,'#e9e1d1');
     for(let s=10;s<BLOCK;s+=24){line(b.x+s,b.y+1,b.x+s,b.y+10,'rgba(150,140,120,.25)',1);line(b.x+s,b.y+BLOCK-10,b.x+s,b.y+BLOCK-1,'rgba(150,140,120,.25)',1);
       line(b.x+1,b.y+s,b.x+10,b.y+s,'rgba(150,140,120,.25)',1);line(b.x+BLOCK-10,b.y+s,b.x+BLOCK-1,b.y+s,'rgba(150,140,120,.25)',1);}
-    rounded(b.x+11,b.y+11,BLOCK-22,BLOCK-22,7,b.type==='park'?park:(b.type==='houses'||b.type==='rows')?homes:b.type==='shops'?shops:b.type==='fun'?'#f6dfc9':b.type==='civic'?'#dfe7cf':city);
+    rounded(b.x+11,b.y+11,BLOCK-22,BLOCK-22,7,b.type==='park'?park:(b.type==='houses'||b.type==='rows')?homes:b.type==='shops'?shops:b.type==='fun'?'#f6dfc9':b.type==='civic'?'#dfe7cf':b.type==='stadium'?'#d9d6cf':city);
     if(b.type==='park'){const cx=b.x+BLOCK/2,cy=b.y+BLOCK/2;
       rounded(cx-7,b.y+11,14,BLOCK-22,5,'#ead9b1');rounded(b.x+11,cy-7,BLOCK-22,14,5,'#ead9b1');
       for(let i=0;i<60;i++){const xx=b.x+19+hash(b.x,b.y,i)*282,yy=b.y+19+hash(b.y,b.x,i+49)*282;
@@ -697,7 +777,7 @@ const COLORS=['#ff5a5f','#3a86ff','#8338ec','#06d6a0','#ffbe0b','#ff70a6','#fb56
 let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myColor=COLORS[0];
 /* ---- levels: growth fills a bar; size only changes on level-up ---- */
 // Each level costs 20 points until about level 7, then 21% more per level. Each level = 10% bigger. No top level.
-const LSTEP=1.1,LV_COST=L=>Math.round(Math.max(20,6*Math.pow(1.21,L-1)));   // points to go from level L to L+1
+const LSTEP=1.1,LV_COST=L=>Math.round(Math.max(20,6*Math.pow(1.21,Math.min(L,20)-1)*Math.pow(1.08,Math.max(0,L-20))));   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
 const LV_TOTAL=[0,0];for(let L=1;L<400;L++)LV_TOTAL[L+1]=LV_TOTAL[L]+LV_COST(L);
 const lvR=L=>R0*Math.pow(LSTEP,L-1);
 const lvPts=L=>LV_TOTAL[Math.min(L,400)];                                  // total points needed to reach level L
@@ -818,9 +898,9 @@ function think(b){
 }
 
 /* ================= spawning during the round ================= */
-const SPAWN_SMALL={park:['duck','ball','bush','tree','bench','flower','dog','picnic','cart','swings','slide'],houses:['ball','flower','cat','dog','bike','bush','tree','mailbox'],
-  rows:['ball','flower','cat','bike','trash','bush','tree'],shops:['pigeon','trash','flower','bike','cone','cart','dumpster','phone','bench'],
-  downtown:['pigeon','trash','flower','cone','dumpster','phone','bike'],fun:['ball','pigeon','cart','flower','picnic'],civic:['ball','bike','dog','tree','picnic','flower']};
+const SPAWN_SMALL={park:['person','person','duck','ball','bush','tree','bench','flower','dog','picnic','cart','swings','slide'],houses:['person','ball','flower','cat','dog','bike','bush','tree','mailbox'],
+  rows:['person','person','ball','flower','cat','bike','trash','bush','tree'],shops:['person','person','person','pigeon','trash','flower','bike','cone','cart','dumpster','phone','bench'],
+  downtown:['person','person','person','pigeon','trash','flower','cone','dumpster','phone','bike'],fun:['person','person','ball','pigeon','cart','flower','picnic'],civic:['person','person','ball','bike','dog','tree','picnic','flower']};
 const SPAWN_BLD={houses:['house','house','rowrow','apartment'],rows:['rowrow','rowrow','house'],shops:['shop','diner','gas'],downtown:['office','tower','apartment','shop']};
 let spawnClk=0,bldClk=0,carClk=0,startCount=0,startCars=0;
 function spawnObj(k,x,y,extra){const ms=(meshByKind.get(k)||[]).filter(m=>m.count<m.cap);if(!ms.length)return null;
@@ -980,7 +1060,7 @@ function updateGhosts(dt){const h=player,want=new Set();
     const tg=want.has(o)?1:0;o.gf=(o.gf||0)+(tg-(o.gf||0))*Math.min(1,dt*7);
     if(tg===0&&o.gf<.04){o.gf=0;o.ghost=false;ghosted.delete(o);setInst(o);}else if(!o.ghost){o.ghost=true;setInst(o);}}
   let i=0;for(const o of ghosted){const gm=ghostPool[i++];gm.geometry=o.im.geometry;objMatrix(o);gm.matrix.copy(_m);gm.matrixWorldNeedsUpdate=true;
-    gm.material.opacity=1-.84*o.gf;gm.visible=true;}
+    gm.material.opacity=1-(o.h>200?.93:.84)*o.gf;gm.visible=true;}
   for(;i<ghostPool.length;i++)ghostPool[i].visible=false;}
 
 /* ---------- automatic quality: step down if the device struggles ---------- */
