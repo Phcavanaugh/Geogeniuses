@@ -687,7 +687,7 @@ function syncHole(h,now){const m=h.m;if(!m)return;const vis=h.alive;
   m.teeth.position.set(h.x,0,h.y);m.teeth.scale.set(r*(1+.07*c),r*(1-.55*c),r*(1+.07*c));
   m.eyes.position.set(h.x,0,h.y);m.eyes.scale.setScalar(r);
   const open=(h.blink<.13?.12:1)*(1-.6*c);
-  _ax.set(h.mvx*.75,.93,.37+h.mvy*.75).normalize();
+  _ax.set(h.mvx*.75,Math.sin(PITCH),Math.cos(PITCH)+h.mvy*.75).normalize();
   for(const e of m.E){const ex=e.side*.3,ey=.36,ez=-.9;
     e.w.position.set(ex,ey,ez);e.w.scale.set(.21,.21*open,.21);
     e.p.position.set(ex+_ax.x*.13,ey+_ax.y*.13*open,ez+_ax.z*.13);e.p.scale.set(.105,.105*open,.105);
@@ -780,7 +780,7 @@ function newGame(){
   ['topl','timer','board','mute'].forEach(i=>$(i).classList.remove('hidden'));
   qualityClock=-2;updateHud();
 }
-function targetD(r){return (420+r*14+r*r*.06)*(camera.aspect<1?1.15:1);}
+function targetD(r){return (430+r*10+r*r*.02)*(camera.aspect<1?1.15:1);}
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');toastT=2.2;}
 function showMsg(t,s){const e=$('msg');e.textContent=t;e.style.display='block';msgT=s;}
 function rank(){return holes.slice().sort((a,b)=>b.score-a.score);}
@@ -1007,7 +1007,10 @@ function update(dt){
     if(mode==='easy'&&b===player)continue;
     if(Math.hypot(a.x-b.x,a.y-b.y)<a.r-b.r*.5)eatHole(a,b);}
   runSpawner(dt);
-  cam.x+=(player.x-cam.x)*Math.min(1,dt*3.5);cam.y+=(player.y-cam.y)*Math.min(1,dt*3.5);
+  // follow the player, but stop at the edge of town so the city always fills the screen
+  const Dn=cam.D,hw=Dn*.36*Math.max(.45,Math.min(1.6,camera.aspect)),nearZ=Dn*.33,farZ=Dn*.45;
+  const tx=hw*2<W?clamp(player.x,hw,W-hw):W/2,ty=nearZ+farZ<W?clamp(player.y,farZ,W-nearZ):W/2;
+  cam.x+=(tx-cam.x)*Math.min(1,dt*3.5);cam.y+=(ty-cam.y)*Math.min(1,dt*3.5);
   cam.D+=(targetD(player.rTo)-cam.D)*Math.min(1,dt*2.2);
   if(toastT>0){toastT-=dt;if(toastT<=0)$('toast').classList.remove('show');}
   if(msgT>0){msgT-=dt;if(msgT<=0)$('msg').style.display='none';}
@@ -1015,7 +1018,7 @@ function update(dt){
 }
 
 /* ================= render sync ================= */
-const PITCH=THREE.MathUtils.degToRad(68);
+const PITCH=THREE.MathUtils.degToRad(47);
 const _p=new THREE.Vector3();
 let shadowHalf=0;
 function toScreen(x,y,z){_p.set(x,y,z).project(camera);return _p.z>1?null:[(_p.x+1)/2*CW,(1-_p.y)/2*CH];}
@@ -1027,14 +1030,14 @@ function syncScene(now,dt){
   const sx=shake?(Math.random()-.5)*shake:0,sz=shake?(Math.random()-.5)*shake:0;
   const D=cam.D,cx=cam.x+sx,cz=cam.y+sz;
   camera.position.set(cx,D*Math.sin(PITCH),cz+D*Math.cos(PITCH));camera.lookAt(cx,0,cz);
-  scene.fog.near=D*1.15;scene.fog.far=D*2.7;camera.near=clamp(D*.04,10,220);camera.far=D*3+1500;camera.updateProjectionMatrix();
+  scene.fog.near=D*1.5;scene.fog.far=D*3.4;camera.near=clamp(D*.04,10,220);camera.far=D*3+1500;camera.updateProjectionMatrix();
   // sun follows the view
-  const half=Math.round(D*.62*Math.max(1,camera.aspect)/50)*50+150;
+  const half=Math.round(D*.8*Math.max(1,camera.aspect)/50)*50+150;
   if(half!==shadowHalf){shadowHalf=half;const sc=sun.shadow.camera;sc.left=-half;sc.right=half;sc.top=half;sc.bottom=-half;sc.updateProjectionMatrix();
     sun.shadow.normalBias=clamp(2*half/sun.shadow.mapSize.x*1.2,.6,6);}
   // snap the shadow to its own pixel grid so it doesn't shimmer as the camera glides
   const texel=2*shadowHalf/sun.shadow.mapSize.x,scx=Math.round(cx/texel)*texel;
-  const tz=Math.round((cz-D*.12)/texel)*texel;sun.target.position.set(scx,0,tz);sun.position.set(scx+SUN_DIR.x*1400,SUN_DIR.y*1400,tz+SUN_DIR.z*1400);
+  const tz=Math.round((cz-D*.3)/texel)*texel;sun.target.position.set(scx,0,tz);sun.position.set(scx+SUN_DIR.x*1400,SUN_DIR.y*1400,tz+SUN_DIR.z*1400);
   // holes & labels
   const lead=rank()[0];
   for(const h of holes){syncHole(h,now);
