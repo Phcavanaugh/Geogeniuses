@@ -66,6 +66,7 @@
   .sw{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #e3e8e1,0 3px 4px rgba(29,43,50,.16);cursor:pointer;transition:transform .17s}
   .sw.on{box-shadow:0 0 0 3px #304a59,0 3px 6px rgba(29,43,50,.23);transform:scale(1.09)}
   .opts{display:flex;gap:8px}
+  .maps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.maps .opt{font-size:13px;padding:9px 4px}
   .opt{flex:1;border:3px solid #e3eae6;background:#fff;border-radius:14px;padding:10px 6px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;line-height:1.2;color:#354d57;box-shadow:0 3px 0 rgba(48,72,77,.09)}
   .opt small{display:block;font-weight:600;font-size:11px;color:#6a7b82;margin-top:3px}
   .opt.on{background:#fff1da;border-color:#f1aa6c}
@@ -103,6 +104,15 @@
     <input type="text" id="name" maxlength="12" value="Me">
     <label class="lbl">Your hole color</label>
     <div class="swatches" id="swatches"></div>
+    <label class="lbl">Map</label>
+    <div class="maps" id="maps">
+      <button class="opt on" data-v="town">🏙️ Gobble Town</button>
+      <button class="opt" data-v="chicago">🌭 Chicago</button>
+      <button class="opt" data-v="newyork">🗽 New York</button>
+      <button class="opt" data-v="dc">🏛️ Washington DC</button>
+      <button class="opt" data-v="london">💂 London</button>
+      <button class="opt" data-v="tokyo">🗼 Tokyo</button>
+    </div>
     <label class="lbl">Mode</label>
     <div class="opts" id="modes">
       <button class="opt on" data-v="easy">🐣 Little kids<small>Nobody can gobble you</small></button>
@@ -162,7 +172,15 @@ const T={
   rowhouse:{w:26,d:44,h:44,pts:12},
   person:{w:6,d:6,h:16,pts:1}, median:{w:60,d:10,h:8,pts:4},
   rocket:{w:60,d:60,h:150,pts:70}, duckstatue:{w:90,d:80,h:90,pts:80}, bean:{w:130,d:80,h:54,pts:90}, dino:{w:150,d:50,h:112,pts:110},
-  supertall:{w:130,d:130,h:580,pts:600,rr:215}, robot:{w:120,d:90,h:330,pts:700,rr:225}, stadium:{w:286,d:286,h:82,pts:800,rr:235},
+  supertall:{w:130,d:130,h:580,pts:600,rr:215},
+  // city landmarks and themed things
+  willis:{w:120,d:120,h:560,pts:650,rr:230}, hancock:{w:100,d:100,h:480,pts:500,rr:205}, buckingham:{w:150,d:150,h:52,pts:120},
+  empire:{w:110,d:110,h:550,pts:600,rr:225}, chrysler:{w:96,d:96,h:470,pts:450,rr:190}, liberty:{w:96,d:96,h:235,pts:500,rr:210}, billboard:{w:42,d:8,h:52,pts:15},
+  capitol:{w:260,d:150,h:185,pts:700,rr:235}, wamonument:{w:44,d:44,h:375,pts:450,rr:200}, lincoln:{w:150,d:100,h:72,pts:150}, whitehouse:{w:150,d:96,h:64,pts:130},
+  bigben:{w:64,d:64,h:362,pts:450,rr:200}, towerbridge:{w:280,d:60,h:165,pts:700,rr:240}, eye:{w:200,d:60,h:215,pts:600,rr:215}, stpauls:{w:150,d:110,h:156,pts:180},
+  tokyotower:{w:130,d:130,h:340,pts:600,rr:225}, skytree:{w:100,d:100,h:602,pts:800,rr:245}, pagoda:{w:74,d:74,h:152,pts:90}, torii:{w:84,d:14,h:66,pts:40},
+  sakura:{w:34,d:34,h:40,pts:6}, vending:{w:12,d:10,h:24,pts:3}, postbox:{w:10,d:10,h:20,pts:2},
+  taxi:{w:38,d:20,h:22,pts:8}, cab:{w:38,d:20,h:24,pts:8}, dbus:{w:64,d:24,h:40,pts:25}, robot:{w:120,d:90,h:330,pts:700,rr:225}, stadium:{w:286,d:286,h:82,pts:800,rr:235},
   diner:{w:84,d:60,h:42,pts:35}, gas:{w:110,d:90,h:40,pts:55}, apartment:{w:100,d:80,h:100,pts:65},
   firestation:{w:104,d:84,h:72,pts:70}, school:{w:130,d:100,h:70,pts:90}, office:{w:116,d:116,h:230,pts:150},
 };
@@ -171,7 +189,13 @@ const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'
   ['fire','🚒','FIRE TRUCKS!'],['bus','🚌','BUSES are yummy now!'],['rowhouse','🏘️','ROW HOUSES!'],['house','🏠','You can eat HOUSES!'],['carousel','🎠','The CAROUSEL!'],
   ['shop','🏪','STORES too!'],['diner','🍔','DINERS!'],['apartment','🏢','APARTMENTS!'],['gas','⛽','GAS STATIONS!'],
   ['firestation','🚒','FIRE STATIONS!'],['school','🏫','SCHOOLS!'],['office','🌆','GLASS TOWERS!'],['rocket','🚀','ROCKET STATUES!'],['duckstatue','🦆','The GIANT DUCK!'],
-  ['bean','🫘','The BIG SILVER BEAN!'],['dino','🦖','The DINOSAUR!'],['supertall','🗼','MEGA TOWERS!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
+  ['bean','🫘','The BIG SILVER BEAN!'],['dino','🦖','The DINOSAUR!'],['supertall','🗼','MEGA TOWERS!'],
+  ['taxi','🚕','TAXIS!'],['cab','🚕','BLACK CABS!'],['dbus','🚌','DOUBLE-DECKERS!'],['billboard','📺','BILLBOARDS!'],['torii','⛩️','The TORII GATE!'],
+  ['pagoda','🏯','The PAGODA!'],['buckingham','⛲','BUCKINGHAM FOUNTAIN!'],['whitehouse','🏠','The WHITE HOUSE!'],['lincoln','🏛️','The LINCOLN MEMORIAL!'],
+  ['stpauls','🏰',"ST PAUL'S!"],['chrysler','✨','The CHRYSLER BUILDING!'],['wamonument','🔺','The WASHINGTON MONUMENT!'],['bigben','🕰️','BIG BEN!'],
+  ['hancock','🏢','The HANCOCK!'],['liberty','🗽','The STATUE OF LIBERTY!'],['eye','🎡','The LONDON EYE!'],['empire','🏙️','The EMPIRE STATE!'],
+  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
+let UNL=UNLOCKS;   // only the unlocks this map actually has
 const WSPD={duck:[10,25],dog:[18,42],cat:[8,22],pigeon:[6,16],person:[10,20]};
 const CAR_COLS=['#e74c3c','#3498db','#2ecc71','#9b59b6','#f1c40f','#ecf0f1','#ff8c42','#1abc9c'];
 const ROOFS=['#c0392b','#8e4b2f','#5d6d7e','#2e4053','#a04000','#b5523b'];
@@ -180,10 +204,38 @@ const SHOPS=['#ff8a80','#80d8ff','#ffd180','#b9f6ca','#ea80fc','#ffab91'];
 const TOWERS=['#7f8c8d','#5d7fa3','#6c7a89','#4f6d7a','#8a8fb0'];
 const TOWER_H=[125,155,140,175,148];
 const OFFICE_H=[195,215,235],APT_H=[70,86,78],SUPER_H=[360,400];
-const VARIANTS={person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2};
+const VARIANTS={billboard:6,vending:3,person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2};
 
+/* ================= maps =================
+   grid is 7x7 blocks: i = west(0)..east(6), j = north(0)..south(6). Camera looks north. */
+const mixDefault=null;
+const CITIES={
+  town:{name:'Gobble Town',emoji:'🏙️'},
+  chicago:{name:'Chicago',emoji:'🌭',water:(i,j)=>i===6||(j===2&&i>=1&&i<=5),
+    special:{'2,3':['plaza','willis'],'4,1':['plaza','hancock'],'5,3':['park','bean'],'5,4':['park','buckingham'],'6,1':['fun']},
+    mix:(dc,r)=>dc<2?(r<.6?'downtown':r<.88?'shops':'park'):(r<.35?'rows':r<.55?'houses':r<.8?'shops':'park'),
+    cars:['car','car','car','car','taxi','icecream','garbage','fire'],bus:'bus'},
+  newyork:{name:'New York',emoji:'🗽',water:(i,j)=>i===0||i===6||j===6,
+    special:{'2,6':['water','liberty'],'3,3':['plaza','empire'],'4,2':['plaza','chrysler'],'2,2':['times'],'2,0':['park'],'3,0':['park'],'4,0':['park'],'3,1':['park']},
+    mix:(dc,r)=>dc<2.3?(r<.7?'downtown':'shops'):(r<.4?'rows':r<.75?'shops':r<.9?'downtown':'park'),
+    cars:['taxi','taxi','taxi','taxi','car','car','garbage','fire'],bus:'bus'},
+  dc:{name:'Washington DC',emoji:'🏛️',water:(i,j)=>(i===0&&j>=3)||(j===6&&i<=2),sakura:true,
+    special:{'1,3':['plaza','lincoln'],'2,3':['water'],'3,3':['mall','wamonument'],'4,3':['mall'],'5,3':['plaza','capitol'],'3,1':['plaza','whitehouse']},
+    mix:(dc,r)=>r<.35?'rows':r<.6?'houses':r<.78?'shops':r<.9?'park':'downtown',
+    cars:['car','car','car','car','icecream','garbage','fire'],bus:'bus'},
+  london:{name:'London',emoji:'💂',water:(i,j)=>j===3,extra:['postbox','phone'],
+    special:{'5,3':['water','towerbridge'],'2,2':['plaza','bigben'],'2,4':['plaza','eye'],'4,1':['plaza','stpauls']},
+    mix:(dc,r)=>r<.4?'rows':r<.68?'shops':r<.85?'downtown':'park',
+    cars:['car','car','cab','cab','cab','garbage','fire'],bus:'dbus'},
+  tokyo:{name:'Tokyo',emoji:'🗼',water:(i,j)=>i>=5&&j>=5,sakura:true,neon:true,scramble:[3,3],extra:['vending'],
+    special:{'2,4':['plaza','tokyotower'],'5,1':['plaza','skytree'],'1,1':['temple','pagoda'],'1,2':['temple','torii']},
+    mix:(dc,r)=>dc<2?(r<.55?'downtown':r<.9?'shops':'park'):(r<.4?'shops':r<.65?'rows':r<.8?'houses':'park'),
+    cars:['car','car','car','taxi','car','garbage','fire'],bus:'bus'},
+};
+let cityId='town';try{cityId=localStorage.getItem('gobbleMap')||'town';}catch(e){}if(!CITIES[cityId])cityId='town';
+let city=CITIES[cityId];
 let objs=[],blocks=[];
-function mk(k,x,y,o){const t=T[k];
+function mk(k,x,y,o){if(k==='tree'&&city.sakura&&Math.random()<.55)k='sakura';const t=T[k];
   const ob={k,t,x,y,w:t.w,d:t.d,h:t.h,r:t.r,pts:t.pts,vx:0,vy:0,fall:null,gone:false,v:0,yaw:0,spin:rnd(-1,1)};
   if(VARIANTS[k])ob.v=ri(0,VARIANTS[k]-1);
   if(['tree','bush','ball','flower','carousel','cat','dog','pigeon','duck'].includes(k))ob.yaw=rnd(0,TAU);
@@ -203,31 +255,49 @@ function place(list,k,x0,y0,x1,y1,extra){const t=T[k];
 
 function genTown(){
   objs=[];blocks=[];
-  const mid=(N-1)/2,fun=new Set();
-  const civic=new Set();let stadiumAt=null,robotAt=null,superLeft=2;const sculpts=['bean','duckstatue','dino','rocket'].sort(()=>Math.random()-.5);
-  while(fun.size<2){const i=ri(0,N-1),j=ri(0,N-1);if(!(i===mid&&j===mid))fun.add(i+','+j);}
-  do{stadiumAt=ri(1,N-2)+','+ri(1,N-2);}while(stadiumAt===mid+','+mid||fun.has(stadiumAt));
-  while(civic.size<2){const i=ri(0,N-1),j=ri(0,N-1),k=i+','+j;if(!(i===mid&&j===mid)&&!fun.has(k)&&k!==stadiumAt)civic.add(k);}
+  const mid=(N-1)/2,fun=new Set(),C=city,isTown=!C.special;
+  const civic=new Set();let stadiumAt=null,robotAt=null,superLeft=isTown?2:0;const sculpts=isTown?['bean','duckstatue','dino','rocket'].sort(()=>Math.random()-.5):[];
+  while(isTown&&fun.size<2){const i=ri(0,N-1),j=ri(0,N-1);if(!(i===mid&&j===mid))fun.add(i+','+j);}
+  if(isTown)do{stadiumAt=ri(1,N-2)+','+ri(1,N-2);}while(stadiumAt===mid+','+mid||fun.has(stadiumAt));
+  while(civic.size<(isTown?2:1)){const i=ri(0,N-1),j=ri(0,N-1),k=i+','+j;if(!(i===mid&&j===mid)&&!fun.has(k)&&k!==stadiumAt&&!(C.special&&C.special[k])&&!(C.water&&C.water(i,j)))civic.add(k);}
   const wander=(list,k,x0,y0,x1,y1)=>place(list,k,x0,y0,x1,y1,{wb:[x0,y0,x1,y1],moveT:rnd(0,1)});
   for(let i=0;i<N;i++)for(let j=0;j<N;j++){
     const bx=ROAD+i*(BLOCK+ROAD),by=ROAD+j*(BLOCK+ROAD);
     const dc=Math.hypot(i-mid,j-mid);
-    let type;
-    if(i===mid&&j===mid)type='park';
+    let type;const key=i+','+j,sp=C.special&&C.special[key];
+    if(sp)type=sp[0];
+    else if(C.water&&C.water(i,j))type='water';
+    else if(isTown&&i===mid&&j===mid)type='park';
     else if(fun.has(i+','+j))type='fun';
     else if(civic.has(i+','+j))type='civic';
     else if(stadiumAt===i+','+j)type='stadium';
+    else if(C.mix)type=C.mix(dc,Math.random());
     else{const r=Math.random();
       if(dc<1.6)type=r<.55?'downtown':r<.85?'shops':'park';
       else if(dc<2.6)type=r<.2?'downtown':r<.5?'shops':r<.65?'houses':r<.82?'rows':'park';
       else type=r<.45?'houses':r<.67?'rows':r<.87?'park':'shops';}
-    blocks.push({x:bx,y:by,type});
+    blocks.push({x:bx,y:by,type,i,j});
     const list=[],x0=bx+16,y0=by+16,x1=bx+BLOCK-16,y1=by+BLOCK-16,cs=(x1-x0)/2;
     const cell=(ci,cj)=>[x0+(ci+.5)*cs,y0+(cj+.5)*cs];
-    if(type==='park'){
+    const lm=sp?sp.slice(1):[];
+    for(const k of lm)list.push(mk(k,bx+BLOCK/2,by+BLOCK/2));
+    if(type==='water')continue;            // rivers, lakes and bays: nothing on them but bridges and landmarks
+    if(type==='plaza'||type==='mall'||type==='times'||type==='temple'){
+      const pk=type==='temple'?'sakura':'tree',nT=type==='mall'?ri(2,4):type==='times'?ri(1,2):ri(4,7);
+      for(let n=nT;n--;)place(list,pk,x0,y0,x1,y1);
+      if(type==='times')for(let n=ri(7,10);n--;)place(list,'billboard',x0,y0,x1,y1);
+      for(let n=type==='times'?2:ri(2,4);n--;)place(list,'bench',x0,y0,x1,y1);
+      for(let n=ri(2,4);n--;)place(list,'flower',x0,y0,x1,y1);
+      for(let n=ri(1,2);n--;)place(list,'trash',x0,y0,x1,y1);
+      if(type!=='temple'&&Math.random()<.6)place(list,'cart',x0,y0,x1,y1);
+      for(let n=ri(3,5);n--;)wander(list,'pigeon',x0,y0,x1,y1);
+      for(let n=type==='times'?ri(8,12):ri(3,6);n--;)wander(list,'person',x0,y0,x1,y1);
+      if(C.extra)for(let n=ri(1,2);n--;)place(list,pick(C.extra),x0,y0,x1,y1);
+    }else if(type==='park'){
       // park centerpiece: a fountain or a big sculpture; one park gets the giant robot
-      if(!robotAt&&!(i===mid&&j===mid)){robotAt=i+','+j;list.push(mk('robot',bx+BLOCK/2,by+BLOCK/2));}
-      else if(i===mid&&j===mid)list.push(mk('fountain',bx+BLOCK/2,by+BLOCK/2));
+      if(lm.length){}
+      else if(isTown&&!robotAt&&!(i===mid&&j===mid)){robotAt=i+','+j;list.push(mk('robot',bx+BLOCK/2,by+BLOCK/2));}
+      else if(isTown&&i===mid&&j===mid)list.push(mk('fountain',bx+BLOCK/2,by+BLOCK/2));
       else if(sculpts.length)list.push(mk(sculpts.pop(),bx+BLOCK/2,by+BLOCK/2));
       else if(Math.random()<.5)list.push(mk('fountain',bx+BLOCK/2,by+BLOCK/2));
       for(let n=ri(6,10);n--;)place(list,'tree',x0,y0,x1,y1);
@@ -295,6 +365,7 @@ function genTown(){
       if(Math.random()<.4)place(list,'cart',x0,y0,x1,y1);
       place(list,'dumpster',x0,y0,x1,y1);
       if(Math.random()<.4)place(list,'phone',x0,y0,x1,y1);
+      if(C.neon)for(let n=ri(2,3);n--;)place(list,'billboard',x0,y0,x1,y1);
     }else{
       const diag=Math.random()<.5;
       for(let ci=0;ci<2;ci++)for(let cj=0;cj<2;cj++){const[cx,cy]=cell(ci,cj);
@@ -306,6 +377,7 @@ function genTown(){
       for(let n=ri(1,2);n--;)place(list,'dumpster',x0,y0,x1,y1);
       if(Math.random()<.5)place(list,'phone',x0,y0,x1,y1);
       for(let n=2;n--;)place(list,'flower',x0,y0,x1,y1);
+      if(C.neon)for(let n=ri(2,4);n--;)place(list,'billboard',x0,y0,x1,y1);
     }
     for(const[cx,cy]of[[bx+7,by+7],[bx+BLOCK-7,by+7],[bx+7,by+BLOCK-7],[bx+BLOCK-7,by+BLOCK-7]])
       if(Math.random()<.35&&fits(list,cx,cy,9,9))list.push(mk('sign',cx,cy));
@@ -316,13 +388,13 @@ function genTown(){
     if(type==='park'||type==='fun'||type==='civic')for(let n=ri(2,4);n--;)wander(list,'person',x0,y0,x1,y1);
     const edges=[[bx,by+7,1,0],[bx,by+BLOCK-7,1,0],[bx+7,by,0,1],[bx+BLOCK-7,by,0,1]];
     for(const[ex,ey,ux,uy]of edges)for(let s=24;s<BLOCK-20;s+=34){
-      if(Math.random()<.3){const k=pick(['lamp','lamp','hydrant','trash','cone','cone','mailbox','flower']);
+      if(Math.random()<.3){const k=pick(['lamp','lamp','hydrant','trash','cone','cone','mailbox','flower',...(C.extra||[])]);
         const x=ex+ux*s,y=ey+uy*s;if(fits(list,x,y,T[k].w,T[k].d))list.push(mk(k,x,y));}}
   }
   for(let i=0;i<=N;i++){const c=ROAD/2+i*(BLOCK+ROAD);
     for(const vert of[false,true])for(const lane of[-1,1]){
       const sp=rnd(45,85)*lane,n=ri(2,4),gap=W/n,busI=Math.random()<.35?ri(0,n-1):-1;
-      for(let m=0;m<n;m++){const p=m*gap+rnd(0,gap*.5),k=m===busI?'bus':pick(['car','car','car','car','car','car','icecream','garbage','fire']);
+      for(let m=0;m<n;m++){const p=m*gap+rnd(0,gap*.5),k=m===busI?(C.bus||'bus'):pick(C.cars||['car','car','car','car','car','car','icecream','garbage','fire']);
         const o={vert,moving:true};
         if(vert)mk(k,c+lane*18,p,Object.assign(o,{vy:sp}));else mk(k,p,c+lane*18,Object.assign(o,{vx:sp}));}
     }}
@@ -605,6 +677,134 @@ Object.assign(BUILD,{
     for(const[x,z]of[[-120,-120],[120,-120],[-120,120],[120,120]]){p.cyl(2.4,3,80,8,'#90a4ae',x,0,z);p.box(26,12,4,'#fff59d',x,80,z,Math.atan2(x,z));}
     p.box(70,20,4,'#263238',0,56,-140);p.box(64,14,4.4,'#4fc3f7',0,59,-140);},
 });
+// square tower that narrows from bottom side b to top side t
+function sqf(p,b,t,h,c,y){p.add(new THREE.CylinderGeometry(t*Math.SQRT1_2,b*Math.SQRT1_2,h,4),c,0,y+h/2,0,0,Math.PI/4);}
+Object.assign(BUILD,{
+  /* ---------- Chicago ---------- */
+  willis(p){const k='#262a31',b='#3d4753',H=440;p.box(130,3,130,'#c9c5bd');
+    const hs=[[.5,.9,.62],[.73,1,1],[.5,.73,.88]];
+    for(let a=0;a<3;a++)for(let c=0;c<3;c++){const h=H*hs[a][c],x=(c-1)*38,z=(a-1)*38;p.box(38,h,38,k,x,3,z);
+      for(let y=18;y<h-4;y+=18)p.box(38.6,1.4,38.6,b,x,3+y,z);}
+    for(const x of[0,38])p.cyl(1.8,1.2,112,6,'#e8e8e8',x,3+H,0);},
+  hancock(p){const k='#23262b',H=380;p.box(110,3,110,'#c9c5bd');sqf(p,96,62,H,k,3);
+    for(let y=24;y<H;y+=24){const sd=96-34*(y/H)+1.2;sqf(p,sd,sd-.2,1.6,'#4a525c',3+y);}
+    for(let i=0;i<5;i++){const y0=i*76,sm=96-34*((y0+38)/H),len=Math.hypot(sm,76),ang=Math.atan2(sm,76);
+      for(const sgn of[-1,1]){p.add(new THREE.BoxGeometry(2.6,len,1.4),'#4a525c',0,3+y0+38,sm/2+.9,0,0,sgn*ang);
+        p.add(new THREE.BoxGeometry(1.4,len,2.6),'#4a525c',sm/2+.9,3+y0+38,0,sgn*ang,0,0);p.add(new THREE.BoxGeometry(1.4,len,2.6),'#4a525c',-sm/2-.9,3+y0+38,0,sgn*ang,0,0);}}
+    sqf(p,62,58,10,'#3a4048',3+H);for(const x of[-12,12])p.cyl(1.8,1.2,96,6,'#e8e8e8',x,13+H,0);},
+  buckingham(p){p.cyl(75,75,4,32,'#e8dcc4');p.cyl(70,70,1,32,'#64b8d3',0,4);
+    p.cyl(36,40,12,24,'#e3d4b6',0,4);p.cyl(33,33,1,24,'#7cc8e0',0,16);p.cyl(18,22,10,20,'#e3d4b6',0,16);p.cyl(16,16,1,20,'#7cc8e0',0,26);
+    p.cyl(8,10,10,16,'#e3d4b6',0,26);p.add(new THREE.ConeGeometry(5,18,10),'#f4ffff',0,45);
+    for(let a=0;a<4;a++){const r=a*TAU/4+TAU/8;p.box(8,10,14,'#4f8f6a',Math.cos(r)*54,4,Math.sin(r)*54,-r);
+      p.add(new THREE.ConeGeometry(2,14,6),'#e8fbff',Math.cos(r)*46,16,Math.sin(r)*46);}
+    for(let a=0;a<12;a++){const r=a*TAU/12;p.ball(2,'#e8fbff',Math.cos(r)*30,20,Math.sin(r)*30,0);}},
+  /* ---------- New York ---------- */
+  empire(p){const c='#d9ccb2',d='#9e927c';p.box(116,4,116,'#c9c5bd');
+    p.box(110,50,110,c,0,4);p.box(84,270,74,c,0,54);
+    for(let x=-36;x<=36;x+=9)p.box(2.4,270,1,d,x,54,37.2);for(let z=-30;z<=30;z+=9){p.box(1,270,2.4,d,42.2,54,z);p.box(1,270,2.4,d,-42.2,54,z);}
+    p.box(66,50,58,c,0,324);p.box(50,34,44,c,0,374);p.box(36,22,32,c,0,408);
+    p.cyl(12,14,30,12,'#cfc4ad',0,430);p.cyl(6,9,28,10,'#e3dccb',0,460);p.cyl(2,1,62,6,'#bdbdbd',0,488);},
+  chrysler(p){const c='#cfd3d8',sv='#eef1f5';p.box(96,4,96,'#c9c5bd');p.box(86,40,86,c,0,4);p.box(72,280,72,c,0,44);
+    for(let y=60;y<320;y+=16)p.box(72.6,1.6,72.6,'#8c939b',0,y);
+    let r=46,y=324;for(let i=0;i<6;i++){p.add(new THREE.CylinderGeometry(r*.8,r,18,4),sv,0,y+9,0,0,Math.PI/4);
+      for(let a=0;a<4;a++){const ang=a*HP;p.box(r*.5,6,1.2,'#2f3b46',Math.sin(ang)*r*.64,y+6,Math.cos(ang)*r*.64,ang);}y+=18;r*=.78;}
+    p.cyl(1.6,.4,70,6,sv,0,y);},
+  liberty(p){const g='#6ec2ad',gd='#4f9e8b';
+    p.add(new THREE.CylinderGeometry(48,48,10,8),'#c9bfa8',0,5,0);p.add(new THREE.CylinderGeometry(36,40,12,8),'#bdb39c',0,16,0);
+    p.box(40,62,40,'#d6cdb8',0,22);p.box(44,6,44,'#c9bfa8',0,84);
+    p.cyl(9,17,80,12,g,0,90);p.box(22,18,16,g,0,160);p.ball(9,g,0,186,0,1);
+    for(let a=-3;a<=3;a++){const r=a*.38;p.add(new THREE.ConeGeometry(1.6,9,4),g,Math.sin(r)*9,197,-Math.abs(Math.sin(r))*2,0,0,-r*.7);}
+    p.add(new THREE.BoxGeometry(6,44,6),g,12,192,0,0,0,-.18);p.cyl(3.4,2,8,8,'#d4a017',16,212);p.add(new THREE.ConeGeometry(4,10,8),'#ffb300',16,225);
+    p.box(10,14,4,gd,-14,160,6,0,0,.3);},
+  billboard(p,v){const c=['#ff1744','#2979ff','#00e676','#ffea00','#d500f9','#ff9100'][v];
+    for(const x of[-14,14])p.cyl(1.4,1.4,30,6,'#78909c',x,0,0);p.box(42,24,3,'#263238',0,28);p.box(38,20,3.6,c,0,30);
+    p.box(26,4,3.8,'#ffffff',-4,38);p.box(14,4,3.8,shade(c,.5),8,32);p.ball(3,'#ffffff',-13,33,1.9,0);},
+  taxi(p){wheels(p,[-11.5,11.5],8.6);p.box(38,8,19,'#ffc107',0,3);p.box(38.4,1.4,19.4,'#212121',0,6.4);
+    p.box(18,6.5,16.5,GLASS,-2,11);p.box(17,1.8,17.4,'#ffca28',-2.5,17.3);p.box(8,3,6,'#fff8e1',-2.5,19.1);
+    p.box(1.2,2,3,'#fff2a8',19,7,6);p.box(1.2,2,3,'#fff2a8',19,7,-6);p.box(1.2,2,3,'#ff6b6b',-19,7,6);p.box(1.2,2,3,'#ff6b6b',-19,7,-6);},
+  /* ---------- Washington DC ---------- */
+  capitol(p){const w='#f4f1ea',sd='#ddd8cc';p.box(270,4,160,'#e0dbcf');
+    p.box(260,46,90,w,0,4);p.box(262,6,92,sd,0,50);p.box(110,64,110,w,0,4);p.box(112,6,112,sd,0,68);
+    for(let x=-44;x<=44;x+=11)p.cyl(2.6,2.6,48,8,'#ffffff',x,10,57);p.add(prismGeo(100,18,8),w,0,58,58);
+    for(const sx of[-1,1])for(let x=40;x<=120;x+=12)p.cyl(2,2,40,6,'#ffffff',sx*x,6,46);
+    p.cyl(40,42,30,24,w,0,74);for(let a=0;a<24;a++){const r=a*TAU/24;p.cyl(1.6,1.6,26,6,'#ffffff',Math.cos(r)*44,76,Math.sin(r)*44);}
+    p.cyl(46,46,4,24,sd,0,102);p.add(new THREE.SphereGeometry(38,24,14,0,TAU,0,HP),w,0,106,0,0,0,0,1,1.25,1);
+    p.cyl(7,8,18,12,w,0,152);p.add(new THREE.ConeGeometry(6,8,12),sd,0,174);p.ball(2.4,'#b0a08a',0,180,0,0);p.box(60,10,24,sd,0,0,72);},
+  wamonument(p){p.cyl(60,60,2,32,'#c8e6a0');
+    for(let a=0;a<24;a++){const r=a*TAU/24;p.cyl(.6,.6,24,4,'#e0e0e0',Math.cos(r)*52,2,Math.sin(r)*52);p.box(6,4,.4,['#e53935','#ffffff','#1e88e5'][a%3],Math.cos(r)*52+3,22,Math.sin(r)*52);}
+    p.box(44,4,44,'#e8e4da',0,2);sqf(p,40,28,340,'#f2efe6',6);p.add(new THREE.ConeGeometry(28*Math.SQRT1_2,30,4),'#e8e4da',0,361,0,0,Math.PI/4);
+    for(let y=60;y<340;y+=70){const sd=40-12*(y/340)+.6;sqf(p,sd,sd-.2,1.2,'#e3dfd3',6+y);}},
+  lincoln(p){const m='#f1ede4',sd='#dcd6c8';p.box(150,10,100,sd);p.box(70,6,24,sd,0,0,58);p.box(54,4,16,sd,0,6,58);
+    p.box(126,48,76,m,0,10);for(let x=-56;x<=56;x+=11.2){p.cyl(2.8,3.1,46,10,'#ffffff',x,10,40);p.cyl(2.8,3.1,46,10,'#ffffff',x,10,-40);}
+    for(let z=-28;z<=28;z+=14){p.cyl(2.8,3.1,46,10,'#ffffff',64,10,z);p.cyl(2.8,3.1,46,10,'#ffffff',-64,10,z);}
+    p.box(136,8,86,m,0,56);p.box(116,8,66,sd,0,64);p.box(40,30,1,'#cfc8b8',0,12,38.6);},
+  whitehouse(p){const w='#f7f7f2',sd='#e2e2da';p.box(150,2,96,'#9ed37e');
+    p.box(110,40,56,w,0,2);p.box(150,24,46,w,0,2);p.box(112,4,58,sd,0,42);
+    for(let x=-48;x<=48;x+=12)for(const y of[12,28])p.box(6,8,.8,'#b9dff0',x,y,28.3);
+    p.cyl(22,22,36,16,w,0,2,28);for(let a=0;a<7;a++){const r=a*Math.PI/6;p.cyl(1.6,1.6,34,8,'#ffffff',Math.cos(r)*24,2,28+Math.sin(r)*24);}
+    p.cyl(24,24,3,16,sd,0,38,28);p.box(36,24,14,w,0,2,-34);p.add(prismGeo(30,10,6),w,0,26,-40);
+    p.cyl(.6,.6,22,6,'#cfd8dc',0,44);for(let k=0;k<3;k++)p.box(10,1.4,.5,k%2?'#ffffff':'#e53935',5,58+k*1.4,0);p.box(4,4.2,.6,'#1e3a8a',2,59.2,.1);},
+  /* ---------- London ---------- */
+  bigben(p){const c='#d9c08b',d='#b99a5e';p.box(64,6,64,'#c9bfa8');p.box(44,210,44,c,0,6);
+    for(let y=30;y<210;y+=24)p.box(44.6,2,44.6,d,0,6+y);for(let x=-14;x<=14;x+=9.3)p.box(3,180,1,d,x,26,22.3);
+    p.box(50,40,50,c,0,216);
+    for(const[fx,fz]of[[0,25.3],[0,-25.3]]){p.add(new THREE.CylinderGeometry(16,16,1.2,24),'#3b2f22',fx,236,fz,HP);p.add(new THREE.CylinderGeometry(14,14,1.4,24),'#fff8e1',fx,236,fz*1.01,HP);
+      p.box(1.4,10,1.4,'#3b2f22',fx,236,fz*1.04);p.box(8,1.4,1.4,'#3b2f22',fx+4,235.3,fz*1.04);}
+    for(const[fx,fz]of[[25.3,0],[-25.3,0]]){p.add(new THREE.CylinderGeometry(16,16,1.2,24),'#3b2f22',fx,236,fz,0,0,HP);p.add(new THREE.CylinderGeometry(14,14,1.4,24),'#fff8e1',fx*1.01,236,fz,0,0,HP);
+      p.box(1.4,10,1.4,'#3b2f22',fx*1.04,236,fz);}
+    p.box(46,26,46,d,0,256);p.add(new THREE.ConeGeometry(33,80,4),'#3f4e5a',0,322,0,0,Math.PI/4);
+    for(const[x,z]of[[-20,-20],[20,-20],[-20,20],[20,20]])p.add(new THREE.ConeGeometry(3,16,6),'#3f4e5a',x,290,z);},
+  towerbridge(p){const sd='#cbb894',b='#5d8aa8';
+    for(const x of[-82,82]){p.box(10,40,58,'#9e9e9e',x,-6,0);p.box(46,124,46,sd,x,0,0);
+      for(let y=50;y<120;y+=24)p.box(10,12,1,'#4a3f30',x,y,23.2);
+      for(const[dx,dz]of[[-20,-20],[20,-20],[-20,20],[20,20]]){p.cyl(4,4,20,8,sd,x+dx,124,dz);p.add(new THREE.ConeGeometry(5,14,8),b,x+dx,151,dz);}
+      p.add(new THREE.ConeGeometry(26,30,4),b,x,139,0,0,Math.PI/4);}
+    p.box(280,8,32,'#7d8a94',0,30);p.box(280,3,32.4,'#5d6a74',0,38);p.box(118,10,20,b,0,112);
+    for(const sx of[-1,1]){p.add(new THREE.BoxGeometry(72,3,3),b,sx*122,69,15,0,0,-sx*1.06);p.add(new THREE.BoxGeometry(72,3,3),b,sx*122,69,-15,0,0,-sx*1.06);}},
+  eye(p){const hub=112,R=95;p.box(80,4,60,'#c9c5bd');
+    p.add(new THREE.TorusGeometry(R,2.4,6,56),'#f5f5f5',0,hub,0);p.add(new THREE.TorusGeometry(R*.96,1.2,4,56),'#e0e0e0',0,hub,0);
+    for(let i=0;i<16;i++){const a=i*TAU/16;p.add(new THREE.BoxGeometry(.8,R,.8),'#e8e8e8',Math.cos(a)*R/2,hub+Math.sin(a)*R/2,0,0,0,a-HP);}
+    p.add(new THREE.CylinderGeometry(7,7,14,12),'#cfd8dc',0,hub,0,HP);
+    for(let i=0;i<28;i++){const a=i*TAU/28;p.ball(1,'#bfe8f5',Math.cos(a)*(R+6),hub+Math.sin(a)*(R+6),0,1,6,4,5);}
+    for(const sx of[-1,1])p.add(new THREE.BoxGeometry(4,124,4),'#e0e0e0',sx*20,hub/2,-20,.36,0,sx*.2);},
+  stpauls(p){const c='#e8e2d3',sd='#d4ccba';p.box(150,4,110,'#cfc8b6');
+    p.box(140,46,90,c,0,4);p.box(142,4,92,sd,0,50);
+    for(let x=-30;x<=30;x+=10)p.cyl(2.6,2.6,40,8,'#ffffff',x,8,48);p.add(prismGeo(76,16,6),c,0,52,48);
+    for(const x of[-58,58]){p.box(22,40,22,c,x,50,30);p.cyl(9,10,16,10,c,x,90,30);p.add(new THREE.ConeGeometry(8,16,10),'#8a9a9a',x,114,30);}
+    p.cyl(38,40,28,24,c,0,54);for(let a=0;a<20;a++){const r=a*TAU/20;p.cyl(1.6,1.6,24,6,'#ffffff',Math.cos(r)*42,56,Math.sin(r)*42);}
+    p.cyl(44,44,3,24,sd,0,80);p.add(new THREE.SphereGeometry(36,24,14,0,TAU,0,HP),'#9aa8a8',0,83,0,0,0,0,1,1.15,1);
+    p.cyl(6,7,16,12,c,0,124);p.add(new THREE.ConeGeometry(5,8,10),'#d4a017',0,144);p.box(1.4,8,1.4,'#d4a017',0,148);p.box(5,1.4,1.4,'#d4a017',0,153);},
+  cab(p){wheels(p,[-11,11],8.6);p.box(38,9,19,'#1c1c1c',0,3);p.box(22,9,17.5,'#1c1c1c',-1,12);p.box(22.4,4,17.8,GLASS,-1,14);
+    p.box(1,6,15,GLASS,10.4,13);p.box(23,1.6,18,'#2b2b2b',-1,21);p.box(5,2.4,3,'#ffca28',2,22.6);
+    p.box(1.2,2,3,'#fff2a8',19,7,6);p.box(1.2,2,3,'#fff2a8',19,7,-6);p.box(1.2,2,3,'#ff6b6b',-19,7,6);p.box(1.2,2,3,'#ff6b6b',-19,7,-6);},
+  dbus(p){wheels(p,[-21,21],10.6);p.box(64,34,24,'#d32f2f',0,3);for(const y of[12,28])p.box(58,6,24.6,GLASS,-1,y);
+    p.box(64.4,1.6,24.4,'#b71c1c',0,22);p.box(64,2,24,'#c62828',0,37);p.box(.8,8,20,GLASS,32.1,11);
+    p.box(1.2,2.2,3.4,'#fff2a8',32.3,5,8);p.box(1.2,2.2,3.4,'#fff2a8',32.3,5,-8);},
+  postbox(p){p.cyl(5,5,1.4,12,'#b71c1c');p.cyl(4.6,4.6,16,12,'#d32f2f',0,1);p.add(new THREE.SphereGeometry(4.6,12,6,0,TAU,0,HP),'#d32f2f',0,17,0);p.box(6,1,1,'#1d1d1d',0,13,4.4);},
+  /* ---------- Tokyo ---------- */
+  tokyotower(p){const R='#ff5a36',Wt='#ffffff';p.box(130,4,130,'#cfc8b6');
+    for(const[sx,sz]of[[-1,-1],[1,-1],[-1,1],[1,1]]){p.add(new THREE.BoxGeometry(10,178,10),R,sx*36,88,sz*36,-sz*.231,0,sx*.225);
+      p.add(new THREE.BoxGeometry(10.6,12,10.6),Wt,sx*44,42,sz*44,-sz*.231,0,sx*.225);}
+    p.box(64,14,64,Wt,0,140);p.box(66,4,66,R,0,154);
+    let sd=40;for(let i=0;i<6;i++){const ns=sd-5;sqf(p,sd,ns,22,i%2?Wt:R,158+i*22);sd=ns;}
+    p.box(18,10,18,Wt,0,290);p.cyl(2.2,1.2,40,6,R,0,300);},
+  skytree(p){const c='#e8f1f8',sb='#b9cfe0';p.box(100,4,100,'#cfc8b6');p.add(new THREE.CylinderGeometry(26,44,40,3),sb,0,24,0);
+    p.cyl(12,26,340,12,c,0,4);for(let y=30;y<340;y+=26){const rr=12+(1-y/340)*14+.6;p.cyl(rr,rr,2,12,sb,0,4+y);}
+    p.cyl(30,24,20,16,'#dfe9f2',0,340);p.cyl(30.6,30.6,3,16,'#6fb7e0',0,350);
+    p.cyl(9,12,80,12,c,0,360);p.cyl(20,18,12,14,'#dfe9f2',0,440);p.cyl(20.6,20.6,2,14,'#6fb7e0',0,446);
+    p.cyl(5,7,70,10,c,0,452);p.cyl(1.6,2.6,80,8,'#ffffff',0,522);},
+  pagoda(p){const r='#c0392b',k='#3e3a39';p.box(74,6,74,'#bdb39c');
+    let y=6,sd=44;for(let i=0;i<5;i++){p.box(sd,15,sd,r,0,y);p.box(sd*.5,8,.8,'#f2e3c6',0,y+4,sd/2+.1);
+      p.add(new THREE.ConeGeometry((sd+22)*Math.SQRT1_2,9,4),k,0,y+15+4.5,0,0,Math.PI/4);y+=24;sd*=.86;}
+    p.cyl(1.6,1.6,26,6,'#d4a017',0,y);for(let i=0;i<5;i++)p.cyl(3,3,1.6,8,'#d4a017',0,y+4+i*4);},
+  torii(p){const r='#e53935';for(const x of[-26,26]){p.cyl(4,4.6,58,12,r,x,0,0);p.cyl(5.5,5.5,4,12,'#2b2b2b',x,0,0);}
+    p.box(66,5,6,r,0,44);p.box(86,5,9,'#2b2b2b',0,58);p.box(80,4,8,r,0,54);p.box(6,10,2,'#2b2b2b',0,46,3.6);},
+  sakura(p){p.cyl(2.2,3,14,7,'#6d4c41');p.ball(13,'#f8bbd0',0,24,0,1);p.ball(9,'#f48fb1',5,31,-3,0);p.ball(8.5,'#fce4ec',-7,20,5,0);
+    p.box(1.6,1.6,1.6,'#fce4ec',4,14.5,6);},
+  vending(p,v){const c=['#e53935','#1e88e5','#f5f5f5'][v];p.box(12,24,10,c);p.box(10,12,.6,'#e3f2fd',0,9,5.1);
+    for(let r=0;r<3;r++)for(let k=0;k<4;k++)p.box(1.6,2.4,.6,['#ff7043','#66bb6a','#42a5f5','#ffca28'][(r+k)%4],-3.6+k*2.4,10+r*3.6,5.5);
+    p.box(10,1.6,.6,'#263238',0,4,5.1);},
+});
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();BUILD[k](p,v);g=p.build();geoCache.set(key,g);}return g;}
 const OBJ_MAT=new THREE.MeshLambertMaterial({vertexColors:true});
@@ -678,11 +878,16 @@ function paintGround(){
   for(let i=0;i<2600;i++)disk(hash(i,1)*W,hash(i,2)*W,1.2,'rgba(255,255,255,.05)');
   const park='#94d894',homes='#b1df9b',shops='#e5dac5',city='#d6d7d6';
   for(const b of blocks){
+    if(b.type==='water'){rect(b.x-5,b.y-5,BLOCK+10,BLOCK+10,'#5fb6df');
+      for(let k=0;k<26;k++){const wx=b.x+hash(b.x,b.y,k)*BLOCK,wy=b.y+hash(b.y,b.x,k+5)*BLOCK;line(wx,wy,wx+14,wy,'rgba(255,255,255,.45)',2);}
+      // railings where roads cross the water
+      for(const x of[b.x-5,b.x+BLOCK+5])line(x,b.y-5,x,b.y+BLOCK+5,'#b0bec5',3);
+      for(const y of[b.y-5,b.y+BLOCK+5])line(b.x-5,y,b.x+BLOCK+5,y,'#b0bec5',3);continue;}
     rect(b.x-5,b.y-5,BLOCK+10,BLOCK+10,'#8d9da6');
     rounded(b.x-3,b.y-3,BLOCK+6,BLOCK+6,10,'#e9e1d1');
     for(let s=10;s<BLOCK;s+=24){line(b.x+s,b.y+1,b.x+s,b.y+10,'rgba(150,140,120,.25)',1);line(b.x+s,b.y+BLOCK-10,b.x+s,b.y+BLOCK-1,'rgba(150,140,120,.25)',1);
       line(b.x+1,b.y+s,b.x+10,b.y+s,'rgba(150,140,120,.25)',1);line(b.x+BLOCK-10,b.y+s,b.x+BLOCK-1,b.y+s,'rgba(150,140,120,.25)',1);}
-    rounded(b.x+11,b.y+11,BLOCK-22,BLOCK-22,7,b.type==='park'?park:(b.type==='houses'||b.type==='rows')?homes:b.type==='shops'?shops:b.type==='fun'?'#f6dfc9':b.type==='civic'?'#dfe7cf':b.type==='stadium'?'#d9d6cf':city);
+    rounded(b.x+11,b.y+11,BLOCK-22,BLOCK-22,7,b.type==='park'?park:(b.type==='houses'||b.type==='rows')?homes:b.type==='shops'?shops:b.type==='fun'?'#f6dfc9':b.type==='civic'?'#dfe7cf':b.type==='stadium'?'#d9d6cf':b.type==='mall'?'#a6d88c':b.type==='plaza'?'#ddd6c8':b.type==='times'?'#cbc6bf':b.type==='temple'?'#e9dfc4':city);
     if(b.type==='park'){const cx=b.x+BLOCK/2,cy=b.y+BLOCK/2;
       rounded(cx-7,b.y+11,14,BLOCK-22,5,'#ead9b1');rounded(b.x+11,cy-7,BLOCK-22,14,5,'#ead9b1');
       for(let i=0;i<60;i++){const xx=b.x+19+hash(b.x,b.y,i)*282,yy=b.y+19+hash(b.y,b.x,i+49)*282;
@@ -707,6 +912,9 @@ function paintGround(){
     for(let q=-3;q<=3;q++){const col='rgba(248,247,230,.75)';
       rounded(x+q*8-3,y-ROAD/2-14,6,14,1,col);rounded(x+q*8-3,y+ROAD/2,6,14,1,col);
       rounded(x-ROAD/2-14,y+q*8-3,14,6,1,col);rounded(x+ROAD/2,y+q*8-3,14,6,1,col);}}
+  if(CITIES[cityId].scramble){const[si,sj]=CITIES[cityId].scramble,x=ROAD/2+si*(BLOCK+ROAD),y=ROAD/2+sj*(BLOCK+ROAD);
+    g.save();g.translate(x,y);for(const a of[Math.PI/4,-Math.PI/4]){g.save();g.rotate(a);for(let q=-6;q<=6;q++)rounded(q*7-2.5,-50,5,100,1,'rgba(248,247,230,.8)');g.restore();}g.restore();}
+  if(CITIES[cityId].special){for(const b of blocks)if(b.type==='mall'){rounded(b.x+11,b.y+BLOCK/2-12,BLOCK-22,24,6,'#e9dcb6');}}
   groundTex.needsUpdate=true;
 }
 
@@ -854,7 +1062,8 @@ function newGame(){
   for(const[n,c]of pool)holes.push(mkHole(n,c,true));
   for(const h of holes){spawn(h);holeMeshes(h);}
   initPhysics();
-  for(const[k]of UNLOCKS)if(T[k].r<player.rTo*.92)unlocked.add(k);
+  UNL=UNLOCKS.filter(u=>objs.some(o=>o.k===u[0]));
+  for(const[k]of UNL)if(T[k].r<player.rTo*.92)unlocked.add(k);
   timeLeft=roundLen;state='play';cam.x=player.x;cam.y=player.y;cam.D=targetD(player.rTo);
   ['menu','over'].forEach(i=>$(i).classList.add('hidden'));
   ['topl','timer','board','mute'].forEach(i=>$(i).classList.remove('hidden'));
@@ -905,7 +1114,8 @@ function think(b){
 }
 
 /* ================= spawning during the round ================= */
-const SPAWN_SMALL={park:['person','person','duck','ball','bush','tree','bench','flower','dog','picnic','cart','swings','slide'],houses:['person','ball','flower','cat','dog','bike','bush','tree','mailbox'],
+const SPAWN_SMALL={plaza:['person','person','person','pigeon','flower','bench','trash'],mall:['person','person','person','pigeon','tree'],
+  times:['person','person','person','person','pigeon','cart'],temple:['person','person','sakura','flower'],park:['person','person','duck','ball','bush','tree','bench','flower','dog','picnic','cart','swings','slide'],houses:['person','ball','flower','cat','dog','bike','bush','tree','mailbox'],
   rows:['person','person','ball','flower','cat','bike','trash','bush','tree'],shops:['person','person','person','pigeon','trash','flower','bike','cone','cart','dumpster','phone','bench'],
   downtown:['person','person','person','pigeon','trash','flower','cone','dumpster','phone','bike'],fun:['person','person','ball','pigeon','cart','flower','picnic'],civic:['person','person','ball','bike','dog','tree','picnic','flower']};
 const SPAWN_BLD={houses:['house','house','rowrow','apartment'],rows:['rowrow','rowrow','house'],shops:['shop','diner','gas'],downtown:['office','tower','apartment','shop']};
@@ -1082,7 +1292,7 @@ function update(dt){
   }
   stepPhysics(dt);
   if(pend.pts){pend.t-=dt;if(pend.t<=0){addPopup(player.x,player.y,'+'+pend.pts);pend.pts=0;}}
-  for(const[k,em,txt]of UNLOCKS)if(!unlocked.has(k)&&T[k].r<player.rTo*.92){unlocked.add(k);toast(em+' '+txt);chime();}
+  for(const[k,em,txt]of UNL)if(!unlocked.has(k)&&T[k].r<player.rTo*.92){unlocked.add(k);toast(em+' '+txt);chime();}
   for(const a of holes)for(const b of holes){if(a===b||!a.alive||!b.alive||a.r<=b.r*1.15)continue;
     if(mode==='easy'&&b===player)continue;
     if(Math.hypot(a.x-b.x,a.y-b.y)<a.r-b.r*.5)eatHole(a,b);}
@@ -1128,7 +1338,7 @@ function syncScene(now,dt){
         if(m.lv._t!==lvl){m.lv.textContent=lvl;m.lv._t=lvl;}
         const pw=Math.round(prog*100);if(m.fill._t!==pw){m.fill.style.width=pw+'%';m.fill._t=pw;}
         let cls='hl',nx='';
-        if(h===player){cls+=' me';const nu=UNLOCKS.find(u=>!unlocked.has(u[0]));nx=nu?nu[1]:'⭐';}
+        if(h===player){cls+=' me';const nu=UNL.find(u=>!unlocked.has(u[0]));nx=nu?nu[1]:'⭐';}
         else if(player&&player.alive&&player.rTo>h.rTo*1.15){cls+=' prey';nx='😋';}
         else if(player&&mode==='normal'&&h.rTo>player.rTo*1.15){cls+=' danger';nx='⚠️';}
         if(el._c!==cls){el.className=cls;el._c=cls;}if(m.nx._t!==nx){m.nx.textContent=nx;m.nx._t=nx;}
@@ -1184,7 +1394,9 @@ function frame(now){
 const sw=$('swatches');
 COLORS.forEach((c,i)=>{const b=document.createElement('button');b.className='sw'+(i?'':' on');b.style.background=c;b.onclick=()=>{myColor=c;[...sw.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');};sw.appendChild(b);});
 function optGroup(id,fn){const el=$(id);el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{el.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));b.classList.add('on');fn(b.dataset.v);});}
-optGroup('modes',v=>mode=v);optGroup('lens',v=>roundLen=+v);
+optGroup('modes',v=>mode=v);
+optGroup('maps',v=>{cityId=v;city=CITIES[v];try{localStorage.setItem('gobbleMap',v);}catch(e){}newTown();});
+$('maps').querySelectorAll('.opt').forEach(b=>b.classList.toggle('on',b.dataset.v===cityId));optGroup('lens',v=>roundLen=+v);
 function showBest(){try{const b=+localStorage.getItem('gobblePhysBest');if(b)$('best').textContent='⭐ Best score: '+b;}catch(e){}}
 try{const n=localStorage.getItem('gobbleName');if(n)$('name').value=n;}catch(e){}showBest();
 $('play').onclick=()=>{initAudio();try{localStorage.setItem('gobbleName',$('name').value);}catch(e){}newGame();};
