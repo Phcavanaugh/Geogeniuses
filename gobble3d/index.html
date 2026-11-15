@@ -187,7 +187,8 @@ const T={
   gherkin:{w:84,d:84,h:250,pts:300,rr:160}, shard:{w:90,d:90,h:430,pts:600,rr:225}, jhouse:{w:38,d:36,h:30,pts:14}, pencil:{w:24,d:30,h:84,pts:30}, konbini:{w:56,d:40,h:30,pts:25},
   tkapt:{w:60,d:44,h:80,pts:50}, castle:{w:140,d:140,h:150,pts:400,rr:180},
 };
-for(const k in T){T[k].r=T[k].rr||Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;}   // rr: giants that need level 30+
+// size for eating comes from the footprint only, so a landmark goes down as soon as its base fits in the hole (rr just marks landmarks)
+for(const k in T){T[k].r=Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;if(T[k].rr)T[k].pts=Math.max(40,Math.round(T[k].pts*Math.min(1,T[k].r/120)));}
 const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'],['icecream','🍦','ICE CREAM TRUCKS!'],['garbage','🚛','GARBAGE TRUCKS!'],
   ['fire','🚒','FIRE TRUCKS!'],['bus','🚌','BUSES are yummy now!'],['rowhouse','🏘️','ROW HOUSES!'],['house','🏠','You can eat HOUSES!'],['carousel','🎠','The CAROUSEL!'],
   ['shop','🏪','STORES too!'],['diner','🍔','DINERS!'],['apartment','🏢','APARTMENTS!'],['gas','⛽','GAS STATIONS!'],
@@ -1535,7 +1536,9 @@ const COLORS=['#ff5a5f','#3a86ff','#8338ec','#06d6a0','#ffbe0b','#ff70a6','#fb56
 let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myColor=COLORS[0];
 /* ---- levels: growth fills a bar; size only changes on level-up ---- */
 // Each level costs 20 points until about level 7, then 21% more per level. Each level = 10% bigger. No top level.
-const LSTEP=1.1,LV_COST=L=>Math.round(Math.max(20,6*Math.pow(1.21,Math.min(L,20)-1)*Math.pow(1.08,Math.max(0,L-20))));   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
+// each level costs 21% more than the last, and above level 15 that step keeps growing, so levels get harder and harder
+const LV_COSTS=[0];{let c=6;for(let L=1;L<400;L++){LV_COSTS[L]=Math.round(Math.max(20,c));c=Math.min(1e12,c*(1.21+.004*Math.max(0,L-15)));}}
+const LSTEP=1.1,LV_COST=L=>LV_COSTS[Math.min(L,399)];   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
 const LV_TOTAL=[0,0];for(let L=1;L<400;L++)LV_TOTAL[L+1]=LV_TOTAL[L]+LV_COST(L);
 const lvR=L=>R0*Math.pow(LSTEP,L-1);
 const lvPts=L=>LV_TOTAL[Math.min(L,400)];                                  // total points needed to reach level L
@@ -1611,7 +1614,7 @@ function newGame(){
   ['topl','timer','board','mute'].forEach(i=>$(i).classList.remove('hidden'));
   qualityClock=-2;updateHud();
 }
-function targetD(r){return (430+r*10+r*r*.02)*(camera.aspect<1?1.15:1);}
+function targetD(r){return (450+11.5*r)*(camera.aspect<1?1.15:1);}   // pulls back more gently as you grow
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');toastT=2.2;}
 function showMsg(t,s){const e=$('msg');e.textContent=t;e.style.display='block';msgT=s;}
 function rank(){return holes.slice().sort((a,b)=>b.score-a.score);}
