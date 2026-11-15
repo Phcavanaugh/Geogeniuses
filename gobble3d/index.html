@@ -1729,7 +1729,7 @@ function update(dt){
     h.mvx+=(dx-h.mvx)*Math.min(1,dt*6);h.mvy+=(dy-h.mvy)*Math.min(1,dt*6);
     if(h.lvT<1){h.lvT=Math.min(1,h.lvT+dt/.45);h.r=h.rFrom+(h.rTo-h.rFrom)*backOut(h.lvT);}
     h.chomp=Math.max(0,h.chomp-dt*4);h.blink-=dt;if(h.blink<0)h.blink=rnd(2,5);
-    const sp=100+h.r*1.6;
+    const sp=100+(player||h).r*1.6;   // everyone moves at a speed set by YOUR size: you speed up as you grow, chases stay fair
     h.x=clamp(h.x+dx*sp*dt,h.r*.5,W-h.r*.5);h.y=clamp(h.y+dy*sp*dt,h.r*.5,W-h.r*.5);
   }
   for(const o of tilting)o.tgt=0;
