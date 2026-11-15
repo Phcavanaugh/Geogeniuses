@@ -479,9 +479,14 @@ function laneOff(E,lane){const med=E.blvd?8:0,n=lanesOf(E),lw=(E.w/2-med)/n;retu
 function carPose(o,dt){const r=o.road,E=RG.edges[r.e],A=RG.nodes[E.a],s=r.dir>0?r.t:E.len-r.t,hx=E.ux*r.dir,hy=E.uy*r.dir,off=laneOff(E,r.lane);
   const x=A.x+E.ux*s-hy*off,y=A.y+E.uy*s+hx*off;
   if(o.bx){const f=Math.exp(-dt*7);o.bx*=f;o.by*=f;if(Math.abs(o.bx)+Math.abs(o.by)<.3)o.bx=o.by=0;}
-  o.x=x+(o.bx||0);o.y=y+(o.by||0);o.vx=hx*r.sp;o.vy=hy*r.sp;
-  const ty=Math.atan2(-hy,hx);if(o.cy===undefined)o.cy=ty;else if(dt)o.cy+=wrapA(ty-o.cy)*Math.min(1,dt*7);}
-function drive(o,dt){const r=o.road;let E=RG.edges[r.e];r.t+=r.sp*dt;let guard=0;
+  o.x=x+(o.bx||0);o.y=y+(o.by||0);o.vx=hx*(r.v??r.sp);o.vy=hy*(r.v??r.sp);
+  const ty=Math.atan2(-hy,hx);if(o.cy===undefined)o.cy=ty;else if(dt){const d=wrapA(ty-o.cy)*Math.min(1,dt*7);o.cy+=d;o.lean=(o.lean||0)+(clamp(-d/dt*.03*(r.v??r.sp)/60,-.06,.06)-(o.lean||0))*Math.min(1,dt*6);}}
+// cars slow down behind the car ahead instead of driving through it, and speed up smoothly
+function trafficFollow(dt){const L=new Map();for(const o of objs){if(!o.moving||!o.road)continue;const r=o.road,k=r.e*8+(r.dir>0?0:4)+(r.lane||0);let l=L.get(k);if(!l)L.set(k,l=[]);l.push(o);}
+  for(const l of L.values()){if(l.length>1)l.sort((a,b)=>a.road.t-b.road.t);for(let i=0;i<l.length;i++){const r=l[i].road;let tg=r.sp;
+    if(i<l.length-1){const f=l[i+1],gap=f.road.t-r.t-(l[i].t.w+f.t.w)/2;if(gap<44)tg=Math.min(tg,Math.max(0,(f.road.v??f.road.sp)*(gap-8)/36));}
+    if(r.v===undefined)r.v=r.sp;r.v+=clamp(tg-r.v,-140*dt,38*dt);}}}
+function drive(o,dt){const r=o.road;let E=RG.edges[r.e];r.t+=(r.v??r.sp)*dt;let guard=0;
   if(r.t>=E.len){const ox=o.x,oy=o.y;
     while(r.t>=E.len&&guard++<8){r.t-=E.len;const nid=r.dir>0?E.b:E.a,N=RG.nodes[nid];
       const opts=N.e.filter(i=>i!==r.e);
@@ -1107,8 +1112,11 @@ Object.assign(BUILD,{
     p.ball(21,'#ffd23a',20,68,0,2);p.add(new THREE.ConeGeometry(9,20,10),'#fb8c00',44,63,0,0,0,-HP);
     for(const z of[-9,9]){p.ball(4.2,'#ffffff',34,74,z,1);p.ball(2.4,'#1d2733',37.5,74.5,z*1.05,1);}
     p.add(new THREE.ConeGeometry(10,22,8),'#ffd23a',-38,50,0,0,0,HP*1.4);},
-  bean(p){p.box(150,1.2,96,'#e8e3d6');p.ball(1,'#cfd8e0',0,30,0,3,62,26,36);p.ball(1,'#eef3f7',-14,40,-6,2,30,10,18);
-    p.ball(1,'#a7b4c0',8,18,10,2,40,10,22);p.ball(5,'#ffffff',-24,48,-8,1);},
+  bean(p){const g=new THREE.SphereGeometry(1,96,48),a=g.attributes.position;
+    for(let i=0;i<a.count;i++){let x=a.getX(i),y=a.getY(i),z=a.getZ(i);
+      if(y<0){y*=1-1.42*Math.exp(-Math.pow(x/.42,2));if(Math.abs(x)>.4)y=Math.max(y,-.86);}        // the omphalos: a tunnel-like hollow under the middle
+      y+=.06*Math.sin(x*2.2)*(y>0?1:0);a.setXYZ(i,x*64,y*29,z*41*(1-.06*x*x));}
+    g.computeVertexNormals();p.add(g,'#dfe4e8',0,25,0);},
   dino(p){const g='#58b368',dk='#3f8f50';
     for(const x of[-10,14])for(const z of[-11,11])p.box(14,34,12,dk,x,0,z);
     p.box(64,36,32,g,0,30);p.box(30,14,26,shade(g,.15),2,24);
@@ -1397,6 +1405,30 @@ Object.assign(BUILD,{
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();BUILD[k](p,v);g=p.build();geoCache.set(key,g);}return g;}
 const OBJ_MAT=new THREE.MeshLambertMaterial({vertexColors:true});
+// polished steel that mirrors a sky and a city skyline (made once into an environment map)
+let BEAN_MAT=null;
+function beanMat(){if(BEAN_MAT)return BEAN_MAT;const sc=new THREE.Scene(),g=new THREE.SphereGeometry(100,48,24),pa=g.attributes.position,col=[],c=new THREE.Color();
+  for(let i=0;i<pa.count;i++){const y=pa.getY(i)/100;if(y>0)c.set('#b9cfe2').lerp(new THREE.Color('#f5f8fb'),Math.pow(1-y,2.2));else c.set('#bdb5a5').lerp(new THREE.Color('#6d675e'),Math.min(1,-y*2.5));col.push(c.r,c.g,c.b);}
+  g.setAttribute('color',new THREE.Float32BufferAttribute(col,3));sc.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide})));
+  for(let i=0;i<70;i++){const ang=i/70*TAU+hash(i,1)*.05,h=14+Math.pow(hash(i,3),1.6)*95,w=6+hash(i,5)*9,m=new THREE.Mesh(new THREE.BoxGeometry(w,h,8),new THREE.MeshBasicMaterial({color:new THREE.Color().setHSL(.58+hash(i,7)*.06,.14,.22+hash(i,9)*.42)}));
+    m.position.set(Math.cos(ang)*(70+hash(i,8)*15),h/2-3,Math.sin(ang)*(70+hash(i,8)*15));m.lookAt(0,h/2-3,0);sc.add(m);}
+  for(let i=0;i<6;i++){const cl=new THREE.Mesh(new THREE.SphereGeometry(9+hash(i,2)*8,12,8),new THREE.MeshBasicMaterial({color:'#ffffff'}));const ang=hash(i,4)*TAU;cl.position.set(Math.cos(ang)*80,45+hash(i,6)*25,Math.sin(ang)*80);cl.scale.y=.45;sc.add(cl);}
+  const pm=new THREE.PMREMGenerator(renderer),env=pm.fromScene(sc,.02).texture;pm.dispose();
+  return BEAN_MAT=new THREE.MeshStandardMaterial({vertexColors:true,metalness:1,roughness:.1,envMap:env,envMapIntensity:1.05});}
+// trees and bushes sway a little in the breeze (done on the graphics card, so it costs nothing)
+const SWAY_U={value:0},SWAY_MAT=OBJ_MAT.clone();
+SWAY_MAT.onBeforeCompile=sh=>{sh.uniforms.uT=SWAY_U;sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nuniform float uT;')
+  .replace('#include <begin_vertex>',`#include <begin_vertex>
+  #ifdef USE_INSTANCING
+  vec3 ip=instanceMatrix[3].xyz;
+  #else
+  vec3 ip=vec3(0.);
+  #endif
+  float sw=max(0.,position.y-7.)*.016;
+  transformed.x+=sin(uT*1.6+ip.x*.013+ip.z*.009)*sw*1.5+sin(uT*4.1+ip.z*.05)*sw*.25;
+  transformed.z+=cos(uT*1.25+ip.x*.011-ip.z*.012)*sw*1.1;`);};
+SWAY_MAT.customProgramCacheKey=()=>'sway';
+const MAT_FOR=k=>k==='bean'?beanMat():k==='tree'||k==='sakura'||k==='bush'?SWAY_MAT:OBJ_MAT;
 
 /* ---------- instancing ---------- */
 let imeshes=[];
@@ -1409,16 +1441,17 @@ function buildInstances(){
   for(const o of objs){const key=o.k+'|'+o.v;let l=groups.get(key);if(!l)groups.set(key,l=[]);l.push(o);}
   for(const[key,list]of groups){const[k,v]=key.split('|');
     const cap=list.length+Math.max(4,Math.ceil(list.length*.6));          // spare slots for things that spawn later
-    const im=new THREE.InstancedMesh(getGeo(k,+v),OBJ_MAT,cap);im.v=+v;im.cap=cap;im.slots=list.slice();im.count=list.length;
+    const im=new THREE.InstancedMesh(getGeo(k,+v),MAT_FOR(k),cap);im.v=+v;im.cap=cap;im.slots=list.slice();im.count=list.length;
     im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;
     list.forEach((o,i)=>{o.im=im;o.ii=i;setInst(o);});
     im.instanceMatrix.needsUpdate=true;scene.add(im);imeshes.push(im);
     let arr=meshByKind.get(k);if(!arr)meshByKind.set(k,arr=[]);arr.push(im);}
 }
-const _qy=new THREE.Quaternion(),_qt=new THREE.Quaternion(),_ax=new THREE.Vector3(),_up=new THREE.Vector3(0,1,0),_zero=new THREE.Vector3(0,0,0);
+let PALPHA=1;const _q2=new THREE.Quaternion(),_qr=new THREE.Quaternion(),_fx=new THREE.Vector3(1,0,0),_qy=new THREE.Quaternion(),_qt=new THREE.Quaternion(),_ax=new THREE.Vector3(),_up=new THREE.Vector3(0,1,0),_zero=new THREE.Vector3(0,0,0);
+const GAIT={person:[1.5,.1,0],duck:[.5,.24,0],pigeon:[2.4,0,.12],dog:[1.4,.05,.06],cat:[1,.04,.05]};   // [bob, waddle, nod]
 function objYaw(o){
   if(o.moving)return o.road?o.cy:Math.atan2(-o.vy,o.vx);
-  if((o.wb||o.walk)&&(o.vx||o.vy))o.yaw=Math.atan2(-o.vy,o.vx);
+  if((o.wb||o.walk)&&(o.vx||o.vy))o.yaw=o.fy??Math.atan2(-o.vy,o.vx);
   return o.yaw;}
 // keep each instanced mesh packed: only live objects are drawn, spare capacity costs nothing
 function removeInst(o){const im=o.im,last=im.count-1,lo=im.slots[last];
@@ -1428,7 +1461,8 @@ function objMatrix(o){
   _qy.setFromAxisAngle(_up,objYaw(o));
   if(o.gone){_m.compose(_v.set(o.x,-9999,o.y),_qy,_zero);}
   else if(o.body||o.pose){let px,py,pz;
-    if(o.body){const t=o.body.translation(),r=o.body.rotation();_qt.set(r.x,r.y,r.z,r.w);px=t.x;py=t.y;pz=t.z;}
+    if(o.body){const t=o.body.translation(),r=o.body.rotation();_qt.set(r.x,r.y,r.z,r.w);px=t.x;py=t.y;pz=t.z;
+      const q=o.pp;if(q&&!o.eaten){const a=PALPHA;px=q[0]+(px-q[0])*a;py=q[1]+(py-q[1])*a;pz=q[2]+(pz-q[2])*a;_q2.set(q[3],q[4],q[5],q[6]);_q2.slerp(_qt,a);_qt.copy(_q2);}}
     else{const P=o.pose;_qt.set(P.q.x,P.q.y,P.q.z,P.q.w);px=P.x;py=P.y;pz=P.z;}
     _v.set(0,-o.h/2,0).applyQuaternion(_qt);_v.x+=px;_v.y+=py;_v.z+=pz;
     const sc=o.eaten?Math.max(.25,1-o.eatT*.7):1;_m.compose(_v,_qt,_s.set(sc,sc,sc));}
@@ -1439,7 +1473,10 @@ function objMatrix(o){
     const s=1-p*.35;_m.compose(_v.set(px,py,pz),_qt,_s.set(s,s,s));}
   else if(o.tilt){_qt.setFromAxisAngle(_ax.set(o.tdz,0,-o.tdx),o.tilt);
     _v.set(o.x-o.pvx,0,o.y-o.pvz).applyQuaternion(_qt);_v.x+=o.pvx;_v.z+=o.pvz;_qt.multiply(_qy);_m.compose(_v,_qt,_s.set(1,1,1));}
-  else{const sc=o.spawnT<1?Math.max(.001,backOut(o.spawnT)):1;_m.compose(_v.set(o.x,0,o.y),_qy,_s.set(sc,sc,sc));}
+  else{const sc=o.spawnT<1?Math.max(.001,backOut(o.spawnT)):1;let y=0;
+    if(o.moving&&o.road){y=.35*Math.sin(animT*13+o.spin*9);if(o.lean){_qr.setFromAxisAngle(_fx,o.lean);_qy.multiply(_qr);}}
+    else if(o.ph&&(o.vx||o.vy)){const s=Math.sin(o.ph),G=GAIT[o.k]||GAIT.dog;y=Math.abs(s)*G[0];if(G[1]){_qr.setFromAxisAngle(_fx,s*G[1]);_qy.multiply(_qr);}if(G[2]){_qr.setFromAxisAngle(_ax.set(0,0,1),Math.cos(o.ph*2)*G[2]);_qy.multiply(_qr);}}
+    _m.compose(_v.set(o.x,y,o.y),_qy,_s.set(sc,sc,sc));}
 }
 
 /* ---------- ground (painted once into a texture) ---------- */
@@ -1818,7 +1855,8 @@ function stepPhysics(dt){
   for(const o of active){if(o.eaten||!o.body.isSleeping())continue;const h=o.hole;if(!h.alive)continue;
     const d=Math.hypot(o.x-h.x,o.y-h.y);if(d<h.r+o.r+8)o.body.wakeUp();}
   if(physDead)return;
-  pAcc+=dt;let n=0;try{while(pAcc>=PSTEP&&n<3){applySuck();world.step();pAcc-=PSTEP;n++;}}catch(e){console.warn('physics reset',e);physReset();return;}if(n===3)pAcc=0;
+  pAcc+=dt;let n=0;try{while(pAcc>=PSTEP&&n<3){for(const o of active){const t=o.body.translation(),r=o.body.rotation(),q=o.pp||(o.pp=[0,0,0,0,0,0,1]);q[0]=t.x;q[1]=t.y;q[2]=t.z;q[3]=r.x;q[4]=r.y;q[5]=r.z;q[6]=r.w;}
+    applySuck();world.step();pAcc-=PSTEP;n++;}PALPHA=clamp(pAcc/PSTEP,0,1);}catch(e){console.warn('physics reset',e);physReset();return;}if(n===3)pAcc=0;
   let anyGone=false;
   for(const o of active){const t=o.body.translation();o.x=t.x;o.y=t.z;
     if(o.eaten){o.eatT+=dt;if(o.eatT>1.1||t.y<-700){world.removeRigidBody(o.body);o.body=null;active.delete(o);o.gone=true;removeInst(o);anyGone=true;}continue;}
@@ -1868,11 +1906,14 @@ function eatHole(a,b){
   if(a===player){addPopup(b.x,b.y,'Gobbled '+b.name+'!',a.color);sfx(0,'big');buzz(40);shake=12;}
   if(b===player){showMsg('Oh no! '+a.name+' gobbled you!\nBack in a sec…',2.5);sfx(0,'big');buzz(120);}
 }
-function update(dt){
+let animT=0;
+function update(dt){animT+=dt;SWAY_U.value=animT;trafficFollow(dt);
   for(const o of objs){if(o.fall||o.body||o.pose)continue;
+    if((o.walk||o.wb)&&(o.vx||o.vy)){const s=Math.hypot(o.vx,o.vy);o.ph=(o.ph||0)+s*dt*(o.k==='person'?.42:o.k==='duck'?.55:.3);o.fy=(o.fy??o.yaw)+wrapA(Math.atan2(-o.vy,o.vx)-(o.fy??o.yaw))*Math.min(1,dt*9);}
     if(o.moving)drive(o,dt);
     else if(o.walk)walk(o,dt);
-    else if(o.wb){o.moveT-=dt;if(o.moveT<=0){o.moveT=rnd(.5,2);const a=rnd(0,TAU),sp=WSPD[o.k]||WSPD.duck,s=Math.random()<.3?0:rnd(sp[0],sp[1]);o.vx=Math.cos(a)*s;o.vy=Math.sin(a)*s;}
+    else if(o.wb){o.moveT-=dt;if(o.moveT<=0){o.moveT=rnd(.5,2);const a=rnd(0,TAU),sp=WSPD[o.k]||WSPD.duck,s=Math.random()<.3?0:rnd(sp[0],sp[1]);o.tvx=Math.cos(a)*s;o.tvy=Math.sin(a)*s;}
+      const ea=Math.min(1,dt*5);o.vx+=((o.tvx||0)-o.vx)*ea;o.vy+=((o.tvy||0)-o.vy)*ea;if(Math.abs(o.vx)+Math.abs(o.vy)<.5&&!o.tvx&&!o.tvy)o.vx=o.vy=0;
       o.x=clamp(o.x+o.vx*dt,o.wb[0]+6,o.wb[2]-6);o.y=clamp(o.y+o.vy*dt,o.wb[1]+6,o.wb[3]-6);}}
   if(state!=='play'){cam.x+=dt*22;cam.y+=dt*10;if(cam.x>W-350)cam.x=350;if(cam.y>W-350)cam.y=350;cam.D=targetD(55);return;}
   timeLeft-=dt;if(timeLeft<=0){timeLeft=0;updateHud();endGame();return;}
