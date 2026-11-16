@@ -26,6 +26,7 @@
   #board div{display:flex;justify-content:space-between;gap:9px;padding:3px 5px;border-radius:7px}
   #board div.me{background:#ffe2b7;color:#bb3d60}
   #board .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1.5px solid rgba(0,0,0,.12)}
+  #pause{position:fixed;bottom:64px;right:12px;z-index:6;border:2px solid #fff;border-radius:50%;width:44px;height:44px;font-size:18px;background:#fffaf0;box-shadow:0 3px 8px rgba(0,0,0,.2);cursor:pointer}
   #mute{position:fixed;bottom:12px;right:12px;z-index:6;border:2px solid #fff;border-radius:50%;width:44px;height:44px;font-size:20px;background:#fffaf0;
     box-shadow:0 4px 0 rgba(43,58,66,.15),0 5px 10px rgba(43,58,66,.16);cursor:pointer}
   #toast{position:fixed;top:64px;left:50%;transform:translateX(-50%) scale(.8);opacity:0;transition:all .25s;border-radius:16px;
@@ -98,6 +99,11 @@
 <div id="timer" class="hud pill hidden">2:00</div>
 <div id="board" class="hud hidden"></div>
 <button id="mute" class="hidden" aria-label="Sound">🔊</button>
+<button id="pause" class="hidden" aria-label="Pause"><b style="font-weight:900;letter-spacing:1px;color:#35546a">II</b></button>
+<div id="pausem" class="overlay hidden"><div class="card"><div class="big">Paused</div>
+  <button class="go" id="resume">KEEP PLAYING</button>
+  <button class="opt" id="restart" style="margin-top:10px;width:100%">🔄 Start over</button>
+  <button class="opt" id="quit" style="margin-top:10px;width:100%">🏠 Quit to menu</button></div></div>
 <div id="toast"></div>
 <div id="msg"></div>
 <div id="joy"></div><div id="knob"></div>
@@ -1736,7 +1742,7 @@ function newGame(){
   for(const[k]of UNL)if(T[k].r<player.rTo*.92)unlocked.add(k);
   timeLeft=roundLen;state='play';cam.x=player.x;cam.y=player.y;cam.D=targetD(player.rTo);
   ['menu','over'].forEach(i=>$(i).classList.add('hidden'));
-  ['topl','timer','board','mute'].forEach(i=>$(i).classList.remove('hidden'));
+  ['topl','timer','board','mute','pause'].forEach(i=>$(i).classList.remove('hidden'));paused=false;$('pausem').classList.add('hidden');
   qualityClock=-2;updateHud();
 }
 function targetD(r){return (212+5.5*r)*(camera.aspect<1?1.08:1);}   // pulls back more gently as you grow
@@ -1751,7 +1757,7 @@ function endGame(){
   let best=0;try{best=+localStorage.getItem('gobblePhysBest')||0;if(player.score>best)localStorage.setItem('gobblePhysBest',player.score);}catch(e){}
   $('overSub').textContent=player.score>best&&best>0?'⭐ New best score: '+player.score+'!':'Your score: '+player.score+' pts';
   $('results').innerHTML=rk.map((h,i)=>`<div class="${h===player?'me':''}"><span>${medal[i]||(i+1)+'.'} <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${h.color}"></span> ${esc(h.name)}</span><span>${h.score}</span></div>`).join('');
-  $('over').classList.remove('hidden');['topl','timer','board'].forEach(i=>$(i).classList.add('hidden'));
+  $('over').classList.remove('hidden');['topl','timer','board','pause'].forEach(i=>$(i).classList.add('hidden'));
   for(const h of holes)if(h.m)h.m.el.style.display='none';
   chime();
 }
@@ -2077,10 +2083,10 @@ function watchQuality(dt){if(window.__noAuto||state!=='play'||qLevel===0)return;
   if(qTime>=2){const avg=qTime/qFrames;qFrames=0;qTime=0;if(avg>1/42){qLevel--;applyQuality();}}}
 
 /* ================= main loop ================= */
-let last=performance.now();
+let last=performance.now(),paused=false;
 function frame(now){
   const dt=Math.min(.05,(now-last)/1000);last=now;
-  update(dt);syncScene(now,dt);renderer.render(scene,camera);watchQuality(dt);
+  if(!paused)update(dt);syncScene(now,paused?0:dt);renderer.render(scene,camera);if(!paused)watchQuality(dt);
   requestAnimationFrame(frame);
 }
 
@@ -2097,6 +2103,12 @@ $('play').onclick=()=>{initAudio();try{localStorage.setItem('gobbleName',$('name
 $('again').onclick=()=>{initAudio();newGame();};
 $('toMenu').onclick=()=>{$('over').classList.add('hidden');$('menu').classList.remove('hidden');$('mute').classList.add('hidden');state='menu';
   for(const h of holes)disposeHole(h);holes=[];clearPopups();showBest();};
+function setPause(p){if(state!=='play')return;paused=p;$('pausem').classList.toggle('hidden',!p);touch=null;for(const k in keys)keys[k]=false;}
+$('pause').onclick=()=>setPause(true);$('resume').onclick=()=>setPause(false);
+$('restart').onclick=()=>{paused=false;$('pausem').classList.add('hidden');initAudio();newGame();};
+$('quit').onclick=()=>{paused=false;$('pausem').classList.add('hidden');clearBanners();['topl','timer','board','pause','mute'].forEach(i=>$(i).classList.add('hidden'));
+  $('menu').classList.remove('hidden');state='menu';for(const h of holes)disposeHole(h);holes=[];clearPopups();for(const el of INDS)el.style.display='none';showBest();newTown();};
+addEventListener('keydown',e=>{if(e.key==='Escape'||e.key==='p'||e.key==='P'){if(state==='play')setPause(!paused);}});
 $('mute').onclick=()=>{muted=!muted;$('mute').textContent=muted?'🔇':'🔊';};
 $('name').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('play').click();});
 document.addEventListener('visibilitychange',()=>{last=performance.now();});
