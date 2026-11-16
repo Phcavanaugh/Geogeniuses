@@ -198,7 +198,7 @@ const T={
   bungalow:{w:40,d:54,h:34,pts:25}, threeflat:{w:36,d:52,h:48,pts:32}, brownstone:{w:26,d:50,h:58,pts:26}, tenement:{w:44,d:56,h:94,pts:40}, nysetback:{w:90,d:90,h:340,pts:160},
   federal:{w:110,d:80,h:64,pts:70}, dcrow:{w:24,d:46,h:42,pts:14}, terrace:{w:26,d:46,h:66,pts:20}, victorian:{w:40,d:50,h:52,pts:30}, pub:{w:46,d:40,h:44,pts:30},
   gherkin:{w:84,d:84,h:250,pts:300,rr:160}, shard:{w:90,d:90,h:430,pts:600,rr:225}, jhouse:{w:38,d:36,h:30,pts:14}, pencil:{w:24,d:30,h:84,pts:30}, konbini:{w:56,d:40,h:30,pts:25},
-  tkapt:{w:60,d:44,h:80,pts:50}, tlight:{w:10,d:6,h:46,pts:5}, castle:{w:140,d:140,h:150,pts:400,rr:180},
+  tkapt:{w:60,d:44,h:80,pts:50}, tlight:{w:10,d:6,h:46,pts:5}, arena:{w:230,d:190,h:80,pts:420}, hospital:{w:220,d:170,h:116,pts:400}, mallblock:{w:242,d:174,h:60,pts:380}, condo:{w:210,d:190,h:216,pts:450}, garage:{w:200,d:182,h:64,pts:300}, twin:{w:212,d:182,h:409,pts:600}, castle:{w:140,d:140,h:150,pts:400,rr:180},
 };
 // size for eating comes from the footprint only, so a landmark goes down as soon as its base fits in the hole (rr just marks landmarks)
 for(const k in T){T[k].r=Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;if(T[k].rr)T[k].pts=Math.max(40,Math.round(T[k].pts*Math.min(1,T[k].r/120)));}
@@ -211,7 +211,7 @@ const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'
   ['pagoda','🏯','The PAGODA!'],['buckingham','⛲','BUCKINGHAM FOUNTAIN!'],['whitehouse','🏠','The WHITE HOUSE!'],['lincoln','🏛️','The LINCOLN MEMORIAL!'],
   ['stpauls','🏰',"ST PAUL'S!"],['chrysler','✨','The CHRYSLER BUILDING!'],['wamonument','🔺','The WASHINGTON MONUMENT!'],['bigben','🕰️','BIG BEN!'],
   ['hancock','🏢','The HANCOCK!'],['liberty','🗽','The STATUE OF LIBERTY!'],['eye','🎡','The LONDON EYE!'],['empire','🏙️','The EMPIRE STATE!'],
-  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!'],['bungalow','🏠','BUNGALOWS!'],['threeflat','🏘️','THREE-FLATS!'],['brownstone','🏘️','BROWNSTONES!'],['tenement','🏢','TENEMENTS!'],['nysetback','🏙️','ART DECO TOWERS!'],['federal','🏛️','GOVERNMENT BUILDINGS!'],['dcrow','🏘️','PAINTED ROWHOUSES!'],['terrace','🏘️','TERRACE HOUSES!'],['victorian','🏚️','VICTORIAN HOUSES!'],['pub','🍽️','PUBS!'],['gherkin','🥒','The GHERKIN!'],['shard','🔷','The SHARD!'],['jhouse','🏠','JAPANESE HOUSES!'],['pencil','✏️','PENCIL BUILDINGS!'],['konbini','🏪','CORNER STORES!'],['tkapt','🏢','APARTMENT BLOCKS!'],['castle','🏯','The CASTLE!'],['tlight','🚦','TRAFFIC LIGHTS!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
+  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!'],['bungalow','🏠','BUNGALOWS!'],['threeflat','🏘️','THREE-FLATS!'],['brownstone','🏘️','BROWNSTONES!'],['tenement','🏢','TENEMENTS!'],['nysetback','🏙️','ART DECO TOWERS!'],['federal','🏛️','GOVERNMENT BUILDINGS!'],['dcrow','🏘️','PAINTED ROWHOUSES!'],['terrace','🏘️','TERRACE HOUSES!'],['victorian','🏚️','VICTORIAN HOUSES!'],['pub','🍽️','PUBS!'],['gherkin','🥒','The GHERKIN!'],['shard','🔷','The SHARD!'],['jhouse','🏠','JAPANESE HOUSES!'],['pencil','✏️','PENCIL BUILDINGS!'],['konbini','🏪','CORNER STORES!'],['tkapt','🏢','APARTMENT BLOCKS!'],['castle','🏯','The CASTLE!'],['tlight','🚦','TRAFFIC LIGHTS!'],['garage','🅿️','PARKING GARAGES!'],['hospital','🏥','HOSPITALS!'],['condo','🏢','CONDO TOWERS!'],['twin','🏙️','TWIN TOWERS!'],['mallblock','🛍️','SHOPPING MALLS!'],['arena','🏟️','ARENAS!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
 let UNL=UNLOCKS;   // only the unlocks this map actually has
 const WSPD={duck:[10,25],dog:[18,42],cat:[8,22],pigeon:[6,16],person:[10,20]};
 const CAR_COLS=['#e74c3c','#3498db','#2ecc71','#9b59b6','#f1c40f','#ecf0f1','#ff8c42','#1abc9c'];
@@ -221,7 +221,7 @@ const SHOPS=['#ff8a80','#80d8ff','#ffd180','#b9f6ca','#ea80fc','#ffab91'];
 const TOWERS=['#7f8c8d','#5d7fa3','#6c7a89','#4f6d7a','#8a8fb0'];
 const TOWER_H=[125,155,140,175,148];
 const OFFICE_H=[195,215,235],APT_H=[70,86,78],SUPER_H=[360,400];
-const VARIANTS={billboard:6,vending:3,person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2,bungalow:4,threeflat:3,brownstone:3,tenement:3,nysetback:2,federal:2,dcrow:6,terrace:3,victorian:3,pub:3,jhouse:4,pencil:4,konbini:3,tkapt:2,tlight:2};
+const VARIANTS={billboard:6,vending:3,person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2,bungalow:4,threeflat:3,brownstone:3,tenement:3,nysetback:2,federal:2,dcrow:6,terrace:3,victorian:3,pub:3,jhouse:4,pencil:4,konbini:3,tkapt:2,tlight:2,arena:2,hospital:2,mallblock:2,condo:3,garage:2,twin:2};
 
 /* ================= maps =================
    grid is 7x7 blocks: i = west(0)..east(6), j = north(0)..south(6). Camera looks north. */
@@ -394,6 +394,9 @@ function genTown(){
       if(Math.random()<.3){const k=pick(['lamp','lamp','hydrant','trash','cone','cone','mailbox','flower',...(C.extra||[])]);
         const x=ex+ux*s,y=ey+uy*s;if(fits(list,x,y,T[k].w,T[k].d))list.push(mk(k,x,y));}}
   }
+  {const cand=blocks.filter(b=>['downtown','shops','houses','rows'].includes(b.type)).sort(()=>Math.random()-.5).slice(0,5);
+    for(const b of cand){const k=pick(['twin','condo','hospital','arena','mallblock','garage']),cx=b.x+BLOCK/2,cy=b.y+BLOCK/2;
+      objs=objs.filter(o=>o.moving||Math.abs(o.x-cx)>BLOCK/2-4||Math.abs(o.y-cy)>BLOCK/2-4);const o=mk(k,cx,cy,{yaw:0});LOTS.push({k,x:cx,y:cy,yaw:0,o});b.type='plaza';}}
   {const segs=[];for(let i=0;i<=N;i++){const c=ROAD/2+i*(BLOCK+ROAD);segs.push({x1:0,y1:c,x2:W,y2:c,w:ROAD},{x1:c,y1:0,x2:c,y2:W,w:ROAD});}
     setGraph(buildGraph(segs));spawnTraffic(Math.round(RG.total/480));}
   // planted medians down the middle of a few boulevards
@@ -584,9 +587,9 @@ function placeLM(G,L){const[k,x0,y0,yaw0,op]=L,o=op||{},t=T[k];
   if(o.river){const R=G.rivers[o.river-1].pts;let b=1e9,bx=x0,by=y0,yaw=0;
     for(let i=0;i<R.length-1;i++){const q=projSeg(x0,y0,R[i][0],R[i][1],R[i+1][0],R[i+1][1]);if(q.d<b){b=q.d;bx=q.x;by=q.y;const dx=R[i+1][0]-R[i][0],dy=R[i+1][1]-R[i][1],l=Math.hypot(dx,dy);yaw=Math.atan2(-dx/l,-dy/l);}}
     return{k,x:bx,y:by,yaw,water:1};}
-  if(o.water)return{k,x:x0,y:y0,yaw:yaw0,water:1};
+  if(o.water)return{k,x:x0,y:y0,yaw:yaw0,water:1};const big=o.big?1:0;
   const ok=(x,y)=>{const c=Math.cos(yaw0),s=Math.sin(yaw0);for(const a of[-.5,0,.5])for(const b of[-.5,0,.5]){const u=a*t.w,v=b*t.d,m=maskAt(x+u*c+v*s,y-u*s+v*c);if((m&3)!==1)return false;}return true;};
-  for(let r=0;r<320;r+=10)for(let a=0;a<(r?Math.ceil(r/5):1);a++){const ang=a/(r?Math.ceil(r/5):1)*TAU,x=x0+Math.cos(ang)*r,y=y0+Math.sin(ang)*r;if(ok(x,y))return{k,x,y,yaw:yaw0};}
+  for(let r=0;r<320;r+=10)for(let a=0;a<(r?Math.ceil(r/5):1);a++){const ang=a/(r?Math.ceil(r/5):1)*TAU,x=x0+Math.cos(ang)*r,y=y0+Math.sin(ang)*r;if(ok(x,y)&&(!big||[[-.5,-.5],[.5,-.5],[-.5,.5],[.5,.5]].every(([a,b])=>maskAt(x+a*t.w*Math.cos(yaw0)+b*t.d*Math.sin(yaw0),y-a*t.w*Math.sin(yaw0)+b*t.d*Math.cos(yaw0))===1)))return{k,x,y,yaw:yaw0,big};if(big)return null;}
   return null;}
 function buildChains(){const C=[],E=RG.edges,N=RG.nodes,used=new Uint8Array(E.length);
   const straight=(nid,ei)=>{const n=N[nid];if(n.e.length!==2)return -1;const fi=n.e[0]===ei?n.e[1]:n.e[0],e=E[ei],f=E[fi],se=e.a===nid?1:-1,sf=f.a===nid?1:-1;
@@ -599,13 +602,18 @@ function buildChains(){const C=[],E=RG.edges,N=RG.nodes,used=new Uint8Array(E.le
   return C;}
 let PTS_SCALE=1;const isBld=t=>t.h>26&&t.w>30&&!t.rr;
 function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[];blocks=[];const PF=G.prof={plan:performance.now()-T0};
-  for(const k in G.styles)if(!G.styles[k].fill)G.styles[k].fill=[['tree',1]];
+  for(const k in G.styles){const st=G.styles[k];if(!st.fill)st.fill=[['tree',1]];if(st.set)st.set=[st.set[0]*.4,st.set[1]*.45];if(st.gap)st.gap=[st.gap[0]*.35,st.gap[1]*.4];st.dens=Math.min(.85,(st.dens||.4)+.18);}
   G.styles.park=G.styles.park||PARKST;
   buildMask(G);PF.mask=performance.now()-T0;
+  {const BIG=['twin','condo','hospital','arena','mallblock','garage'],want={core:['twin','condo','hospital','arena'],downtown:['twin','condo','hospital','arena']},pts=[];for(const L of G.landmarks)pts.push([L[1],L[2]]);let n=0;
+    for(let tries=0;tries<900&&n<16;tries++){const x=rnd(180,W-180),y=rnd(180,W-180);if(maskAt(x,y)!==1)continue;const dk=G.district(x,y),st=G.styles[dk];if(!st)continue;
+      const z=st.zone,wgt=z==='downtown'?1:z==='shops'?.75:.45;if(Math.random()>wgt)continue;if(pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<330))continue;
+      const k=z==='downtown'?pick(want.core):z==='shops'?pick(['mallblock','hospital','garage','condo','arena']):pick(['mallblock','garage','condo']);
+      G.landmarks.push([k,x,y,G.yawAt?G.yawAt(x,y):0,{big:1}]);pts.push([x,y]);n++;}}
   G.lm=[];for(const L of G.landmarks){const r=placeLM(G,L);if(!r)continue;G.lm.push(r);G.noroad.push({rr:1,x:r.x,y:r.y,w:T[r.k].w,d:T[r.k].d,yaw:r.yaw,m:14});}
   setGraph(buildGraph(dedupeSegs(clipSegs(G))));PF.graph=performance.now()-T0;
   OCC=new Uint8Array(ON*ON);
-  for(const L of G.lm){aabb(mk(L.k,L.x,L.y,{yaw:L.yaw}));occMark(L.x,L.y,T[L.k].w+16,T[L.k].d+16,L.yaw);}
+  for(const L of G.lm){const lo=aabb(mk(L.k,L.x,L.y,{yaw:L.yaw}));if(L.big)LOTS.push({k:L.k,x:L.x,y:L.y,yaw:L.yaw,o:lo});occMark(L.x,L.y,T[L.k].w+16,T[L.k].d+16,L.yaw);}
   // buildings lined up along every street, facing it
   const CH=buildChains();
   for(const ch of CH){if(ch.bridge||ch.len<14)continue;
@@ -645,7 +653,7 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
       else mk('sign',x,y,{yaw});}});
   PF.street=performance.now()-T0;
   // between the streets: yards, plazas, parks, more buildings
-  for(let y=13;y<W;y+=26)for(let x=13;x<W;x+=26){let px=x+rnd(-7,7),py=y+rnd(-7,7);const m=maskAt(px,py);if((m&3)!==1)continue;
+  for(let y=11;y<W;y+=21)for(let x=11;x<W;x+=21){let px=x+rnd(-6,6),py=y+rnd(-6,6);const m=maskAt(px,py);if((m&3)!==1)continue;
     const park=m===5;if(roadDist(px,py)<SW+3)continue;const st=park?G.styles.park:G.styles[G.district(px,py)];if(!st||Math.random()>(st.dens||.4))continue;
     const k=wpick(st.fill),t=T[k],bld=!park&&t.h>26&&t.w>30;let yaw=rnd(0,TAU);
     if(bld){const ne=nearEdge(px,py);yaw=ne?Math.atan2(ne.x-px,ne.y-py):pick([0,HP,Math.PI,-HP]);
@@ -664,7 +672,7 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
   spawnTraffic(Math.round(RG.total/480));
   // keep the total points on the map close to Gobble Town's so levels come at the same pace
   // (only buildings are scaled, so the small stuff you eat early on is worth the same everywhere)
-  let sm=0,bl=0;for(const o of objs){if(o.t.rr)continue;if(isBld(o.t))bl+=o.t.pts;else sm+=o.t.pts;}PTS_SCALE=clamp((16500-sm)/Math.max(1,bl),.35,1);
+  let sm=0,bl=0;for(const o of objs){if(o.t.rr)continue;if(isBld(o.t))bl+=o.t.pts;else sm+=o.t.pts;}PTS_SCALE=clamp((24000-sm)/Math.max(1,bl),.3,1);
   for(const o of objs)if(!o.t.rr)o.pts=isBld(o.t)?Math.max(1,Math.round(o.t.pts*PTS_SCALE)):o.t.pts;PF.all=performance.now()-T0;
 }
 
@@ -691,13 +699,14 @@ function kit(seed){srand(seed);const G={land:[],lakes:[],rivers:[],parks:[],noro
   // street sizes: local streets, collectors, and two-lanes-each-way arterials (boulevards get a planted median)
   G.sid=0;G.road=(P,w=46,o)=>{w=w<=36?46:w<=42?54:w<=46?66:w<=58?76:o&&o.blvd?112:96;const sid=o&&o.sid||++G.sid;for(let i=0;i<P.length-1;i++)G.segs.push(Object.assign({x1:P[i][0],y1:P[i][1],x2:P[i+1][0],y2:P[i+1][1],w},o||{},{sid}));};
   // a street grid at any angle; amp makes the streets crooked
-  G.grid=o=>{o=Object.assign({},o,{sx:o.sx+24,sy:o.sy+24,sid:++G.sid});const c=Math.cos(o.a||0),s=Math.sin(o.a||0),P=(u,v)=>[o.x+u*c-v*s,o.y+u*s+v*c];
+  G.grid=o=>{o=Object.assign({},o,{sx:o.sx+24,sy:o.sy+24,sid:++G.sid});(G.gr||(G.gr=[])).push({x:o.x,y:o.y,a:o.a||0,clip:o.clip});const c=Math.cos(o.a||0),s=Math.sin(o.a||0),P=(u,v)=>[o.x+u*c-v*s,o.y+u*s+v*c];
     for(const[dirU,sp,ext,span]of[[true,o.sy,o.hh,o.hw],[false,o.sx,o.hw,o.hh]]){let k=0;
       const ph=dirU?(o.phy!==undefined?o.phy:o.ph):(o.phx!==undefined?o.phx:o.ph);for(let q=-ext+(ph!==undefined?ph:srr(0,sp));q<=ext;q+=sp,k++){const art=o.ev&&k%o.ev===(o.evo||0);
         let L=dirU?[P(-span,q),P(span,q)]:[P(q,-span),P(q,span)];L=wig(L,o.amp||0,o.amp?45:200);
         G.road(L,art?o.w2:o.w,{clip:o.clip,blvd:!!(art&&o.blvd),sid:o.sid});}}};
   G.rotary=(x,y,r,w=46)=>{r+=16;G.road(closed(ell(x,y,r,r,0,28)),w,{free:true});G.noroad.push({x,y,r:r-5});G.parks.push({x,y,r:r-w/2-1});G.landmarks.push(['fountain',x,y,0]);};
   // patchwork of little grids, each at its own angle (London, Tokyo)
+  G.yawAt=(x,y)=>{let b=null,bd=1e9;for(const s of G.gr||[]){const d=Math.hypot(x-s.x,y-s.y)-(s.R||1e9)*0;if(s.clip&&!s.clip(x,y))continue;if(d<bd){bd=d;b=s;}}return b?-b.a:0;};
   G.patches=(seeds,o)=>{seeds.forEach((sd,i)=>{const clip=(x,y)=>{const d0=Math.hypot(x-sd.x,y-sd.y);if(d0>(o.R||560))return false;
       for(let j=0;j<seeds.length;j++)if(j!==i&&Math.hypot(x-seeds[j].x,y-seeds[j].y)+(o.margin||20)<d0)return false;return o.clip?o.clip(x,y):true;};
     G.grid({x:sd.x,y:sd.y,a:sd.a,hw:o.R||560,hh:o.R||560,sx:sd.sx,sy:sd.sy,w:o.w,amp:o.amp,clip});});};
@@ -737,7 +746,7 @@ const PLANS={
     G.land.push([[3400,-700],[900,-700],[400,-740],[-200,-790],[-900,-820],[-900,-3600],[3400,-3600]].map(p=>P(...p)));     // New Jersey
     G.land.push(ell(...P(-330,-430),85,85,0,24));                                                                              // Liberty Island
     const inMan=(x,y)=>{const[u,v]=UV(x,y);return u>-20&&Math.abs(v)<hw(u)+30;};
-    const cp=[P(2250,-200),P(3700,-200),P(3700,200),P(2250,200)];G.parks.push(cp);G.noroad.push(cp);
+    (G.gr||(G.gr=[])).push({x:ox,y:oy,a:.506,clip:inMan});const cp=[P(2250,-200),P(3700,-200),P(3700,200),P(2250,200)];G.parks.push(cp);G.noroad.push(cp);
     for(const v of[-215,0,215])G.road([P(700,v),P(3700,v)],62,{blvd:v===0});
     for(const s of[-1,1]){const L=[];for(let u=260;u<=3700;u+=80)L.push(P(u,s*(hw(u)-44)));G.road(L,54);}
     for(let u=920;u<3700;u+=225)G.road([P(u,-460),P(u,460)],44,{clip:inMan});
@@ -1382,6 +1391,34 @@ Object.assign(BUILD,{
   tlight(p,v){const sx=v?-1:1,c='#3d4650';p.cyl(1.4,1.9,46,8,c);p.box(34,1.6,1.6,c,sx*17,44,0);p.box(5,14,4,'#2b2f33',sx*30,30,0);
     for(const[y,col]of[[40,'#ff5252'],[35.5,'#ffd54f'],[31,'#69f0ae']])p.box(3,3,.6,col,sx*30,y,2.2);
     p.box(4,8,3,'#2b2f33',0,24,2);p.box(2.4,2.4,.6,'#ff8a65',0,28,3.6);},
+
+  /* --- big late-game buildings (need about level 22) --- */
+  arena(p,v){const w=['#d9d4c9','#cfd6de'][v];p.add(new THREE.CylinderGeometry(1,1.07,1,48).scale(112,46,92),w,0,23,0);
+    for(let i=0;i<24;i++){const a=i/24*TAU;p.box(4,40,3,shade(w,-.15),Math.cos(a)*113,4,Math.sin(a)*93,-a+HP);}
+    p.add(new THREE.CylinderGeometry(1,1,1,48).scale(115,5,95),'#f4f4f2',0,48.5,0);p.add(new THREE.CylinderGeometry(1,1,1,48).scale(100,1,82),v?'#c0392b':'#2f6fb8',0,51.2,0);
+    p.add(new THREE.CylinderGeometry(1,1,1,40).scale(74,1,54),'#5cb85c',0,51.9,0);for(let i=-2;i<=2;i++)p.box(1.2,.4,100,'#ffffff',i*28,52.4,0);
+    for(const[x,z]of[[-100,-70],[100,-70],[-100,70],[100,70]]){p.cyl(1.6,2,74,8,'#7b8590',x,0,z);p.box(14,7,3,'#fffde0',x,74,z);}
+    p.box(30,14,4,'#222833',0,52,-86);p.box(26,10,.6,'#57d1ff',0,54,-83.6);},
+  hospital(p,v){const w=['#eef1f4','#f3eee6'][v],gl='#7fb6d6';p.box(210,58,100,w,0,0,-30);p.box(90,112,84,shade(w,-.03),-50,0,38);
+    for(let y=8;y<56;y+=12){p.box(206,5,.6,gl,0,y,20.1);p.box(206,5,.6,gl,0,y,-80.1);}
+    for(let y=64;y<108;y+=11)p.box(86,5,.6,gl,-50,y,80.1);
+    p.box(36,4,36,'#3b434b',-50,112,38);p.box(4,.6,16,'#ffffff',-56,116.2,38);p.box(4,.6,16,'#ffffff',-44,116.2,38);p.box(12,.6,4,'#ffffff',-50,116.2,38);
+    p.box(30,10,8,'#e53935',50,58,-30);p.box(10,30,8,'#e53935',50,48,-30);
+    p.box(50,3,22,'#cfd8dc',60,14,32);for(const x of[38,82])p.cyl(1.4,1.4,14,8,'#b0bec5',x,0,42);p.box(46,10,.6,'#9fd3ec',60,0,20.4);},
+  mallblock(p,v){const w=['#e8dcc8','#dfe3e6'][v],s=['#ff6f91','#5ec8f2','#ffd23a','#7ed957','#b37bff'];p.box(240,46,170,w);p.box(242,4,172,shade(w,-.12),0,46);
+    p.add(new THREE.SphereGeometry(40,24,12,0,TAU,0,Math.PI/2).scale(1,.55,1),'#a9d8ee',0,48,0);
+    for(let i=0;i<8;i++){const x=-105+i*30;p.box(24,12,.8,'#bfe9ff',x,2,85.4);p.box(26,6,1.4,s[i%5],x,18,85.8);}
+    p.box(50,26,2,'#ffffff',0,4,86.5);p.box(40,7,1,s[v*2],0,30,87.6);for(const[x,z]of[[-80,-50],[60,-60],[90,30],[-90,40]])p.box(18,8,14,'#cfd8dc',x,50,z);},
+  condo(p,v){const c=[['#f3eee4','#9fc6dc'],['#e9e3f2','#b7a9d6'],['#e7efe6','#96c7a8']][v],h=[190,150,120];p.box(210,20,190,shade(c[0],-.08));
+    [[-55,-40],[55,-50],[0,55]].forEach(([x,z],i)=>{p.box(56,h[i],56,c[0],x,20,z);for(let y=30;y<h[i]+14;y+=10){p.box(60,1.4,60,c[1],x,y,z);}p.box(30,6,30,'#b0bec5',x,h[i]+20,z);});
+    p.box(60,.6,40,'#5ec8f2',-40,20.4,62);},
+  garage(p,v){const c=['#b7b4ad','#c9c3b5'][v],cars=['#e53935','#1e88e5','#fdd835','#43a047','#fafafa','#8e24aa'];
+    for(let f=0;f<4;f++){const y=f*15;p.box(200,2.6,180,c,0,y);if(f>0)for(let i=0;i<14;i++){const x=-88+(i%7)*29,z=i<7?-60:60;p.box(14,6,24,cars[(i+f*3)%6],x,y+2.6,z);}}
+    p.box(200,3,180,shade(c,-.05),0,60);for(const x of[-95,-30,30,95])for(const z of[-85,0,85])p.box(5,60,5,shade(c,-.2),x,0,z);
+    p.box(20,64,20,shade(c,-.1),90,0,-80);p.box(36,10,1,'#1565c0',0,46,90.6);p.box(8,7,1.4,'#ffffff',0,47.5,91.2);},
+  twin(p,v){const g=['#5f8fb4','#7a9a8c'][v];p.box(210,30,180,'#cfcac0');p.box(212,3,182,'#a39e94',0,30);
+    for(const x of[-52,52]){p.box(70,330,70,g,x,33,0);for(let y=45;y<360;y+=14)p.box(71,1.2,71,shade(g,.25),x,y,0);p.box(56,16,56,shade(g,-.2),x,363,0);p.cyl(1,.3,30,6,'#e0e0e0',x,379,0);}
+    p.box(34,10,24,'#9fb6c8',0,170,0);},
   /* Japanese castle on a stone base */
   castle(p){const wh='#f6f4ef',rf='#4f6b63',dk='#2f3b37';sqf(p,140,112,40,'#8d8579',0);
     const T=[[90,22,74,108,92,14,.55],[70,18,58,86,74,12,.55],[52,16,42,66,56,11,.5],[34,14,28,46,40,14,.2]];let y=40;
@@ -1810,13 +1847,14 @@ function spawnSmall(){const b=pick(blocks);if(!b)return;const pool=SPAWN_SMALL[b
   const x0=b.x+m,y0=b.y+m,x1=b.x+S-m,y1=b.y+S-m;
   for(let i=0;i<6;i++){const x=rnd(x0+t.w/2,x1-t.w/2),y=rnd(y0+t.d/2,y1-t.d/2);if(!clearSpot(x,y,t.w,t.d))continue;
     spawnObj(k,x,y,WSPD[k]?{wb:b.s?[x-30,y-30,x+30,y+30]:[x0,y0,x1,y1],moveT:0}:null);spawnedCount++;return;}}
-function spawnBuilding(){if(CITYGEO){spawnLot();return;}const bs=blocks.filter(b=>SPAWN_BLD[b.type]);if(!bs.length)return;const b=pick(bs),k=pick(SPAWN_BLD[b.type]);
+function spawnBuilding(){if(CITYGEO||(LOTS.length&&Math.random()<.4)){spawnLot();return;}const bs=blocks.filter(b=>SPAWN_BLD[b.type]);if(!bs.length)return;const b=pick(bs),k=pick(SPAWN_BLD[b.type]);
   const x0=b.x+16,y0=b.y+16,cs=(BLOCK-32)/2;
   for(const[ci,cj]of[[0,0],[1,0],[0,1],[1,1]].sort(()=>Math.random()-.5)){const cx=x0+(ci+.5)*cs,cy=y0+(cj+.5)*cs;
     if(k==='rowrow'){if(!clearSpot(cx,cy,27*5,46,true))continue;clearClutter(cx,cy,27*5,46);for(let n=0;n<5;n++)spawnObj('rowhouse',cx-54+n*27,cy);spawnedCount+=5;return;}
     if(clearSpot(cx,cy,T[k].w,T[k].d,true)){clearClutter(cx,cy,T[k].w,T[k].d);if(spawnObj(k,cx,cy))spawnedCount++;return;}}}
-function spawnLot(){if(!LOTS.length)return;
-  for(let k=0;k<4;k++){const L=pick(LOTS);if(L.o&&!L.o.gone)continue;const t=T[L.k];
+function spawnLot(){if(!LOTS.length)return;const f=1-timeLeft/roundLen,cand=[];for(let i=0;i<40;i++){const L=pick(LOTS);if(!L.o||L.o.gone)cand.push(L);}
+  let tw=0;const ws=cand.map(L=>{const w=Math.pow(T[L.k].r,.6+1.6*f);tw+=w;return w;});
+  for(let k=0;k<4&&cand.length;k++){let q=Math.random()*tw,j=0;while(j<cand.length-1&&(q-=ws[j])>0)j++;const L=cand[j];const t=T[L.k];
     if(holes.some(h=>h.alive&&Math.hypot(h.x-L.x,h.y-L.y)<h.r+Math.max(t.w,t.d)/2+40))continue;
     if(objs.some(o=>!o.fall&&!o.gone&&(o.r>=15||o.moving)&&Math.hypot(o.x-L.x,o.y-L.y)<Math.min(t.w,t.d)/2))continue;
     const c=Math.abs(Math.cos(L.yaw)),sn=Math.abs(Math.sin(L.yaw));clearClutter(L.x,L.y,c*t.w+sn*t.d,sn*t.w+c*t.d);
