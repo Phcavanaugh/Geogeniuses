@@ -1739,7 +1739,7 @@ function newGame(){
   ['topl','timer','board','mute'].forEach(i=>$(i).classList.remove('hidden'));
   qualityClock=-2;updateHud();
 }
-function targetD(r){return (330+8.6*r)*(camera.aspect<1?1.12:1);}   // pulls back more gently as you grow
+function targetD(r){return (265+6.9*r)*(camera.aspect<1?1.1:1);}   // pulls back more gently as you grow
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');toastT=2.2;}
 function showMsg(t,s){const e=$('msg');e.textContent=t;e.style.display='block';msgT=s;}
 function rank(){return holes.slice().sort((a,b)=>b.score-a.score);}
