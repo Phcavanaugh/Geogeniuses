@@ -270,6 +270,9 @@
   .pline .nextw{border-bottom:3px solid #5BC0EB}
   .pline .hit{color:#2E8B47;background:#E6F8EA;border-radius:6px;padding:0 2px;transition:background .3s}
   .pline .blank{color:#C9C3D6;letter-spacing:2px}
+  .scrsw{display:flex;gap:6px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:5px;margin-bottom:10px}
+  .scrsw button{flex:1;border-radius:12px;padding:8px 4px;font-size:15px;font-weight:700;color:var(--muted)}
+  .scrsw button.on{background:#E0663A;color:#fff}
   .heard{text-align:center;font-size:15px;color:var(--muted);min-height:20px;margin-top:8px}
 
   /* ---------- ¡Escríbelo! (10) ---------- */
@@ -491,6 +494,7 @@
       <div class="title">📜 Mi presentación</div>
       <button class="iconbtn" id="gPlayAll" aria-label="Listen to the whole presentation">▶️</button>
     </div>
+    <div class="scrsw" id="gScr"></div>
     <div class="ensw"><button class="smallbtn" id="gEn">🇺🇸 Show English</button></div>
     <div id="gBody"></div>
   </section>
@@ -526,6 +530,7 @@
       <div class="title">🎤 Practica</div>
       <div style="width:46px"></div>
     </div>
+    <div class="scrsw" id="prScr"></div>
     <div class="plevels" id="prLevels"><button data-l="1">1 · Todo</button><button data-l="2">2 · Huecos</button><button data-l="3">3 · Letras</button><button data-l="4">4 · ¡Sola!</button></div>
     <div class="pmeta" id="prMeta"></div>
     <div class="pline" id="prLine"></div>
@@ -1508,6 +1513,49 @@ ZORRO.frases = [
   [14,'Busca sus huellas.','Look for its tracks.'],[14,'Quédate muy callado.','Stay very quiet.'],[14,'Ve al amanecer o al atardecer.','Go at dawn or dusk.'],
   [15,'El zorro es nocturno.','The fox is nocturnal.'],[15,'La tundra es muy fría.','The tundra is very cold.'],
 ];
+// A second presentation, all about the red fox (facts from the book)
+let ZSCR = 0;   // which presentation is active (0 = Los zorros, 1 = El zorro rojo)
+ZORRO.scripts = [
+  {id:'todos', e:'🦊', t:'Los zorros', lines: ZORRO.script},
+  {id:'rojo', e:'🔴', t:'El zorro rojo', lines: [
+    {h:'Introducción', hen:'Introduction', lines:[
+      ['¡Hola! Me llamo Cora y hoy les voy a hablar del zorro rojo.','Hi! My name is Cora and today I\'m going to talk to you about the red fox.'],
+      ['El zorro rojo es el zorro que más conocemos. Es de la familia del perro, como los lobos y los coyotes.','The red fox is the fox we know best. It is in the dog family, like wolves and coyotes.'],
+    ]},
+    {h:'¿Cómo es?', hen:'What does it look like?', lines:[
+      ['Su pelaje es café rojizo y la punta de su cola esponjosa es blanca.','Its fur is reddish-brown and the tip of its bushy tail is white.'],
+      ['Tiene el hocico puntiagudo, las orejas grandes y las patas largas. Es un buen corredor.','It has a pointed snout, big ears and long legs. It is a good runner.'],
+      ['En la primavera pierde su pelaje de invierno. En el otoño su pelaje se pone más grueso. Esto se llama muda.','In spring it loses its winter fur. In autumn its fur gets thicker. This is called molting.'],
+    ]},
+    {h:'¿Dónde vive?', hen:'Where does it live?', lines:[
+      ['Vive sobre todo en el hemisferio norte, en América del Norte, Europa y Asia.','It lives mainly in the northern hemisphere, in North America, Europe and Asia.'],
+      ['También vive en Australia. Lo llevaron desde Europa hace más de cien años.','It also lives in Australia. People brought it from Europe more than a hundred years ago.'],
+      ['Vive en bosques, en granjas y hasta en ciudades grandes, como Londres y Nueva York.','It lives in forests, on farms and even in big cities, like London and New York.'],
+    ]},
+    {h:'¿Qué come?', hen:'What does it eat?', lines:[
+      ['Come casi de todo: ratones, conejos, pájaros, huevos, fruta y sobras de la basura.','It eats almost anything: mice, rabbits, birds, eggs, fruit and scraps from the garbage.'],
+      ['Caza solo y casi siempre de noche. Escucha a los ratones en el pasto, salta muy alto y cae encima.','It hunts alone and almost always at night. It listens for mice in the grass, leaps up high and lands on them.'],
+      ['Si le sobra comida, la entierra para comerla después.','If it has extra food, it buries it to eat later.'],
+    ]},
+    {h:'La familia', hen:'The family', lines:[
+      ['La mamá busca una madriguera y tiene de uno a seis cachorros.','The mom looks for a den and has one to six cubs.'],
+      ['Los cachorros nacen ciegos y sordos, con el pelaje gris oscuro. El papá le trae comida a la mamá.','The cubs are born blind and deaf, with dark gray fur. The dad brings food to the mom.'],
+      ['A las tres o cuatro semanas, los cachorros salen a explorar y a jugar.','At three or four weeks, the cubs come out to explore and play.'],
+    ]},
+    {h:'¿Cómo habla?', hen:'How does it talk?', lines:[
+      ['El zorro rojo ladra, aúlla y gruñe. ¡A veces hace un grito solo para decir hola!','The red fox barks, howls and growls. Sometimes it screams just to say hello!'],
+      ['Cuando está contento, mueve la cola.','When it is happy, it wags its tail.'],
+    ]},
+    {h:'Conclusión', hen:'Conclusion', lines:[
+      ['El zorro rojo es astuto y muy listo. ¡Por eso aparece en muchos cuentos!','The red fox is sly and very smart. That\'s why it appears in so many stories!'],
+      ['Si quieres ver uno, sal al amanecer o al atardecer y quédate muy callado. ¡Gracias por escuchar!','If you want to see one, go out at dawn or dusk and stay very quiet. Thank you for listening!'],
+    ]},
+  ]},
+];
+Object.defineProperty(ZORRO, 'script', { get(){ return ZORRO.scripts[ZSCR].lines; } });
+const scriptLines = i => ZORRO.scripts[i].lines.flatMap(sec=>sec.lines.map(l=>({es:l[0], en:l[1]})));
+const skey = i => (ZSCR ? 'z|p' : 'z|s') + i;          // audio key for line i of the active presentation
+const prKey = () => ZSCR ? 'practica_rojo' : 'practica';  // practice progress per presentation
 const UNITS = [ZORRO];
 const unitLines = U => U.script.flatMap((sec,si)=>sec.lines.map((l,li)=>({si, li, es:l[0], en:l[1]})));
 
@@ -1631,7 +1679,8 @@ function keyText(k){
     case 'x': return '';
     case 'z': { const t=v[0], rest=v.slice(1);
       if(t==='r') return ZORRO.frases[+rest][1];
-      if(t==='s') return unitLines(ZORRO)[+rest].es;
+      if(t==='s') return scriptLines(0)[+rest].es;
+      if(t==='p') return scriptLines(1)[+rest].es;
       if(t==='v') return ZORRO.vocab[+rest][0]+'.';
       if(t==='t') return ZORRO.lessons[+rest].t+'.';
       const [li,fi]=rest.split('_').map(Number), f=ZORRO.lessons[li]&&ZORRO.lessons[li].facts[fi];
@@ -1984,13 +2033,13 @@ function openUnit(u){
   $('tTitle').textContent=`${u.icon} ${u.title}`;
   $('tIntro').innerHTML=`<b>Tip:</b> start with <b>Aprende</b> to learn the fox facts in Spanish, then practice the words and take the quiz. When you're ready, read <b>Mi presentación</b> and say it out loud in <b>Practica</b>.`;
   const L=unitLines(u).length;
-  const pr = P.practica||{}; const prDone=Object.keys(pr).length, prMem=Object.values(pr).filter(v=>v>=4).length;
+  const pr = P[prKey()]||{}; const prDone=Object.keys(pr).length, prMem=Object.values(pr).filter(v=>v>=4).length;
   const lessDone=u.lessons.filter((L,li)=>(P.lessons||{})[li]).length;
   const zj=P.zmap||{stars:{}}; let zt=0; Object.values(zj.stars).forEach(v=>zt+=v);
   const acts=[
     {e:'🗺️', t:'Aventura del zorro', s:`${u.lessons.length} chapters × 4 levels, like the main map`, chk: zt ? `⭐ ${zt}/${u.lessons.length*12}` : '', go:openZMap},
     {e:'📚', t:'Aprende', s:`${u.lessons.length} short lessons from your fox book`, chk: lessDone ? `✅ ${lessDone}/${u.lessons.length}` : '', go:openLessons},
-    {e:'📜', t:'Mi presentación', s:'Read and listen to the whole talk', chk: P.guion ? '✅' : '', go:openGuion},
+    {e:'📜', t:'Mis presentaciones', s:'Two talks: all foxes, or just the red fox', chk: P.guion ? '✅' : '', go:openGuion},
     {e:'📖', t:'Palabras', s:`${u.vocab.length} words from the lessons, then a quick test`, chk: P.palabras!=null ? `⭐ ${P.palabras}/10` : '', go:openPalabras},
     {e:'🧩', t:'Arma la frase', s:'Build sentences: short ones first, then longer', chk: P.arma!=null ? `⭐ ${P.arma}/10` : '', go:()=>startTPlay('arma')},
     {e:'❓', t:'Quiz del zorro', s:`${u.quiz.length} questions about foxes, in Spanish`, chk: P.quiz!=null ? `⭐ ${P.quiz}/10` : '', go:()=>startTPlay('quiz')},
@@ -2195,9 +2244,17 @@ function zResult(body, stars, pass){
   if(pass) for(let j=0;j<(boss?5:3);j++) setTimeout(()=>burst(innerWidth/2, innerHeight/3,['⭐','🦊','✨']),j*400);
 }
 
+/* --- choosing which presentation --- */
+function drawScrSwitch(id, after){
+  const box=$(id); box.innerHTML='';
+  ZORRO.scripts.forEach((sc,i)=>{ const b=document.createElement('button'); b.textContent=`${sc.e} ${sc.t}`; b.classList.toggle('on', i===ZSCR);
+    b.onclick=()=>{ if(i===ZSCR) return; stopListening(true); stopClips(); ZSCR=i; store.set('zscript',i); S.pi=0; after(); }; box.appendChild(b); });
+}
+
 /* --- Mi presentación (script) --- */
 let gEnglish=false;
 function openGuion(){
+  drawScrSwitch('gScr', openGuion);
   const u=S.unit, body=$('gBody'); body.innerHTML='';
   let idx=0;
   u.script.forEach(sec=>{
@@ -2206,7 +2263,7 @@ function openGuion(){
     sec.lines.forEach(l=>{
       const i=idx++; const b=document.createElement('button'); b.className='gline'; b.dataset.i=i;
       b.innerHTML=`<span class="sp">🔊</span><span>${l[0]}${gEnglish?`<span class="en">${l[1]}</span>`:''}</span>`;
-      b.onclick=()=>{ document.querySelectorAll('.gline').forEach(x=>x.classList.remove('playing')); b.classList.add('playing'); talk(['z|s'+i]).then(()=>b.classList.remove('playing')); };
+      b.onclick=()=>{ document.querySelectorAll('.gline').forEach(x=>x.classList.remove('playing')); b.classList.add('playing'); talk([skey(i)]).then(()=>b.classList.remove('playing')); };
       d.appendChild(b);
     });
     body.appendChild(d);
@@ -2220,7 +2277,7 @@ $('gPlayAll').onclick=async()=>{
   const run=++S.run, rows=[...document.querySelectorAll('.gline')];
   for(const b of rows){ if(run!==S.run || !$('tguion').classList.contains('on')) return;
     rows.forEach(x=>x.classList.remove('playing')); b.classList.add('playing'); b.scrollIntoView({block:'center',behavior:'smooth'});
-    await talk(['z|s'+b.dataset.i]); await wait(350); }
+    await talk([skey(b.dataset.i)]); await wait(350); }
   rows.forEach(x=>x.classList.remove('playing'));
 };
 
@@ -2245,7 +2302,7 @@ const TPLAY={ arma:{title:'🧩 Arma la frase', n:10}, quiz:{title:'❓ Quiz del
 function armaLadder(u){
   const F=u.frases.map((f,i)=>({es:f[1], en:f[2], key:'z|r'+i})), n=x=>x.es.split(' ').length;
   const facts=u.lessons.flatMap((L,li)=>L.facts.map((f,fi)=>({es:plainEs(f[1]), en:f[2], key:'z|f'+li+'_'+fi}))).filter(x=>n(x)>=7 && n(x)<=10);
-  const pres=unitLines(u).map((l,i)=>({es:l.es, en:l.en, key:'z|s'+i})).filter(x=>n(x)<=13);
+  const pres=unitLines(u).map((l,i)=>({es:l.es, en:l.en, key:skey(i)})).filter(x=>n(x)<=13);
   const take=(list,k)=>shuffle(list).slice(0,k);
   const out=[...take(F.filter(x=>n(x)===3),2), ...take(F.filter(x=>n(x)===4),2), ...take(F.filter(x=>n(x)>=5&&n(x)<=6),2),
              ...take([...F.filter(x=>n(x)>=7), ...facts],2), ...take(pres,2)];
@@ -2343,21 +2400,22 @@ function drawPrLine(hits, finished){
   $('prLine').querySelectorAll('.hid').forEach(h=>h.onclick=()=>h.classList.toggle('peek'));
 }
 function renderPractica(){
-  const lines=unitLines(S.unit), l=lines[S.pi], sec=S.unit.script[l.si], P=TP(), pr=P.practica||{};
+  drawScrSwitch('prScr', renderPractica);
+  const lines=unitLines(S.unit), l=lines[S.pi], sec=S.unit.script[l.si], P=TP(), pr=P[prKey()]||{};
   document.querySelectorAll('#prLevels button').forEach(b=>b.classList.toggle('on', +b.dataset.l===S.plevel));
   $('prMeta').textContent=`${sec.h} · line ${S.pi+1} of ${lines.length}` + (pr[S.pi] ? ` · ✅ up to level ${pr[S.pi]}` : '');
   drawPrLine(null);
   $('prHeard').textContent=''; $('prLive').textContent=''; micState('idle');
-  if(S.plevel===1 && S.readAloud) talk(['z|s'+S.pi]);
+  if(S.plevel===1 && S.readAloud) talk([skey(S.pi)]);
 }
 document.querySelectorAll('#prLevels button').forEach(b=>b.onclick=()=>{ stopListening(true); S.plevel=+b.dataset.l; renderPractica(); });
-$('prListen').onclick=()=>talk(['z|s'+S.pi]);
+$('prListen').onclick=()=>talk([skey(S.pi)]);
 $('prPeek').onclick=()=>{ const l=unitLines(S.unit)[S.pi]; $('prLine').innerHTML=l.es+`<div style="font-size:15px;color:var(--muted);font-weight:500;margin-top:6px">${l.en}</div>`; };
 $('prBack').onclick=()=>{ stopListening(true); if(S.pi>0){ S.pi--; renderPractica(); } };
 $('prOk').onclick=()=>{
   stopListening(true);
-  const lines=unitLines(S.unit), P=TP(); P.practica=P.practica||{};
-  P.practica[S.pi]=Math.max(P.practica[S.pi]||0, S.plevel); saveTP();
+  const lines=unitLines(S.unit), P=TP(); const K=prKey(); P[K]=P[K]||{};
+  P[K][S.pi]=Math.max(P[K][S.pi]||0, S.plevel); saveTP();
   const r=$('prOk').getBoundingClientRect(); tReward(r.left+r.width/2, r.top);
   if(S.pi<lines.length-1){ S.pi++; renderPractica(); }
   else { banner(S.plevel<4 ? `¡Nivel ${S.plevel} completo!` : '¡Excelente presentación!');
@@ -3262,6 +3320,7 @@ function confirmBtn(id, fn){ const b=$(id); let armed=false; b.onclick=()=>{ if(
 confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+'best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
 confirmBtn('resetAll',()=>{ stats={}; store.set('stats',stats); pet={xp:0,hat:0}; store.set('pet',pet); renderHomePet(); renderCats(); });
 
+ZSCR = store.get('zscript',0) ? 1 : 0;
 setStars(S.stars); renderHomePet(); renderCats(); S.from='map'; renderTareaSlot(); renderMap();
 
 /* ======================= installable app + offline ======================= */
