@@ -201,7 +201,11 @@ const T={
   tkapt:{w:60,d:44,h:80,pts:50}, tlight:{w:10,d:6,h:46,pts:5}, flr:{w:66,d:66,h:14,pts:9}, flrbase:{w:66,d:66,h:14,pts:9}, flrtop:{w:66,d:66,h:14,pts:12}, stk:{w:66,d:66,h:140,pts:0}, stkcluster:{w:250,d:250,h:150,pts:0},
   apt:{w:50,d:50,h:12,pts:7}, aptb:{w:50,d:50,h:12,pts:7}, aptt:{w:50,d:50,h:12,pts:9}, slab:{w:110,d:46,h:14,pts:12}, slabb:{w:110,d:46,h:14,pts:12}, slabt:{w:110,d:46,h:14,pts:14},
   gls:{w:80,d:80,h:16,pts:12}, glsb:{w:80,d:80,h:16,pts:12}, glst:{w:80,d:80,h:16,pts:16}, stp1:{w:84,d:84,h:14,pts:12}, stp2:{w:66,d:66,h:14,pts:9}, stp3:{w:48,d:48,h:14,pts:7},
-  book:{w:72,d:48,h:10,pts:6}, ctn:{w:80,d:30,h:26,pts:10},
+  book:{w:72,d:48,h:10,pts:6},
+  rhf:{w:26,d:42,h:11,pts:3}, rhb:{w:26,d:42,h:11,pts:3}, rht:{w:26,d:42,h:11,pts:4}, bsf:{w:26,d:40,h:11,pts:3}, bsb:{w:26,d:40,h:11,pts:3}, bst:{w:26,d:40,h:11,pts:4},
+  tef:{w:26,d:42,h:11,pts:3}, teb:{w:26,d:42,h:11,pts:3}, tet:{w:26,d:42,h:11,pts:4}, dcf:{w:24,d:40,h:10,pts:3}, dcb:{w:24,d:40,h:10,pts:3}, dct:{w:24,d:40,h:10,pts:4},
+  tnf:{w:44,d:48,h:11,pts:5}, tnb:{w:44,d:48,h:11,pts:5}, tnt:{w:44,d:48,h:11,pts:6}, pcf:{w:22,d:28,h:10,pts:3}, pcb:{w:22,d:28,h:10,pts:3}, pct:{w:22,d:28,h:10,pts:4},
+  R_rowhouse:{w:26,d:44,h:80,pts:0}, R_brownstone:{w:26,d:50,h:90,pts:0}, R_terrace:{w:26,d:46,h:100,pts:0}, R_dcrow:{w:24,d:46,h:70,pts:0}, R_tenement:{w:44,d:56,h:120,pts:0}, R_pencil:{w:24,d:30,h:120,pts:0}, ctn:{w:80,d:30,h:26,pts:10},
   S_office:{w:66,d:66,h:140,pts:0}, S_apt:{w:50,d:50,h:140,pts:0}, S_slab:{w:110,d:46,h:100,pts:0}, S_glass:{w:80,d:80,h:200,pts:0}, S_step:{w:84,d:84,h:180,pts:0}, S_books:{w:74,d:52,h:110,pts:0}, S_box:{w:82,d:32,h:80,pts:0}, arena:{w:230,d:190,h:80,pts:420}, hospital:{w:220,d:170,h:116,pts:400}, mallblock:{w:242,d:174,h:60,pts:380}, condo:{w:210,d:190,h:216,pts:450}, garage:{w:200,d:182,h:64,pts:300}, twin:{w:212,d:182,h:409,pts:600}, castle:{w:140,d:140,h:150,pts:400,rr:180},
 };
 // size for eating comes from the footprint only, so a landmark goes down as soon as its base fits in the hole (rr just marks landmarks)
@@ -215,7 +219,7 @@ const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'
   ['pagoda','🏯','The PAGODA!'],['buckingham','⛲','BUCKINGHAM FOUNTAIN!'],['whitehouse','🏠','The WHITE HOUSE!'],['lincoln','🏛️','The LINCOLN MEMORIAL!'],
   ['stpauls','🏰',"ST PAUL'S!"],['chrysler','✨','The CHRYSLER BUILDING!'],['wamonument','🔺','The WASHINGTON MONUMENT!'],['bigben','🕰️','BIG BEN!'],
   ['hancock','🏢','The HANCOCK!'],['liberty','🗽','The STATUE OF LIBERTY!'],['eye','🎡','The LONDON EYE!'],['empire','🏙️','The EMPIRE STATE!'],
-  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!'],['bungalow','🏠','BUNGALOWS!'],['threeflat','🏘️','THREE-FLATS!'],['brownstone','🏘️','BROWNSTONES!'],['tenement','🏢','TENEMENTS!'],['nysetback','🏙️','ART DECO TOWERS!'],['federal','🏛️','GOVERNMENT BUILDINGS!'],['dcrow','🏘️','PAINTED ROWHOUSES!'],['terrace','🏘️','TERRACE HOUSES!'],['victorian','🏚️','VICTORIAN HOUSES!'],['pub','🍽️','PUBS!'],['gherkin','🥒','The GHERKIN!'],['shard','🔷','The SHARD!'],['jhouse','🏠','JAPANESE HOUSES!'],['pencil','✏️','PENCIL BUILDINGS!'],['konbini','🏪','CORNER STORES!'],['tkapt','🏢','APARTMENT BLOCKS!'],['castle','🏯','The CASTLE!'],['tlight','🚦','TRAFFIC LIGHTS!'],['flr','📚','TOWER FLOORS! Knock them over!'],['apt','🏢','APARTMENT FLOORS!'],['book','📕','GIANT BOOKS!'],['ctn','📦','SHIPPING CONTAINERS!'],['gls','🏙️','GLASS TOWER FLOORS!'],['slab','🧱','SLAB BLOCKS!'],['stp1','🎂','WEDDING-CAKE TOWERS!'],['garage','🅿️','PARKING GARAGES!'],['hospital','🏥','HOSPITALS!'],['condo','🏢','CONDO TOWERS!'],['twin','🏙️','TWIN TOWERS!'],['mallblock','🛍️','SHOPPING MALLS!'],['arena','🏟️','ARENAS!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
+  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!'],['bungalow','🏠','BUNGALOWS!'],['threeflat','🏘️','THREE-FLATS!'],['brownstone','🏘️','BROWNSTONES!'],['tenement','🏢','TENEMENTS!'],['nysetback','🏙️','ART DECO TOWERS!'],['federal','🏛️','GOVERNMENT BUILDINGS!'],['dcrow','🏘️','PAINTED ROWHOUSES!'],['terrace','🏘️','TERRACE HOUSES!'],['victorian','🏚️','VICTORIAN HOUSES!'],['pub','🍽️','PUBS!'],['gherkin','🥒','The GHERKIN!'],['shard','🔷','The SHARD!'],['jhouse','🏠','JAPANESE HOUSES!'],['pencil','✏️','PENCIL BUILDINGS!'],['konbini','🏪','CORNER STORES!'],['tkapt','🏢','APARTMENT BLOCKS!'],['castle','🏯','The CASTLE!'],['tlight','🚦','TRAFFIC LIGHTS!'],['flr','📚','TOWER FLOORS! Knock them over!'],['apt','🏢','APARTMENT FLOORS!'],['rhf','🏘️','ROW HOUSE FLOORS!'],['bsf','🏘️','BROWNSTONE FLOORS!'],['tef','🏘️','TERRACE FLOORS!'],['dcf','🏘️','ROWHOUSE FLOORS!'],['tnf','🏢','TENEMENT FLOORS!'],['pcf','✏️','PENCIL TOWER FLOORS!'],['book','📕','GIANT BOOKS!'],['ctn','📦','SHIPPING CONTAINERS!'],['gls','🏙️','GLASS TOWER FLOORS!'],['slab','🧱','SLAB BLOCKS!'],['stp1','🎂','WEDDING-CAKE TOWERS!'],['garage','🅿️','PARKING GARAGES!'],['hospital','🏥','HOSPITALS!'],['condo','🏢','CONDO TOWERS!'],['twin','🏙️','TWIN TOWERS!'],['mallblock','🛍️','SHOPPING MALLS!'],['arena','🏟️','ARENAS!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
 let UNL=UNLOCKS;   // only the unlocks this map actually has
 const WSPD={duck:[10,25],dog:[18,42],cat:[8,22],pigeon:[6,16],person:[10,20]};
 const CAR_COLS=['#e74c3c','#3498db','#2ecc71','#9b59b6','#f1c40f','#ecf0f1','#ff8c42','#1abc9c'];
@@ -225,7 +229,7 @@ const SHOPS=['#ff8a80','#80d8ff','#ffd180','#b9f6ca','#ea80fc','#ffab91'];
 const TOWERS=['#7f8c8d','#5d7fa3','#6c7a89','#4f6d7a','#8a8fb0'];
 const TOWER_H=[125,155,140,175,148];
 const OFFICE_H=[195,215,235],APT_H=[70,86,78],SUPER_H=[360,400];
-const VARIANTS={billboard:6,vending:3,person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2,bungalow:4,threeflat:3,brownstone:3,tenement:3,nysetback:2,federal:2,dcrow:6,terrace:3,victorian:3,pub:3,jhouse:4,pencil:4,konbini:3,tkapt:2,tlight:2,flr:6,flrbase:6,flrtop:6,apt:5,aptb:5,aptt:5,slab:4,slabb:4,slabt:4,gls:4,glsb:4,glst:4,stp1:4,stp2:4,stp3:4,book:9,ctn:6,arena:2,hospital:2,mallblock:2,condo:3,garage:2,twin:2};
+const VARIANTS={billboard:6,vending:3,person:8,supertall:2,rowhouse:8,diner:3,apartment:3,office:3,car:8,ball:3,tree:4,bush:2,house:6,shop:6,tower:5,flower:3,bike:2,cat:3,dog:3,cart:2,swings:2,slide:2,bungalow:4,threeflat:3,brownstone:3,tenement:3,nysetback:2,federal:2,dcrow:6,terrace:3,victorian:3,pub:3,jhouse:4,pencil:4,konbini:3,tkapt:2,tlight:2,flr:6,flrbase:6,flrtop:6,apt:5,aptb:5,aptt:5,slab:4,slabb:4,slabt:4,gls:4,glsb:4,glst:4,stp1:4,stp2:4,stp3:4,book:9,ctn:6,rhf:8,rhb:8,rht:8,bsf:3,bsb:3,bst:3,tef:3,teb:3,tet:3,dcf:6,dcb:6,dct:6,tnf:3,tnb:3,tnt:3,pcf:4,pcb:4,pct:4,arena:2,hospital:2,mallblock:2,condo:3,garage:2,twin:2};
 
 /* ================= maps =================
    grid is 7x7 blocks: i = west(0)..east(6), j = north(0)..south(6). Camera looks north. */
@@ -1409,6 +1413,29 @@ Object.assign(BUILD,{
     p.box(4,8,3,'#2b2f33',0,24,2);p.box(2.4,2.4,.6,'#ff8a65',0,28,3.6);},
 
 
+
+  /* --- row-house storeys (each storey is its own piece) --- */
+  rhf(p,v){const w=RH_PAL[v];rowFl(p,26,11,42,w,'#a9e1f1','#ffffff',[-6,6]);},
+  rhb(p,v){const w=RH_PAL[v];rowFl(p,26,11,42,w,'#a9e1f1','#ffffff',[6]);p.box(7,9.6,.8,'#5d4037',-6,1,21.2);p.box(10,1.4,4,'#cfd8dc',-6,0,23);},
+  rht(p,v){const w=RH_PAL[v];rowFl(p,26,11,42,w,'#a9e1f1','#ffffff',[-6,6]);p.add(prismGeo(28.5,9,44),['#5d4037','#455a64','#6d4c41','#37474f'][v%4],0,11);p.box(5,4,.6,'#fff3c4',0,12.5,20.5);},
+  bsf(p,v){const c=BS_PAL[v];rowFl(p,26,11,40,c,GLASS,shade(c,-.25),[-7,0,7]);for(const x of[-7,0,7])p.box(5.6,1,1,shade(c,.18),x,8.6,20.2);},
+  bsb(p,v){const c=BS_PAL[v];rowFl(p,26,11,40,c,GLASS,shade(c,-.25),[6]);p.box(5,8.5,.6,'#3e2723',-7,2,20.1);
+    for(let k=0;k<4;k++)p.box(8,8-2*k,2.4,shade(c,.08),-7,0,21.2+k*2.4);p.add(new THREE.BoxGeometry(.6,.6,12),'#1e1e1e',-11,7,25,.6,0,0);},
+  bst(p,v){const c=BS_PAL[v];rowFl(p,26,11,40,c,GLASS,shade(c,-.25),[-7,0,7]);p.box(27.4,2.4,41.4,shade(c,-.35),0,9.6);p.box(28,1.4,3,shade(c,-.35),0,8.4,20.4);},
+  tef(p,v){rowFl(p,26,11,42,'#f5f3ee',GLASS,'#e2ded5',[-7,0,7]);p.box(24,2.2,2.2,'#1d1d1d',0,1.2,22);},
+  teb(p,v){const d=['#1a237e','#b71c1c','#1b5e20'][v];rowFl(p,26,11,42,'#f5f3ee',GLASS,'#e2ded5',[6]);p.box(5,9,.6,d,-6,1,21.1);
+    for(const x of[-9.5,-2.5])p.cyl(1.2,1.2,10,8,'#ffffff',x,0,24);p.box(10,1.4,5,'#ffffff',-6,10,23);p.box(26,3.5,.5,'#1d1d1d',0,0,25.5);},
+  tet(p,v){rowFl(p,26,11,42,'#f5f3ee',GLASS,'#e2ded5',[-7,0,7]);hip(p,26,42,7,'#5a6068',11,.65);p.box(4,9,8,'#efebe4',12,11,0);p.cyl(1,1,3,6,'#b5523b',12,20,-2);p.cyl(1,1,3,6,'#b5523b',12,20,2);},
+  dcf(p,v){const c=DC_PAL[v];rowFl(p,24,10,40,c,GLASS,'#ffffff',[-6]);p.cyl(6,6,10,12,c,5,0,20);p.box(4,5.5,.6,GLASS,5,2.5,26.1);},
+  dcb(p,v){const c=DC_PAL[v];rowFl(p,24,10,40,c,GLASS,'#ffffff',[]);p.cyl(6,6,10,12,c,5,0,20);p.box(4,5.5,.6,GLASS,5,2.5,26.1);p.box(5,8,.6,'#3e2723',-6,.5,20.1);p.box(7,1.2,4,'#d7ccc8',-6,0,22);},
+  dct(p,v){const c=DC_PAL[v];rowFl(p,24,10,40,c,GLASS,'#ffffff',[-6]);p.cyl(6,6,10,12,c,5,0,20);p.add(new THREE.ConeGeometry(7,9,12),'#5c6670',5,14.5,20);hip(p,24,40,5,'#5c6670',10,.75);},
+  tnf(p,v){const c=TN_PAL[v];rowFl(p,44,11,48,c,GLASS,shade(c,-.3),[-16,-8,8,16]);p.box(18,.8,5,'#222222',0,1,26.5);p.box(18,3,.4,'#222222',0,1.8,29);p.add(new THREE.BoxGeometry(.6,12,.6),'#222222',0,6,26,0,0,.75);},
+  tnb(p,v){const c=TN_PAL[v];rowFl(p,44,11,48,c,GLASS,shade(c,-.3),[]);p.box(40,7,.6,'#ffe3a0',0,1.5,24.1);p.box(40,1.2,6,['#2e7d32','#c62828','#1565c0'][v],0,9,27,0,.3);},
+  tnt(p,v){const c=TN_PAL[v];rowFl(p,44,11,48,c,GLASS,shade(c,-.3),[-16,-8,8,16]);p.box(45,3,49,shade(c,-.3),0,9);
+    for(const[x,z]of[[6,-16],[14,-16],[6,-8],[14,-8]])p.box(1,6,1,'#5d4037',x,12,z);p.cyl(6,6,8,10,'#8d6e63',10,18,-12);p.add(new THREE.ConeGeometry(6.6,5,10),'#5d4037',10,28.5,-12);},
+  pcf(p,v){const[c,sg]=PC_PAL[v];rowFl(p,22,10,28,c,GLASS,shade(c,-.12),[-2]);p.box(3,10,6,sg,9.5,0,15);p.box(3.4,3,4,'#ffffff',9.5,4,15);},
+  pcb(p,v){const[c,sg]=PC_PAL[v];rowFl(p,22,10,28,c,GLASS,shade(c,-.12),[]);p.box(20,7,.6,'#ffe082',0,1,14.1);},
+  pct(p,v){const[c,sg]=PC_PAL[v];rowFl(p,22,10,28,c,GLASS,shade(c,-.12),[-2]);p.box(3,10,6,sg,9.5,0,15);p.cyl(3,3,4,8,'#b0bec5',-5,10,-6);p.box(16,6,1,shade(sg,.3),0,10,-12);},
   /* one storey of a stacked tower: every floor is its own piece, so towers topple like a stack of books */
   flr(p,v){const[w,gl,b]=FLR_PAL[v];p.box(66,1.6,66,b);p.box(64,12.4,64,w,0,1.6);
     for(const s of[-1,1]){p.box(54,6.6,.6,gl,0,4.6,s*32.05);p.box(.6,6.6,54,gl,s*32.05,4.6,0);for(const q of[-18,0,18]){p.box(1.4,6.6,.8,w,q,4.6,s*32.1);p.box(.8,6.6,1.4,w,s*32.1,4.6,q);}}},
@@ -1480,13 +1507,18 @@ Object.assign(BUILD,{
       hip(p,rw,rd,rh,rf,y+h,top);p.add(prismGeo(rw*.32,rh*.8,8),rf,0,y+h+rh*.25,rd/2-4);y+=h+rh*.55;}
     for(const x of[-10,10])p.box(3,5,2,'#d4a017',x,y+2,0);},
 });
+// a storey of a narrow house: floor band, walls and a row of windows front and back
+function rowFl(p,w,h,d,wall,win,trim,xs){p.box(w,1,d,trim);p.box(w-.4,h-1,d-.4,wall,0,1);for(const s of[-1,1])for(const x of xs)p.box(Math.min(6,w*.22),h*.5,.5,win,x,h*.3,s*(d/2-.15));}
+const RH_PAL=['#e57373','#64b5f6','#ffd54f','#81c784','#ba68c8','#ffb74d','#f2efe9','#4db6ac'],BS_PAL=['#7b4b36','#8a5a44','#6d5a4e'],TN_PAL=['#9b3d2e','#a65a3c','#7d4a3a'],
+  DC_PAL=['#f4a6a6','#a6d1f4','#f4e3a6','#b7e4c7','#e0b3f0','#f7c59f'],PC_PAL=[['#d7ccc8','#ff1744'],['#cfd8dc','#00b0ff'],['#ffe0b2','#ffd600'],['#c5cae9','#76ff03']];
 const APT_PAL=[['#f3eee4','#ff8a65'],['#e3f2fd','#64b5f6'],['#fff3e0','#ffb74d'],['#e8f5e9','#81c784'],['#f3e5f5','#ba68c8']];
 const SLAB_PAL=[['#eceff1','#6f9fc4'],['#d7ccc8','#5f8aa6'],['#ffe0b2','#6d9bc3'],['#cfd8dc','#4e7fa1']];
 const GLS_PAL=[['#5f9fd0','#cfd8dc'],['#4d8f93','#e0e0e0'],['#7d8fb3','#eceff1'],['#3f6f9a','#b0bec5']];
 const STP_PAL=[['#d8cbb0','#4b5a66'],['#c9a27e','#3e4a52'],['#bcc6cc','#2f3d47'],['#e6d2c3','#5a4a42']];
 const BOOK_PAL=['#c62828','#1565c0','#2e7d32','#f9a825','#6a1b9a','#ef6c00','#00838f','#ad1457','#4e342e'];
 const CTN_PAL=['#c0392b','#2471a3','#d68910','#1e8449','#7d3c98','#566573'];
-const STK={S_office:{f:['flrbase','flr','flrtop'],h:14,n:[6,15],pal:6},S_apt:{f:['aptb','apt','aptt'],h:12,n:[7,16],pal:5},S_slab:{f:['slabb','slab','slabt'],h:14,n:[4,10],pal:4},
+const STK={R_rowhouse:{f:['rhb','rhf','rht'],h:11,n:[5,8],pal:8},R_brownstone:{f:['bsb','bsf','bst'],h:11,n:[6,9],pal:3},R_terrace:{f:['teb','tef','tet'],h:11,n:[6,10],pal:3},
+  R_dcrow:{f:['dcb','dcf','dct'],h:10,n:[5,8],pal:6},R_tenement:{f:['tnb','tnf','tnt'],h:11,n:[8,12],pal:3},R_pencil:{f:['pcb','pcf','pct'],h:10,n:[9,14],pal:4},S_office:{f:['flrbase','flr','flrtop'],h:14,n:[6,15],pal:6},S_apt:{f:['aptb','apt','aptt'],h:12,n:[7,16],pal:5},S_slab:{f:['slabb','slab','slabt'],h:14,n:[4,10],pal:4},
   S_glass:{f:['glsb','gls','glst'],h:16,n:[7,17],pal:4},S_step:{f:['stp1','stp2','stp3'],h:14,n:[9,16],pal:4,step:1},S_books:{f:['book'],h:10,n:[7,15],pal:9,jit:1},S_box:{f:['ctn'],h:26,n:[2,5],pal:6,jit:2}};
 const FLR_PAL=[['#e9e4da','#7fb3d5','#b9b2a5'],['#cfd8dc','#4f7ea8','#90a4ae'],['#f2d7b6','#6d9bc3','#c9a27e'],['#d7ccc8','#5c7f99','#a1887f'],['#dfe9e1','#5d9c8f','#9fb8a5'],['#f4e1e1','#7a8fb8','#c49a9a']];
 const geoCache=new Map();
@@ -1868,7 +1900,9 @@ function buildRoadMesh(){
   roadMesh=new THREE.Mesh(geo,ROAD_MAT);roadMesh.receiveShadow=true;roadMesh.frustumCulled=false;scene.add(roadMesh);}
 const ROAD_MAT=new THREE.MeshLambertMaterial({vertexColors:true,side:THREE.DoubleSide,...STENCIL_GROUND});
 
-function newTown(){genTown();outer.material.color.set(CITYGEO?CITYGEO.outer||'#5fb6df':'#83c98a');paintGround();buildRoadMesh();buildInstances();startCount=objs.length;startCars=objs.filter(o=>o.moving).length;spawnClk=bldClk=carClk=1;}
+function stackifyRows(){const rows=objs.filter(o=>ROWT.has(o.k));if(!rows.length)return;const gone=new Set(rows);objs=objs.filter(o=>!gone.has(o));LOTS=LOTS.filter(L=>!gone.has(L.o));
+  for(const o of rows){const st='R_'+o.k,S=STK[st];if(!S)continue;const v=Math.min(o.v,S.pal-1),n=ri(S.n[0],S.n[1]),grp=mkStackT(st,o.x,o.y,o.yaw,n,v);LOTS.push({k:st,st,x:o.x,y:o.y,yaw:o.yaw,n,v,grp});}}
+function newTown(){genTown();stackifyRows();outer.material.color.set(CITYGEO?CITYGEO.outer||'#5fb6df':'#83c98a');paintGround();buildRoadMesh();buildInstances();startCount=objs.length;startCars=objs.filter(o=>o.moving).length;spawnClk=bldClk=carClk=1;}
 function newGame(){
   clearBanners();for(const h of holes)disposeHole(h);clearPopups();pend={pts:0,t:0};tilting.clear();ghosted.clear();for(const g of ghostPool)g.visible=false;
   newTown();holes=[];unlocked=new Set();shake=0;
@@ -1961,7 +1995,7 @@ function spawnSmall(){const b=pick(blocks);if(!b)return;const pool=SPAWN_SMALL[b
 function spawnBuilding(){if(CITYGEO||(LOTS.length&&Math.random()<.4)){spawnLot();return;}const bs=blocks.filter(b=>SPAWN_BLD[b.type]);if(!bs.length)return;const b=pick(bs),k=pick(SPAWN_BLD[b.type]);
   const x0=b.x+16,y0=b.y+16,cs=(BLOCK-32)/2;
   for(const[ci,cj]of[[0,0],[1,0],[0,1],[1,1]].sort(()=>Math.random()-.5)){const cx=x0+(ci+.5)*cs,cy=y0+(cj+.5)*cs;
-    if(k==='rowrow'){if(!clearSpot(cx,cy,27*5,46,true))continue;clearClutter(cx,cy,27*5,46);for(let n=0;n<5;n++)spawnObj('rowhouse',cx-54+n*27,cy);spawnedCount+=5;return;}
+    if(k==='rowrow'){if(!clearSpot(cx,cy,27*5,46,true))continue;clearClutter(cx,cy,27*5,46);const v=ri(0,7);for(let n=0;n<5;n++){const x=cx-54+n*27,m=ri(5,8);LOTS.push({k:'R_rowhouse',st:'R_rowhouse',x,y:cy,yaw:0,n:m,v,grp:mkStackT('R_rowhouse',x,cy,0,m,v,true)});spawnedCount+=m;}return;}
     if(clearSpot(cx,cy,T[k].w,T[k].d,true)){clearClutter(cx,cy,T[k].w,T[k].d);if(spawnObj(k,cx,cy))spawnedCount++;return;}}}
 function spawnLot(){if(!LOTS.length)return;const f=1-timeLeft/roundLen,cand=[];for(let i=0;i<40;i++){const L=pick(LOTS);if(L.grp?L.grp.every(o=>o.gone):(!L.o||L.o.gone))cand.push(L);}
   let tw=0;const ws=cand.map(L=>{const w=Math.pow(T[L.k].r,.6+1.6*f);tw+=w;return w;});
