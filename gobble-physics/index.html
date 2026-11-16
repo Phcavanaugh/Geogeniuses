@@ -1573,67 +1573,106 @@ function paintGround(){
 const maskGeo=new THREE.CircleGeometry(1,56).rotateX(-Math.PI/2);
 const maskMat=new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,stencilWrite:true,stencilRef:1,
   stencilFunc:THREE.AlwaysStencilFunc,stencilZPass:THREE.ReplaceStencilOp,stencilFail:THREE.ReplaceStencilOp,stencilZFail:THREE.ReplaceStencilOp});
-const wellGeo=(()=>{const g=new THREE.CylinderGeometry(1,1,1,56,4,true);const p=g.attributes.position,c=new Float32Array(p.count*3);
-  const top=new THREE.Color('#9a2a47'),bot=new THREE.Color('#0a0205');
-  for(let i=0;i<p.count;i++){const t=Math.pow(clamp(.5-p.getY(i),0,1),.6);_c.copy(top).lerp(bot,t);c[i*3]=_c.r;c[i*3+1]=_c.g;c[i*3+2]=_c.b;}
-  g.setAttribute('color',new THREE.BufferAttribute(c,3));return g;})();
-const wellMat=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.BackSide,fog:false});
-const floorGeo=new THREE.CircleGeometry(1,40).rotateX(-Math.PI/2);
-const floorMat=new THREE.MeshBasicMaterial({color:'#070103',fog:false});
-const tongueGeo=new THREE.SphereGeometry(1,18,10);
-const tongueMat=new THREE.MeshBasicMaterial({color:'#a8385a',fog:false});
-const lipsGeo=new THREE.TorusGeometry(1.0,.1,10,72).rotateX(Math.PI/2);
-const teethGeo=(()=>{const p=new Parts(),up=new THREE.Vector3(0,1,0),n=16;
-  for(let i=0;i<n;i++){if(i===12)continue;const a=i/n*TAU,s=(i===11||i===13)?2:1;
-    const dir=new THREE.Vector3(-Math.cos(a),-.8,-Math.sin(a)).normalize();
-    const pos=new THREE.Vector3(Math.cos(a)*.95,.06,Math.sin(a)*.95).addScaledVector(dir,.1*s);
-    p.addQ(new THREE.ConeGeometry(.08*s,.2*s,5),'#fffaf0',pos,new THREE.Quaternion().setFromUnitVectors(up,dir));}
-  return p.build();})();
-const eyeGeo=new THREE.SphereGeometry(1,20,14),pupilGeo=new THREE.SphereGeometry(1,14,10),browGeo=new THREE.BoxGeometry(1,1,1);
-const eyeMat=new THREE.MeshLambertMaterial({color:'#ffffff'}),pupilMat=new THREE.MeshBasicMaterial({color:'#16161e'}),glintMat=new THREE.MeshBasicMaterial({color:'#ffffff'});
-const haloGeo=new THREE.RingGeometry(1.2,1.26,72).rotateX(-Math.PI/2);
+// ---- the mouth: glossy rolled lips, a swirling throat, curved fangs, a wiggly tongue, big shiny eyes ----
+const wellGeo=new THREE.CylinderGeometry(1,1,1,72,12,true);
+const THROAT_VS=`varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
+const THROAT_FS=`uniform float uT;uniform vec3 uTint;varying vec2 vUv;
+void main(){float d=1.-vUv.y;                                        // 0 at the lips, 1 at the bottom
+  float a=vUv.x*6.2831853;
+  float swirl=sin(a*7.+d*18.-uT*5.)*.5+.5;                             // spiral ridges sliding down
+  float rings=sin(d*40.-uT*9.)*.5+.5;
+  vec3 c=mix(uTint,vec3(.02,0.,.01),pow(d,.55));
+  c*=.5+.85*swirl*(1.-d*.7)+.18*rings*(1.-d);
+  c+=uTint*.35*pow(1.-d,6.);                                           // warm glow just under the lips
+  gl_FragColor=vec4(c,1.);
+  #include <colorspace_fragment>
+}`;
+const floorGeo=new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2);
+const floorMat=new THREE.MeshBasicMaterial({color:'#050102',fog:false});
+const tongueGeo=(()=>{const g=new THREE.SphereGeometry(1,40,24),p=g.attributes.position;   // a tongue with a groove down the middle
+  for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);if(y>0)p.setY(i,y*(1-.55*Math.exp(-x*x*18)));p.setZ(i,z*(1+.12*Math.max(0,z)));}
+  g.computeVertexNormals();return g;})();
+const lipsGeo=new THREE.TorusGeometry(1.0,.115,24,160).rotateX(Math.PI/2).scale(1,.78,1);
+const lipInGeo=new THREE.TorusGeometry(.9,.045,14,128).rotateX(Math.PI/2);
+const toothGeo=(()=>{const pts=[];for(let i=0;i<=10;i++){const t=i/10;pts.push(new THREE.Vector2(Math.max(.001,(1-t)*(1-t*.25)*.5),t));}
+  const g=new THREE.LatheGeometry(pts,14),p=g.attributes.position,c=new Float32Array(p.count*3);
+  for(let i=0;i<p.count;i++){const y=p.getY(i);p.setZ(i,p.getZ(i)+y*y*.35);_c.set('#e9dcc0').lerp(new THREE.Color('#fffef8'),y);c[i*3]=_c.r;c[i*3+1]=_c.g;c[i*3+2]=_c.b;}  // curved, ivory at the base
+  g.setAttribute('color',new THREE.BufferAttribute(c,3));g.computeVertexNormals();return g;})();
+const teethGeo=(()=>{const parts=[],up=new THREE.Vector3(0,1,0),n=22;
+  for(let i=0;i<n;i++){const a=i/n*TAU,front=Math.abs(wrapA(a-HP))<.42;if(front&&Math.abs(wrapA(a-HP))<.12)continue;
+    const big=Math.abs(Math.abs(wrapA(a-HP))-.24)<.08,s=big?1.9:.8+.25*hash(i,3);
+    const dir=new THREE.Vector3(-Math.cos(a),-.75,-Math.sin(a)).normalize();
+    const g=toothGeo.clone(),q=new THREE.Quaternion().setFromUnitVectors(up,dir);
+    g.applyMatrix4(new THREE.Matrix4().compose(new THREE.Vector3(Math.cos(a)*.92,.05,Math.sin(a)*.92),q,new THREE.Vector3(.12*s,.24*s,.12*s)));
+    parts.push(g);}
+  const out=new THREE.BufferGeometry(),tot=parts.reduce((s,g)=>s+g.index.count,0),P=new Float32Array(tot*3),N=new Float32Array(tot*3),C=new Float32Array(tot*3);let o=0;
+  for(const g of parts){const n=g.toNonIndexed();P.set(n.attributes.position.array,o);N.set(n.attributes.normal.array,o);C.set(n.attributes.color.array,o);o+=n.attributes.position.array.length;}
+  out.setAttribute('position',new THREE.BufferAttribute(P,3));out.setAttribute('normal',new THREE.BufferAttribute(N,3));out.setAttribute('color',new THREE.BufferAttribute(C,3));return out;})();
+const eyeGeo=new THREE.SphereGeometry(1,40,28),irisGeo=new THREE.SphereGeometry(1,28,18),pupilGeo=new THREE.SphereGeometry(1,24,16),
+  lidGeo=new THREE.SphereGeometry(1,40,20,0,TAU,0,Math.PI*.5),browGeo=new THREE.CapsuleGeometry(.5,1.6,6,14).rotateZ(HP);
+const glowGeo=new THREE.RingGeometry(1,1.55,96,1).rotateX(-Math.PI/2);
+const GLOW_FS=`uniform vec3 uTint;uniform float uA;varying vec2 vUv;void main(){float r=length(vUv-.5)*2.;float t=clamp((r-.645)/.355,0.,1.);gl_FragColor=vec4(uTint,uA*pow(1.-t,2.2));
+  #include <colorspace_fragment>
+}`;
+const glowMatFor=c=>new THREE.ShaderMaterial({uniforms:{uTint:{value:new THREE.Color(c)},uA:{value:.55}},vertexShader:THROAT_VS,fragmentShader:GLOW_FS,transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,
+  stencilWrite:true,stencilRef:1,stencilFunc:THREE.NotEqualStencilFunc});
+const haloGeo=new THREE.RingGeometry(1.2,1.26,96).rotateX(-Math.PI/2);
+const glossy=(c,r=.32,env=.35)=>new THREE.MeshStandardMaterial({color:c,roughness:r,metalness:0,envMap:beanMat().envMap,envMapIntensity:env});
+let EYE_MAT=null,PUPIL_MAT=null,GLINT_MAT=null,TEETH_MAT=null,TONGUE_MAT=null;
+function sharedMouthMats(){if(EYE_MAT)return;EYE_MAT=glossy('#ffffff',.18,.6);PUPIL_MAT=glossy('#101018',.12,.8);GLINT_MAT=new THREE.MeshBasicMaterial({color:'#ffffff'});
+  TEETH_MAT=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.28,metalness:0,envMap:beanMat().envMap,envMapIntensity:.45});TONGUE_MAT=glossy('#d4486f',.35,.3);}
 const SHARED_MATS=new Set();
-function holeMeshes(h){
+function holeMeshes(h){sharedMouthMats();
   const mask=new THREE.Mesh(maskGeo,maskMat);mask.renderOrder=-2;
+  const tint=new THREE.Color(h.color).lerp(new THREE.Color('#5a0a22'),.55);
+  const wellMat=new THREE.ShaderMaterial({uniforms:{uT:{value:0},uTint:{value:tint}},vertexShader:THROAT_VS,fragmentShader:THROAT_FS,side:THREE.BackSide});
   const well=new THREE.Mesh(wellGeo,wellMat);
   const floor=new THREE.Mesh(floorGeo,floorMat);
-  const tongue=new THREE.Mesh(tongueGeo,tongueMat);
-  const lips=new THREE.Mesh(lipsGeo,new THREE.MeshLambertMaterial({color:h.color}));lips.castShadow=true;
-  const teeth=new THREE.Mesh(teethGeo,OBJ_MAT);
-  const eyes=new THREE.Group(),browMat=new THREE.MeshLambertMaterial({color:shade(h.color,-.5)}),E=[];
-  for(const side of[-1,1]){const e={side,w:new THREE.Mesh(eyeGeo,eyeMat),p:new THREE.Mesh(pupilGeo,pupilMat),g:new THREE.Mesh(glintMat?pupilGeo:pupilGeo,glintMat),b:new THREE.Mesh(browGeo,browMat)};
-    e.w.castShadow=true;eyes.add(e.w,e.p,e.g,e.b);E.push(e);}
-  const parts=[mask,well,floor,tongue,lips,teeth,eyes];
+  const tongue=new THREE.Mesh(tongueGeo,TONGUE_MAT);
+  const lipMat=glossy(h.color,.3,.45),lipInMat=glossy(shade(h.color,-.45),.5,.2);
+  const lips=new THREE.Mesh(lipsGeo,lipMat);lips.castShadow=true;
+  const lipIn=new THREE.Mesh(lipInGeo,lipInMat);
+  const teeth=new THREE.Mesh(teethGeo,TEETH_MAT);
+  const glow=new THREE.Mesh(glowGeo,glowMatFor(h.color));glow.renderOrder=1;
+  const eyes=new THREE.Group(),lidMat=glossy(shade(h.color,-.08),.35,.35),browMat=glossy(shade(h.color,-.55),.45,.2),irisMat=glossy('#2a2238',.2,.6),E=[];
+  for(const side of[-1,1]){const e={side,w:new THREE.Mesh(eyeGeo,EYE_MAT),i:new THREE.Mesh(irisGeo,irisMat),p:new THREE.Mesh(pupilGeo,PUPIL_MAT),g:new THREE.Mesh(pupilGeo,GLINT_MAT),
+      l:new THREE.Mesh(lidGeo,lidMat),b:new THREE.Mesh(browGeo,browMat)};
+    e.w.castShadow=true;eyes.add(e.w,e.i,e.p,e.g,e.l,e.b);E.push(e);}
+  const parts=[mask,well,floor,tongue,lips,lipIn,teeth,glow,eyes];
   let halo=null;if(!h.bot){halo=new THREE.Mesh(haloGeo,new THREE.MeshBasicMaterial({color:'#ffffff',transparent:true,opacity:.5,depthWrite:false}));parts.push(halo);}
   for(const m of parts){m.frustumCulled=false;m.traverse(c=>c.frustumCulled=false);scene.add(m);}
   const el=document.createElement('div');el.className='hl';
   el.innerHTML='<div class="hn"><span class="lv">1</span><span class="nm"></span></div><div class="bars"><div class="bar"><i></i></div><span class="nx"></span></div>';
   el.querySelector('.bar i').style.background=h.color;$('labels').appendChild(el);
   h.chomp=0;h.blink=rnd(1,4);h.mvx=0;h.mvy=0;
-  h.m={mask,well,floor,tongue,lips,teeth,eyes,E,halo,parts,el,lv:el.querySelector('.lv'),nm:el.querySelector('.nm'),fill:el.querySelector('.bar i'),nx:el.querySelector('.nx'),own:[lips.material,browMat,halo&&halo.material]};
+  h.m={mask,well,floor,tongue,lips,lipIn,teeth,glow,eyes,E,halo,parts,el,lv:el.querySelector('.lv'),nm:el.querySelector('.nm'),fill:el.querySelector('.bar i'),nx:el.querySelector('.nx'),
+    own:[wellMat,lipMat,lipInMat,glow.material,lidMat,browMat,irisMat,halo&&halo.material]};
 }
 function disposeHole(h){if(!h.m)return;for(const m of h.m.parts)scene.remove(m);for(const mt of h.m.own)if(mt)mt.dispose();h.m.el.remove();h.m=null;}
 function syncHole(h,now){const m=h.m;if(!m)return;const vis=h.alive;
   for(const p of m.parts)p.visible=vis;
   if(!vis){m.el.style.display='none';return;}
-  const r=h.r;
+  const r=h.r,t=now/1000,c=h.chomp,breath=1+.012*Math.sin(t*2.2+h.x*.01);
   m.mask.position.set(h.x,0,h.y);m.mask.scale.set(r,1,r);
-  m.well.position.set(h.x,-1.5*r,h.y);m.well.scale.set(r,3*r,r);
+  m.well.position.set(h.x,-1.5*r,h.y);m.well.scale.set(r,3*r,r);m.well.material.uniforms.uT.value=t;
   m.floor.position.set(h.x,-3*r+.5,h.y);m.floor.scale.set(r,1,r);
-  const c=h.chomp;
-  m.tongue.position.set(h.x,-.78*r,h.y-.05*r);m.tongue.scale.set(.36*r,.12*r,.5*r);
-  const ls=r*(1+.06*c);m.lips.position.set(h.x,.02*r,h.y);m.lips.scale.set(ls,r,ls);
-  m.teeth.position.set(h.x,0,h.y);m.teeth.scale.set(r*(1+.07*c),r*(1-.55*c),r*(1+.07*c));
+  m.tongue.position.set(h.x+Math.sin(t*3.1)*.04*r,-.72*r+Math.sin(t*4.3)*.03*r,h.y+.02*r);m.tongue.scale.set(.34*r,.11*r*(1+.25*c),.5*r);m.tongue.rotation.y=Math.sin(t*2.3)*.18;
+  const ls=r*breath*(1+.07*c);m.lips.position.set(h.x,.03*r,h.y);m.lips.scale.set(ls,r*(1-.2*c),ls);
+  m.lipIn.position.set(h.x,-.02*r,h.y);m.lipIn.scale.set(ls,r,ls);
+  m.teeth.position.set(h.x,0,h.y);m.teeth.scale.set(r*breath*(1+.07*c),r*(1-.55*c),r*breath*(1+.07*c));
+  m.glow.position.set(h.x,.6,h.y);m.glow.scale.set(r,1,r);m.glow.material.uniforms.uA.value=.38+.12*Math.sin(t*3+h.y*.01)+.35*c;
   m.eyes.position.set(h.x,0,h.y);m.eyes.scale.setScalar(r);
-  const open=(h.blink<.13?.12:1)*(1-.6*c);
+  const blink=h.blink<.13?1:0,lid=-1.2+1.95*Math.max(blink,c*.5);     // eyelids roll down to blink
   _ax.set(h.mvx*.75,Math.sin(PITCH),Math.cos(PITCH)+h.mvy*.75).normalize();
-  for(const e of m.E){const ex=e.side*.3,ey=.36,ez=-.9;
-    e.w.position.set(ex,ey,ez);e.w.scale.set(.21,.21*open,.21);
-    e.p.position.set(ex+_ax.x*.13,ey+_ax.y*.13*open,ez+_ax.z*.13);e.p.scale.set(.105,.105*open,.105);
-    e.g.position.set(e.p.position.x-.03,e.p.position.y+.045*open,e.p.position.z+.07);e.g.scale.setScalar(.032*Math.max(open,.2));
-    e.b.position.set(ex,ey+.24*Math.max(open,.5)+(h.bot?0:.03),ez+.04);e.b.scale.set(.27,.055,.07);
-    e.b.rotation.z=(h.bot?-.38:.22)*-e.side;}
-  if(m.halo){const pl=Math.sin(now*.004)*.5+.5;m.halo.position.set(h.x,.4,h.y);const s=r+2+pl*3;m.halo.scale.set(s,1,s);m.halo.material.opacity=.25+.3*pl;}
+  for(const e of m.E){const ex=e.side*.33,ey=.34+.015*Math.sin(t*2.2),ez=-.92;
+    e.w.position.set(ex,ey,ez);e.w.scale.setScalar(.25);
+    const lx=_ax.x*.15,ly=_ax.y*.15,lz=_ax.z*.15;
+    e.i.position.set(ex+lx,ey+ly,ez+lz);e.i.scale.setScalar(.14);
+    e.p.position.set(ex+lx*1.2,ey+ly*1.2,ez+lz*1.2);e.p.scale.setScalar(.085);
+    e.g.position.set(e.p.position.x-.04,e.p.position.y+.06,e.p.position.z+.075);e.g.scale.setScalar(.034);
+    e.l.position.set(ex,ey,ez);e.l.scale.setScalar(.262);e.l.rotation.set(lid,0,(h.bot?.32:-.12)*e.side);
+    e.b.position.set(ex,ey+.31+(h.bot?-.01:.03)+.03*c,ez+.05);e.b.scale.set(.14,.06,.06);e.b.rotation.set(0,0,(h.bot?-.42:.24)*-e.side);}
+  if(m.halo){const pl=Math.sin(now*.004)*.5+.5;m.halo.position.set(h.x,.4,h.y);const s=r*1.18+2+pl*3;m.halo.scale.set(s,1,s);m.halo.material.opacity=.2+.25*pl;}
 }
 
 /* ================= holes / players ================= */
