@@ -326,7 +326,9 @@
   .monsterstage{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;min-height:260px}
   .speech{background:var(--card);border-radius:22px;box-shadow:var(--shadow);padding:10px 18px;font-size:clamp(22px,6vw,32px);font-weight:700;position:relative;margin-bottom:14px;text-align:center}
   .speech::after{content:'';position:absolute;left:50%;bottom:-12px;margin-left:-12px;border:12px solid transparent;border-top-color:#fff;border-bottom:0}
+  #monsterWrap{width:min(68vw,280px,32vh)}
   #monster{width:min(62vw,250px);height:auto;transition:transform .2s}
+  canvas#monster{width:100%;display:block}
   #monster.hover{transform:scale(1.08)}
   #monster.chomp{animation:chomp .6s}
   #monster.yuck{animation:shake .5s}
@@ -3164,7 +3166,17 @@ function monsterSVG(mood){
     ${eyes}${mouth}
   </svg>`;
 }
-function setMonster(m){ $('monsterWrap').innerHTML=monsterSVG(m); }
+// 3D Ñamñam when the phone supports it; the flat drawing otherwise
+const M3 = () => window.Monster3D && window.Monster3D.ok ? window.Monster3D : null;
+function setMonster(m){
+  const M=M3();
+  if(M){ try{ M.mount($('monsterWrap')); if(m==='open') M.ask(); return; }catch(e){ console.warn('3D monster failed', e); window.Monster3D=null; } }
+  $('monsterWrap').innerHTML=monsterSVG(m);
+}
+function monsterHover(on){ const M=M3(); if(M) M.hover(on); else $('monster')&&$('monster').classList.toggle('hover',on); }
+// play the 3D dance (cute or gross); resolves when it ends
+function monsterDance(kind, emoji){ const M=M3(); if(!M) return Promise.resolve(); try{ return kind==='happy' ? M.happy(emoji) : M.gross(emoji); }catch(e){ return Promise.resolve(); } }
+window.addEventListener('monster3d-ready', ()=>{ if($('feed').classList.contains('on') && !S.locked) setMonster('open'); });
 function startFeed(){ newRun(); feedRound(); }
 function feedRound(){
   const words=VOCAB[S.cat].words;
@@ -3189,11 +3201,11 @@ function dragStart(e,b){
   const overMonster=(x,y)=>{ const m=$('monster'); if(!m) return false; const r=m.getBoundingClientRect(); return x>r.left-30&&x<r.right+30&&y>r.top-30&&y<r.bottom+30; };
   const move=ev=>{
     if(!moved && Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){ moved=true; ghost=document.createElement('div'); ghost.className='ghost'; ghost.textContent=b._w[2]; document.body.appendChild(ghost); b.classList.add('dragging'); }
-    if(ghost){ ghost.style.left=ev.clientX+'px'; ghost.style.top=ev.clientY+'px'; $('monster')&&$('monster').classList.toggle('hover',overMonster(ev.clientX,ev.clientY)); }
+    if(ghost){ ghost.style.left=ev.clientX+'px'; ghost.style.top=ev.clientY+'px'; monsterHover(overMonster(ev.clientX,ev.clientY)); }
   };
   const up=ev=>{
     window.removeEventListener('pointermove',move); window.removeEventListener('pointerup',up); window.removeEventListener('pointercancel',up);
-    ghost&&ghost.remove(); b.classList.remove('dragging'); $('monster')&&$('monster').classList.remove('hover');
+    ghost&&ghost.remove(); b.classList.remove('dragging'); monsterHover(false);
     if(!moved || overMonster(ev.clientX,ev.clientY)) feedIt(b);
   };
   window.addEventListener('pointermove',move); window.addEventListener('pointerup',up); window.addEventListener('pointercancel',up);
@@ -3202,15 +3214,17 @@ async function feedIt(b){
   if(S.locked) return; S.locked=true; const run=S.run; const w=b._w;
   const done = wordDone();
   if(w===S.target){
-    b.classList.add('gone'); setMonster('chomp');
+    b.classList.add('gone'); if(!M3()) setMonster('chomp');
+    const dance=monsterDance('happy', w[2]);
     const r=$('monster').getBoundingClientRect();
     scoreRight(w, r.left+r.width/2, r.top+r.height*0.6);
-    await Promise.all([talk(['c|¡Ñam, ñam! ¡Gracias!','w|'+w[2]]), wait(1300)]);
+    await Promise.all([talk(['c|¡Ñam, ñam! ¡Gracias!','w|'+w[2]]), wait(1300), dance]);
   } else {
-    b.classList.add('miss'); setMonster('yuck');
+    b.classList.add('miss'); if(!M3()) setMonster('yuck');
+    const dance=monsterDance('gross', w[2]);
     const right=[...$('tray').children].find(x=>x._w===S.target); right&&right.classList.add('reveal');
     scoreMiss(S.target);
-    await Promise.all([talk(['c|¡Puaj!','c|'+thatIs(w),'w|'+w[2],'c|Yo quiero','w|'+S.target[2]]), wait(1800)]);
+    await Promise.all([talk(['c|¡Puaj!','c|'+thatIs(w),'w|'+w[2],'c|Yo quiero','w|'+S.target[2]]), wait(1800), dance]);
   }
   if(run!==S.run) return;
   nextOrEnd(done, feedRound);
@@ -3339,5 +3353,6 @@ $('saveOffline').onclick=async()=>{
   b.disabled=false;
 };
 </script>
+<script type="module" src="monster3d.js"></script>
 </body>
 </html>
