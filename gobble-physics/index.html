@@ -415,8 +415,6 @@ function genTown(){
   for(const[ri_,vert]of[[blvd[0],false],[blvd[1],false],[blvd[2],true],[blvd[3],true]]){const c=ROAD/2+ri_*(BLOCK+ROAD);
     for(let k=0;k<N;k++){const s0=ROAD+k*(BLOCK+ROAD)+20;for(let m=0;m<4;m++){const p=s0+30+m*70;
       if(vert)mk('median',c,p,{vert:true,yaw:Math.PI/2});else mk('median',p,c);}}}
-  for(let n=40;n--;){const i=ri(0,N),c=ROAD/2+i*(BLOCK+ROAD),p=rnd(30,W-30);
-    if(Math.random()<.5)mk('cone',p,c+pick([-34,34]));else mk('cone',c+pick([-34,34]),p);}
 }
 
 /* ================= road network: any-angle streets, cars that follow them ================= */
@@ -469,9 +467,9 @@ function buildGraph(S){
     E.ux=(B.x-A.x)/E.len;E.uy=(B.y-A.y)/E.len;A.e.push(i);B.e.push(i);});};
   link();
   // trim little stubs left where roads were cut short
-  for(let pass=0;pass<4;pass++){let cut=false;
+  for(let pass=0;pass<8;pass++){let cut=false;
     edges=edges.filter(E=>{const da=nodes[E.a].e.length,db=nodes[E.b].e.length;
-      if(E.len<45&&((da===1&&!gate(E.a)&&db>=3)||(db===1&&!gate(E.b)&&da>=3))){cut=true;return false;}return true;});
+      if((E.len<45&&((da===1&&!gate(E.a)&&db>=3)||(db===1&&!gate(E.b)&&da>=3)))||(CITYGEO&&E.len<130&&((da===1&&!gate(E.a))||(db===1&&!gate(E.b))))){cut=true;return false;}return true;});
     link();if(!cut)break;}
   // drop tiny islands of road
   const comp=new Int32Array(nodes.length).fill(-1),clen=[];let c=0;
@@ -624,12 +622,12 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
       const z=st.zone,wgt=z==='downtown'?1:z==='shops'?.75:.45;if(Math.random()>wgt)continue;if(pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<300))continue;
       const k=Math.random()<(z==='downtown'?.66:z==='shops'?.55:.2)?'stkcluster':z==='downtown'?pick(want.core):z==='shops'?pick(['mallblock','hospital','garage','condo','arena']):pick(['mallblock','garage','condo']);
       G.landmarks.push([k,x,y,G.yawAt?G.yawAt(x,y):0,{big:1}]);pts.push([x,y]);n++;}}
-  G.lm=[];for(const L of G.landmarks){const r=placeLM(G,L);if(!r)continue;G.lm.push(r);G.noroad.push({rr:1,x:r.x,y:r.y,w:T[r.k].w,d:T[r.k].d,yaw:r.yaw,m:14});}
+  G.lm=[];for(const L of G.landmarks){const r=placeLM(G,L);if(!r)continue;G.lm.push(r);G.noroad.push({rr:1,x:r.x,y:r.y,w:T[r.k].w,d:T[r.k].d,yaw:r.yaw,m:r.water?14:r.big?64:44});}
   setGraph(buildGraph(dedupeSegs(clipSegs(G))));PF.graph=performance.now()-T0;
   OCC=new Uint8Array(ON*ON);
   for(const L of G.lm){if(L.k==='stkcluster'){const c=Math.cos(L.yaw),s=Math.sin(L.yaw),v=ri(0,5);
       const dk=G.styles[G.district(L.x,L.y)],z=dk&&dk.zone,st=z==='downtown'?wpick([['S_office',3],['S_glass',4],['S_step',2],['S_slab',1.5],['S_apt',.8]]):z==='shops'?wpick([['S_apt',2],['S_slab',2],['S_office',2],['S_glass',1.5],['S_step',1.2],['S_box',.8]]):z==='park'?'S_books':wpick([['S_apt',3],['S_box',1.5],['S_books',1],['S_slab',1]]),S=T[st];
-      const gp=S.w>70?10:14,nx=Math.max(1,Math.floor(280/(S.w+gp))),ny=Math.max(1,Math.floor(280/(S.d+gp)));
+      const gp=S.w>70?10:14,nx=Math.max(1,Math.floor(252/(S.w+gp))),ny=Math.max(1,Math.floor(252/(S.d+gp)));
       for(let a=0;a<nx;a++)for(let b=0;b<ny;b++){const u=(a-(nx-1)/2)*(S.w+gp),w=(b-(ny-1)/2)*(S.d+gp),x=L.x+u*c+w*s,y=L.y-u*s+w*c;putStack(st,x,y,L.yaw);}
       occMark(L.x,L.y,T[L.k].w+16,T[L.k].d+16,L.yaw);continue;}
     const lo=aabb(mk(L.k,L.x,L.y,{yaw:L.yaw}));if(L.big)LOTS.push({k:L.k,x:L.x,y:L.y,yaw:L.yaw,o:lo});occMark(L.x,L.y,T[L.k].w+16,T[L.k].d+16,L.yaw);}
@@ -652,12 +650,17 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
     for(let t=50;t<E.len-50;t+=72){const x=A.x+E.ux*t,y=A.y+E.uy*t;if(!isLand(x,y))continue;aabb(mk('median',x,y,{yaw:Math.atan2(-E.uy,E.ux)}));}}
   // sidewalks: lamps, hydrants, street trees, people walking
   for(const ch of CH){if(ch.bridge||ch.len<30)continue;const m0=ch.mA+2,m1=ch.len-ch.mB-2;if(m1-m0<12)continue;
-    for(const side of[-1,1]){const off=ch.w/2+4;
-      for(let t=m0+rnd(0,20);t<m1;t+=rnd(22,44)){const q=ptAt(ch.pts,ch.cum,t),nx=-q[3]*side,ny=q[2]*side,x=q[0]+nx*off,y=q[1]+ny*off;if(maskAt(x,y)!==1)continue;
-        const st=G.styles[G.district(x,y)];if(!st)continue;const r=Math.random();
-        const k=r<(st.tree||.2)?'tree':r<(st.tree||.2)+.5?pick(st.street||(C.extra?STREETK.concat(C.extra):STREETK)):null;if(!k)continue;
-        const fw=k==='tree'?10:T[k].w,fd=k==='tree'?10:T[k].d;if(!occFree(x,y,fw+2,fd+2,0))continue;occMark(x,y,fw,fd,0);
-        mk(k,x,y,k==='bench'||k==='sign'||k==='phone'||k==='postbox'||k==='vending'?{yaw:Math.atan2(nx,ny)}:null);}}
+    for(const side of[-1,1]){const off=ch.w/2+3.5;
+      // street furniture in a tidy rhythm along the curb: lamps, street trees, a hydrant, a bin by the corner
+      const put=(k,t,yawFace)=>{if(t<m0||t>m1)return;const q=ptAt(ch.pts,ch.cum,t),nx=-q[3]*side,ny=q[2]*side,x=q[0]+nx*off,y=q[1]+ny*off;if(maskAt(x,y)!==1)return;
+        const fw=k==='tree'?9:T[k].w,fd=k==='tree'?9:T[k].d;if(!occFree(x,y,fw+2,fd+2,0))return;occMark(x,y,fw,fd,0);mk(k,x,y,yawFace?{yaw:Math.atan2(nx,ny)}:null);};
+      const stS=G.styles[G.district(ch.pts[0][0],ch.pts[0][1])]||{},trees=(stS.tree||.2)>.18;
+      for(let t=m0+(side>0?12:44);t<m1-4;t+=64){put('lamp',t);if(trees&&Math.random()<(stS.tree||.2)*1.8)put('tree',t+32);}
+      if(m1-m0>140&&Math.random()<.55)put('hydrant',m0+rnd(20,m1-m0-20));
+      if(Math.random()<.4)put('trash',side>0?m0+4:m1-4);
+      if((stS.zone==='downtown'||stS.zone==='shops')&&Math.random()<.25)put('bench',m0+rnd(30,m1-m0-30),1);
+      if(C.extra&&Math.random()<.3)put(pick(C.extra),m0+rnd(14,m1-m0-14),1);
+      if(stS.zone==='downtown'&&Math.random()<.2)put('sign',m0+8,1);}
     const st0=G.styles[G.district(ch.pts[0][0],ch.pts[0][1])]||{ppl:1},np=Math.round((m1-m0)/100*st0.ppl*rnd(.5,1.5));
     for(let n=0;n<np;n++){const ei=pick(ch.es),E=RG.edges[ei];if(E.len<30)continue;const a0=endMargin(E.a,ei)+2,a1=E.len-endMargin(E.b,ei)-2;if(a1-a0<20)continue;
       const o=mk('person',0,0,{walk:{e:ei,s:pick([-1,1]),t:rnd(a0,a1),t0:a0,t1:a1,sp:rnd(9,18)*pick([-1,1])}});walk(o,0);}}
@@ -674,7 +677,7 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
   // between the streets: yards, plazas, parks, more buildings
   for(let y=11;y<W;y+=21)for(let x=11;x<W;x+=21){let px=x+rnd(-6,6),py=y+rnd(-6,6);const m=maskAt(px,py);if((m&3)!==1)continue;
     const park=m===5;if(roadDist(px,py)<SW+3)continue;const st=park?G.styles.park:G.styles[G.district(px,py)];if(!st||Math.random()>(st.dens||.4))continue;
-    const k=wpick(st.fill),t=T[k],bld=!park&&t.h>26&&t.w>30;let yaw=rnd(0,TAU);
+    const k=wpick(st.fill),t=T[k],bld=!park&&t.h>26&&t.w>30;if(!bld&&!STK[k]&&!['tree','bush','sakura','person','bench'].includes(k)&&Math.random()<.6)continue;let yaw=rnd(0,TAU);
     if(bld){const ne=nearEdge(px,py);yaw=ne?Math.atan2(ne.x-px,ne.y-py):pick([0,HP,Math.PI,-HP]);
       if(ne&&ne.d<90){const E=RG.edges[ne.e],dx=px-ne.x,dy=py-ne.y,l=Math.hypot(dx,dy)||1,off=E.w/2+SW+3+rnd(...(st.set||[2,6]))+t.d/2;px=ne.x+dx/l*off;py=ne.y+dy/l*off;}}
     else if(['bench','picnic','swings','slide','cart','bike','fountain'].includes(k))yaw=pick([0,HP,Math.PI,-HP]);
@@ -1997,9 +2000,9 @@ function think(b){
 
 /* ================= spawning during the round ================= */
 const SPAWN_SMALL={plaza:['person','person','person','pigeon','flower','bench','trash'],mall:['person','person','person','pigeon','tree'],
-  times:['person','person','person','person','pigeon','cart'],temple:['person','person','sakura','flower'],park:['person','person','duck','ball','bush','tree','bench','flower','dog','picnic','cart','swings','slide'],houses:['person','ball','flower','cat','dog','bike','bush','tree','mailbox'],
-  rows:['person','person','ball','flower','cat','bike','trash','bush','tree'],shops:['person','person','person','pigeon','trash','flower','bike','cone','cart','dumpster','phone','bench'],
-  downtown:['person','person','person','pigeon','trash','flower','cone','dumpster','phone','bike'],fun:['person','person','ball','pigeon','cart','flower','picnic'],civic:['person','person','ball','bike','dog','tree','picnic','flower']};
+  times:['person','person','person','person','pigeon','cart'],temple:['person','person','sakura','flower'],park:['person','person','duck','ball','bush','tree','bench','flower','dog','picnic','cart','swings','slide'],houses:['person','cat','dog','bike','bush','tree'],
+  rows:['person','person','cat','bike','bush','tree'],shops:['person','person','person','pigeon','trash','bike','bench'],
+  downtown:['person','person','person','pigeon','trash','bike','bench'],fun:['person','person','ball','pigeon','cart','flower','picnic'],civic:['person','person','ball','bike','dog','tree','picnic','flower']};
 const SPAWN_BLD={houses:['house','house','rowrow','apartment'],rows:['rowrow','rowrow','house'],shops:['shop','diner','gas'],downtown:['office','tower','apartment','shop']};
 let spawnClk=0,bldClk=0,carClk=0,startCount=0,startCars=0;
 function mkStackT(st,x,y,yaw,n,v,spawn){const S=STK[st];if(!S||st==='S_office')return mkStack(x,y,yaw,n,v,spawn);const g=[];let z=0;
