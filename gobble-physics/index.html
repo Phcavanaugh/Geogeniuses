@@ -209,7 +209,8 @@ const T={
   S_office:{w:66,d:66,h:140,pts:0}, S_apt:{w:50,d:50,h:140,pts:0}, S_slab:{w:110,d:46,h:100,pts:0}, S_glass:{w:80,d:80,h:200,pts:0}, S_step:{w:84,d:84,h:180,pts:0}, S_books:{w:74,d:52,h:110,pts:0}, S_box:{w:82,d:32,h:80,pts:0}, arena:{w:230,d:190,h:80,pts:420}, hospital:{w:220,d:170,h:116,pts:400}, mallblock:{w:242,d:174,h:60,pts:380}, condo:{w:210,d:190,h:216,pts:450}, garage:{w:200,d:182,h:64,pts:300}, twin:{w:212,d:182,h:409,pts:600}, castle:{w:140,d:140,h:150,pts:400,rr:180},
 };
 // size for eating comes from the footprint only, so a landmark goes down as soon as its base fits in the hole (rr just marks landmarks)
-for(const k in T){T[k].r=Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;if(T[k].rr)T[k].pts=Math.max(40,Math.round(T[k].pts*Math.min(1,T[k].r/120)));}
+for(const k in T){T[k].r=Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;if(T[k].rr)T[k].pts=Math.max(40,Math.round(T[k].pts*Math.min(1,T[k].r/120)));
+  if(T[k].pts)T[k].pts=Math.max(1,Math.min(25,Math.round(Math.sqrt(T[k].pts))));}   // flat, Hole.io-like values: eat lots of stuff, not one jackpot
 const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'],['icecream','🍦','ICE CREAM TRUCKS!'],['garbage','🚛','GARBAGE TRUCKS!'],
   ['fire','🚒','FIRE TRUCKS!'],['bus','🚌','BUSES are yummy now!'],['rowhouse','🏘️','ROW HOUSES!'],['house','🏠','You can eat HOUSES!'],['carousel','🎠','The CAROUSEL!'],
   ['shop','🏪','STORES too!'],['diner','🍔','DINERS!'],['apartment','🏢','APARTMENTS!'],['gas','⛽','GAS STATIONS!'],
@@ -695,7 +696,7 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
   spawnTraffic(Math.round(RG.total/480));
   // keep the total points on the map close to Gobble Town's so levels come at the same pace
   // (only buildings are scaled, so the small stuff you eat early on is worth the same everywhere)
-  let sm=0,bl=0;for(const o of objs){if(o.t.rr)continue;if(isBld(o.t))bl+=o.t.pts;else sm+=o.t.pts;}PTS_SCALE=clamp((24000-sm)/Math.max(1,bl),.3,1);
+  let sm=0,bl=0;for(const o of objs){if(o.t.rr)continue;if(isBld(o.t))bl+=o.t.pts;else sm+=o.t.pts;}PTS_SCALE=1;
   for(const o of objs)if(!o.t.rr)o.pts=isBld(o.t)?Math.max(1,Math.round(o.t.pts*PTS_SCALE)):o.t.pts;PF.all=performance.now()-T0;
 }
 
@@ -1802,7 +1803,7 @@ let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myCo
 /* ---- levels: growth fills a bar; size only changes on level-up ---- */
 // Each level costs 20 points until about level 7, then 21% more per level. Each level = 10% bigger. No top level.
 // each level costs 21% more than the last, and above level 15 that step keeps growing, so levels get harder and harder
-const LV_COSTS=[0];{let c=6;for(let L=1;L<400;L++){LV_COSTS[L]=Math.round(Math.max(20,c));c=Math.min(1e12,c*(1.21+.008*Math.max(0,L-12)));}}
+const PK=window.__pk||.3,LV_COSTS=[0];{let c=6;for(let L=1;L<400;L++){LV_COSTS[L]=Math.round(Math.max(6,c*PK));c=Math.min(1e12,c*(1.21+.008*Math.max(0,L-12)));}}
 const LSTEP=1.1,LV_COST=L=>LV_COSTS[Math.min(L,399)];   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
 const LV_TOTAL=[0,0];for(let L=1;L<400;L++)LV_TOTAL[L+1]=LV_TOTAL[L]+LV_COST(L);
 const lvR=L=>R0*Math.pow(LSTEP,L-1);
@@ -2169,7 +2170,7 @@ function startFall(o,h){const dx=h.x-o.x,dy=h.y-o.y,d=Math.hypot(dx,dy);
   let ax,az;if(d>1){ax=dx/d;az=dy/d;}else{const a=rnd(0,TAU);ax=Math.cos(a);az=Math.sin(a);}
   o.fall={h,t:0,dur:.5+o.r*.007,ax,az,t0:Math.max(0,o.tilt)};}
 function eatHole(a,b){
-  const bonus=25+Math.round(b.r);a.score+=bonus;a.chomp=1;grow(a,bonus);
+  const bonus=5+Math.round(b.r/12);a.score+=bonus;a.chomp=1;grow(a,bonus);
   b.alive=false;b.respawn=2.5;holeDied(b);setLevel(b,b.lvl-4);b.target=null;
   if(a===player){addPopup(b.x,b.y,'Gobbled '+b.name+'!',a.color);sfx(0,'big');buzz(40);shake=12;}
   if(b===player){showMsg('Oh no! '+a.name+' gobbled you!\nBack in a sec…',2.5);sfx(0,'big');buzz(120);}
