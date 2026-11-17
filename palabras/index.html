@@ -42,6 +42,7 @@
   .bar{height:14px;border-radius:10px;background:rgba(43,43,58,.1);overflow:hidden;margin-top:6px}
   .bar i{display:block;height:100%;background:linear-gradient(90deg,#FF9DB8,#FF7A6B);border-radius:10px;transition:width .6s}
   .petwrap{position:relative;flex:none;display:inline-block}
+  .petwrap canvas.lolo3d,.petwrap img.lolo3dimg{display:block}
   .petwrap .hat{position:absolute;left:50%;transform:translateX(-50%);line-height:1;pointer-events:none}
   .petwrap.bounce{animation:petbounce .6s}
   @keyframes petbounce{0%,100%{transform:none}30%{transform:translateY(-14px) scale(1.06)}60%{transform:translateY(0) scale(.97)}}
@@ -1778,7 +1779,7 @@ function record(w, ok){
 const found = w => (stats[w[2]]||{}).r>0;
 
 /* ======================= pet ======================= */
-const HATS=[{lvl:1,h:'',pos:'head'},{lvl:2,h:'🎀',pos:'head'},{lvl:3,h:'🧢',pos:'head'},{lvl:4,h:'🕶️',pos:'eyes'},{lvl:5,h:'👑',pos:'head'},{lvl:6,h:'🎩',pos:'head'},{lvl:8,h:'🌸',pos:'head'},{lvl:10,h:'🎓',pos:'head'},{lvl:12,h:'⭐',pos:'head'}];
+const HATS=[{lvl:1,h:'',pos:'head',id:''},{lvl:2,h:'🎀',pos:'head',id:'bow'},{lvl:3,h:'🧢',pos:'head',id:'cap'},{lvl:4,h:'🕶️',pos:'eyes',id:'sunglasses'},{lvl:5,h:'👑',pos:'head',id:'crown'},{lvl:6,h:'🎩',pos:'head',id:'tophat'},{lvl:8,h:'🌸',pos:'head',id:'flower'},{lvl:10,h:'🎓',pos:'head',id:'gradcap'},{lvl:12,h:'⭐',pos:'head',id:'star'}];
 function petLevel(xp=pet.xp){ let l=1, need=5, acc=0; while(xp>=acc+need){acc+=need; l++; need+=5;} return {level:l, into:xp-acc, need}; }
 const unlockedHats = () => HATS.filter(h=>h.lvl<=petLevel().level);
 function petSVG(px, mood='happy'){
@@ -1799,26 +1800,44 @@ function petSVG(px, mood='happy'){
     ${mouth}
   </svg>`;
 }
+// 3D Lolo when available (evolves by stage, 3D prizes); flat drawing otherwise
+const L3 = () => window.Lolo3D && window.Lolo3D.ok ? window.Lolo3D : null;
+const curHat = () => unlockedHats()[pet.hat % unlockedHats().length] || HATS[0];
+const petStage = (lvl=petLevel().level) => L3() ? L3().stageOf(lvl) : 0;
+const petOpts = (mood='happy') => ({ stage: petStage(), hat: curHat().id, mood });
+function setOverPet(html){
+  $('overPet').innerHTML = html;
+  const M=L3(), w=$('overPet').querySelector('.petwrap'); if(!M || !w) return;
+  try{ M.live(w, 104, petOpts(S.treats?'eat':'happy'));
+    const from=M.stageOf(S.lvlBefore||petLevel().level), to=petStage();
+    if(to>from) setTimeout(()=>M.evolve(from,to), 300);
+  }catch(e){}
+}
 function petHTML(px, mood){
-  const hat = unlockedHats()[pet.hat % unlockedHats().length] || HATS[0];
+  const M=L3();
+  if(M){ try{ return `<img class="lolo3dimg" alt="Lolo" src="${M.snapshot(px, petOpts(mood||'happy'))}" style="width:${px}px;height:${Math.round(px*0.85)}px;display:block">`; }catch(e){} }
+  const hat = curHat();
   const top = hat.pos==='eyes' ? px*0.27 : -px*0.18;
   const size = hat.pos==='eyes' ? px*0.42 : px*0.36;
   return petSVG(px,mood) + (hat.h ? `<span class="hat" style="top:${top}px;font-size:${size}px">${hat.h}</span>` : '');
 }
 function renderHomePet(){
-  const L=petLevel();
-  const px = Math.min(96, 64 + L.level*3);
+  const L=petLevel(), M=L3();
+  const px = M ? 104 : Math.min(96, 64 + L.level*3);
   $('homePet').innerHTML = petHTML(px);
-  $('petLvl').textContent = `Nivel ${L.level}`;
+  if(M){ try{ M.live($('homePet'), px, petOpts()); }catch(e){} }
+  const st = M ? M.STAGES[M.stageOf(L.level)] : null, nextSt = M ? M.STAGES[M.stageOf(L.level)+1] : null;
+  $('petLvl').textContent = `Nivel ${L.level}` + (st ? ` · ${st.name}` : '');
   $('petBar').style.width = (100*L.into/L.need)+'%';
   const next = HATS.find(h=>h.lvl>L.level);
-  $('petSub').textContent = `${L.into}/${L.need} 🍪 to grow` + (next ? ` · next prize: ${next.h}` : '') + (unlockedHats().length>1 ? ' · tap to change hat' : '');
+  $('petSub').textContent = `${L.into}/${L.need} 🍪 to grow` + (nextSt ? ` · evolves into ${nextSt.name} at Nivel ${nextSt.min}` : '') + (next ? ` · next prize ${next.h}` : '') + (unlockedHats().length>1 ? ' · tap to change prize' : '');
 }
+window.addEventListener('lolo3d-ready', ()=>{ renderHomePet(); document.querySelectorAll('.lolo .petwrap').forEach(w=>{ w.innerHTML=petHTML(50); }); });
 $('petcard').onclick=()=>{
   const hats=unlockedHats();
   if(hats.length>1){ pet.hat=(pet.hat+1)%hats.length; store.set('pet',pet); }
   renderHomePet();
-  const w=$('homePet'); w.classList.remove('bounce'); void w.offsetWidth; w.classList.add('bounce');
+  if(L3()) L3().poke(); else { const w=$('homePet'); w.classList.remove('bounce'); void w.offsetWidth; w.classList.add('bounce'); }
   talk(['c|¡Hola! Soy Lolo, el ajolote.']);
 };
 
@@ -2005,7 +2024,7 @@ function levelEnd(pass){
   $('newRec').classList.toggle('on', !!$('newRec').textContent);
   $('overBest').textContent = pass ? `${S.score} puntos` : 'Te quedaste sin corazones. ¡Tú puedes!';
   const Lv=petLevel(), grew=Lv.level>S.lvlBefore, newHat = grew ? HATS.filter(h=>h.lvl>S.lvlBefore && h.lvl<=Lv.level).pop() : null;
-  $('overPet').innerHTML = petPanel(Lv, grew, newHat);
+  setOverPet(petPanel(Lv, grew, newHat));
   $('nextLvl').style.display = pass && next ? '' : 'none';
   $('again').textContent = pass ? '🔄 Otra vez' : '🔄 ¡Inténtalo otra vez!';
   $('over').classList.add('on');
@@ -2626,7 +2645,7 @@ function gameOver(opts={}){
   $('overEmoji').textContent = rec ? '🏆' : (opts.emoji || (val>=10 ? '🎉' : val>=3 ? '😀' : '💪'));
   const L=petLevel(), grew = L.level>S.lvlBefore;
   const newHat = grew ? HATS.filter(h=>h.lvl>S.lvlBefore && h.lvl<=L.level).pop() : null;
-  $('overPet').innerHTML = petPanel(L, grew, newHat);
+  setOverPet(petPanel(L, grew, newHat));
   $('over').classList.add('on');
   const line = opts.say ? opts.say.slice() : [rec ? 'c|¡Nuevo récord!' : (opts.sayFinish ? 'c|¡Lo lograste!' : 'c|¡Fin del juego!'), val<=150 ? 'p|'+val : null];
   if(grew) line.push('c|¡Lolo creció!');
@@ -2637,7 +2656,8 @@ function petPanel(L, grew, newHat){
   return `<span class="petwrap">${petHTML(70, S.treats?'eat':'happy')}</span>
     <div class="t">${S.treats ? `Lolo got ${S.treats} 🍪` : 'Lolo is cheering for you!'}
       <div class="bar"><i style="width:${100*L.into/L.need}%"></i></div>
-      ${grew ? `<div class="lvlup">🎉 ¡Lolo creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
+      ${grew && L3() && L3().stageOf(L.level)>L3().stageOf(S.lvlBefore) ? `<div class="lvlup">✨ ¡Lolo evolucionó! Ahora es Lolo ${L3().STAGES[L3().stageOf(L.level)].name}</div>`
+        : grew ? `<div class="lvlup">🎉 ¡Lolo creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
     </div>`;
 }
 $('again').onclick=()=>{ if(S.level) startLevel(S.level.i); else start(S.cat); };
@@ -3354,5 +3374,6 @@ $('saveOffline').onclick=async()=>{
 };
 </script>
 <script type="module" src="monster3d.js"></script>
+<script type="module" src="lolo3d.js"></script>
 </body>
 </html>

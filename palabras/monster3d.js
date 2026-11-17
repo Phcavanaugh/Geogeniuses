@@ -71,7 +71,10 @@ function build(){
   const mouth = new THREE.Group(); mouth.position.set(0, -0.22, 0.86); body.add(mouth);
   const hole = new THREE.Mesh(new THREE.SphereGeometry(0.42, 32, 16), toon('#3A1F4D')); hole.scale.set(1, 0.6, 0.25); mouth.add(hole);
   const tongue = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 16), toon('#FF7A9C')); tongue.scale.set(1, 0.45, 0.6); tongue.position.set(0, -0.12, 0.08); mouth.add(tongue);
-  [-0.17,0.17].forEach(x=>{ const t = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.14, 8), toon('#ffffff')); t.rotation.z = Math.PI; t.position.set(x, 0.17, 0.1); mouth.add(t); });
+  // two small rounded fangs that hang from the top lip and follow the mouth
+  const fangs = [-1,1].map(sx=>{ const f = new THREE.Group();
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.11, 16), new THREE.MeshBasicMaterial({ color:'#ffffff' })); cone.rotation.z = Math.PI; cone.position.y = -0.055;
+    f.add(cone); f.rotation.z = 0.12*sx; mouth.add(f); return f; });
   const smile = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.045, 10, 30, Math.PI), toon('#3A1F4D')); smile.rotation.z = Math.PI; smile.position.set(0, -0.12, 0.9); body.add(smile);
   // arms and feet
   const arms = [-1,1].map(sx=>{
@@ -85,7 +88,7 @@ function build(){
   // shadow
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(1.1, 32), new THREE.MeshBasicMaterial({ color:'#2B2B3A', transparent:true, opacity:0.12 }));
   shadow.rotation.x = -Math.PI/2; shadow.position.y = -1.15; scene.add(shadow);
-  R = { root, body, bodyMat, eyes, mouth, hole, tongue, smile, arms, feet, food, shadow };
+  R = { root, body, bodyMat, eyes, mouth, hole, tongue, smile, arms, feet, food, shadow, fangs };
 }
 
 function resize(){
@@ -169,6 +172,8 @@ function frame(nowMs){
   const open = clamp01(p.mouth);
   R.hole.scale.set(0.75+0.3*open, 0.12+0.55*open, 0.25); R.hole.visible = open > 0.08;
   R.smile.visible = open <= 0.08 && !p.xeyes;
+  const top = 0.42*(0.12+0.55*open)*0.92;     // top edge of the mouth opening
+  R.fangs.forEach((f,i)=>{ f.visible = open > 0.22; f.position.set((i?1:-1)*(0.12+0.07*open), top*0.82, 0.07); f.scale.setScalar(0.9+0.25*open); });
   R.tongue.position.y = -0.12 - 0.25*p.tongueOut; R.tongue.position.z = 0.08 + 0.25*p.tongueOut; R.tongue.visible = open > 0.15 || p.tongueOut > 0.1;
   R.bodyMat.color.copy(PURPLE).lerp(GREEN, clamp01(p.tint)*0.75);
   R.eyes.forEach(e=>{ e.g.scale.set(1, p.joy ? 1 : Math.max(0.08, 1-p.closed*0.92), 1); e.xg.visible = p.xeyes && !p.joy; e.joy.visible = !!p.joy; e.white.visible = !p.joy; e.pupil.visible = e.shine.visible = !p.xeyes && !p.joy;
