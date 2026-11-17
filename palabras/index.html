@@ -176,6 +176,30 @@
   /* ---------- journey map ---------- */
   .mapbar{display:flex;align-items:center;justify-content:space-between;margin:0 0 12px;gap:10px}
   .tot{font-weight:700;font-size:20px;background:var(--card);border-radius:15px;box-shadow:var(--shadow);padding:8px 14px}
+  .shopbtn{background:linear-gradient(135deg,#FFE08A,#FFB86B);border-radius:15px;box-shadow:var(--shadow);padding:10px 14px;font-size:16px;font-weight:700}
+  .mapbtns{display:flex;gap:6px}
+  .mapbar .tot{white-space:nowrap}
+  .mapbar .shopbtn,.mapbar .freebtn{white-space:nowrap;padding:10px 10px;font-size:15px}
+  .shoptop{display:flex;flex-direction:column;align-items:center;background:linear-gradient(135deg,#FFE3EC,#FFF1D6);border-radius:24px;box-shadow:var(--shadow);padding:8px 10px 10px;margin:4px 0 12px}
+  .shoptop .petwrap{width:150px;height:128px;display:flex;align-items:center;justify-content:center}
+  .shopname{font-size:18px;font-weight:700;margin-top:2px}
+  .shopwallet{font-size:15px;color:var(--muted)}
+  .shoptabs{display:flex;gap:8px;margin-bottom:10px}
+  .shoptabs button{flex:1;padding:10px;border-radius:14px;background:var(--card);box-shadow:var(--shadow);font-weight:700;font-size:15px}
+  .shoptabs button.on{background:#7B5CFF;color:#fff}
+  .shopgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .shopitem{background:var(--card);border-radius:20px;box-shadow:var(--shadow);padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;border:3px solid transparent}
+  .shopitem.sel{border-color:#7B5CFF}
+  .shopitem img{width:120px;height:102px}
+  .shopitem .nm{font-weight:700;font-size:16px}
+  .shopitem .sub{font-size:12px;color:var(--muted);min-height:15px}
+  .shopitem .buy{width:100%;padding:9px;border-radius:12px;font-weight:700;font-size:15px;background:#FFD54A}
+  .shopitem .buy.own{background:#E6F7EC;color:#1E8E4E}
+  .shopitem .buy.using{background:#7B5CFF;color:#fff}
+  .shopitem .buy.poor{background:#EEE;color:#999}
+  .shopitem .buy.arm{background:#FF7A59;color:#fff}
+  .shopitem.shake{animation:shk .4s}
+  @keyframes shk{20%,60%{transform:translateX(-6px)}40%,80%{transform:translateX(6px)}}
   .freebtn{background:var(--card);border-radius:15px;box-shadow:var(--shadow);padding:10px 14px;font-size:16px;font-weight:700}
   .world{border-radius:30px;margin-bottom:14px;padding:12px 10px 10px;position:relative;overflow:hidden}
   .wtitle{display:flex;align-items:center;gap:8px;font-size:20px;font-weight:700;position:relative;z-index:1}
@@ -434,7 +458,7 @@
     <button class="petcard" id="petcard">
       <span class="petwrap" id="homePet"></span>
       <span class="petinfo">
-        <div class="petname">Lolo el ajolote · <span id="petLvl"></span></div>
+        <div class="petname"><span id="petTitle">Lolo el ajolote</span> · <span id="petLvl"></span></div>
         <div class="bar"><i id="petBar"></i></div>
         <div class="petsub" id="petSub"></div>
       </span>
@@ -442,7 +466,7 @@
     <div id="tareaSlot"></div>
     <div class="mapbar">
       <div class="tot">⭐ <span id="mapStars">0</span></div>
-      <button class="freebtn" id="freeBtn">🎮 Juego libre</button>
+      <div class="mapbtns"><button class="shopbtn" id="shopBtn">🛒 Tienda</button><button class="freebtn" id="freeBtn">🎮 Juego libre</button></div>
     </div>
     <div id="mapwrap"></div>
   </section>
@@ -738,6 +762,17 @@
   </section>
 
   <!-- ALBUM -->
+  <section class="view" id="shop">
+    <div class="topbar">
+      <button class="iconbtn" data-home aria-label="Home">🏠</button>
+      <div class="title">🛒 Tienda</div>
+      <div style="width:46px"></div>
+    </div>
+    <div class="shoptop"><span class="petwrap" id="shopPet"></span><div class="shopname" id="shopName"></div><div class="shopwallet">You have ⭐ <b id="shopStars">0</b> · win more by getting words right</div></div>
+    <div class="shoptabs"><button data-tab="pets" class="on">🐾 Mascotas</button><button data-tab="skins">🎨 Colores de Lolo</button></div>
+    <div class="shopgrid" id="shopGrid"></div>
+  </section>
+
   <section class="view" id="album">
     <div class="topbar">
       <button class="iconbtn" data-home aria-label="Home">🏠</button>
@@ -1590,6 +1625,25 @@ const S = {
 };
 let stats = store.get('stats', {});   // emoji -> {r:right, w:wrong, s:current streak}
 let pet = store.get('pet', {xp:0, hat:0});
+// store: animals and Lolo colors, bought with ⭐. All pets share the same level, so each one evolves too.
+const PETS = {
+  axolotl:{ name:'Lolo',   kind:'el ajolote',  en:'axolotl', price:0,   emoji:'🦎', hi:'c|¡Hola! Soy Lolo, el ajolote.' },
+  penguin:{ name:'Pipo',   kind:'el pingüino', en:'penguin', price:50,  emoji:'🐧', hi:'c|¡Hola! Soy Pipo, el pingüino.' },
+  fox:    { name:'Chispa', kind:'la zorrita',  en:'fox',     price:75,  emoji:'🦊', hi:'c|¡Hola! Soy Chispa, la zorrita.' },
+  seal:   { name:'Nieve',  kind:'la foquita',  en:'seal',    price:100, emoji:'🦭', hi:'c|¡Hola! Soy Nieve, la foquita.' },
+};
+const SKINLIST = [
+  { id:'clasico', name:'Rosa',    price:0 },
+  { id:'menta',   name:'Menta',   price:25 },
+  { id:'salvaje', name:'Salvaje', price:25 },
+  { id:'dorado',  name:'Dorado',  price:40 },
+  { id:'blanco',  name:'Blanco',  price:40 },
+  { id:'galaxia', name:'Galaxia', price:60 },
+];
+pet = { species:'axolotl', skin:'clasico', owned:['axolotl'], skins:['clasico'], ...pet };
+if(!PETS[pet.species]) pet.species='axolotl';
+const petInfo = () => PETS[pet.species];
+const petName = () => petInfo().name;
 
 /* ======================= speech ======================= */
 const synth = window.speechSynthesis;
@@ -1804,7 +1858,7 @@ function petSVG(px, mood='happy'){
 const L3 = () => window.Lolo3D && window.Lolo3D.ok ? window.Lolo3D : null;
 const curHat = () => unlockedHats()[pet.hat % unlockedHats().length] || HATS[0];
 const petStage = (lvl=petLevel().level) => L3() ? L3().stageOf(lvl) : 0;
-const petOpts = (mood='happy') => ({ stage: petStage(), hat: curHat().id, mood });
+const petOpts = (mood='happy', o={}) => ({ species: pet.species, skin: pet.species==='axolotl' ? pet.skin : '', stage: petStage(), hat: curHat().id, mood, ...o });
 function setOverPet(html){
   $('overPet').innerHTML = html;
   const M=L3(), w=$('overPet').querySelector('.petwrap'); if(!M || !w) return;
@@ -1815,7 +1869,8 @@ function setOverPet(html){
 }
 function petHTML(px, mood){
   const M=L3();
-  if(M){ try{ return `<img class="lolo3dimg" alt="Lolo" src="${M.snapshot(px, petOpts(mood||'happy'))}" style="width:${px}px;height:${Math.round(px*0.85)}px;display:block">`; }catch(e){} }
+  if(M){ try{ return `<img class="lolo3dimg" alt="${petName()}" src="${M.snapshot(px, petOpts(mood||'happy'))}" style="width:${px}px;height:${Math.round(px*0.85)}px;display:block">`; }catch(e){} }
+  if(pet.species!=='axolotl') return `<span style="font-size:${px*0.7}px;line-height:1">${petInfo().emoji}</span>`;
   const hat = curHat();
   const top = hat.pos==='eyes' ? px*0.27 : -px*0.18;
   const size = hat.pos==='eyes' ? px*0.42 : px*0.36;
@@ -1827,6 +1882,7 @@ function renderHomePet(){
   $('homePet').innerHTML = petHTML(px);
   if(M){ try{ M.live($('homePet'), px, petOpts()); }catch(e){} }
   const st = M ? M.STAGES[M.stageOf(L.level)] : null, nextSt = M ? M.STAGES[M.stageOf(L.level)+1] : null;
+  $('petTitle').textContent = `${petName()} ${petInfo().kind}`;
   $('petLvl').textContent = `Nivel ${L.level}` + (st ? ` · ${st.name}` : '');
   $('petBar').style.width = (100*L.into/L.need)+'%';
   const next = HATS.find(h=>h.lvl>L.level);
@@ -1838,8 +1894,58 @@ $('petcard').onclick=()=>{
   if(hats.length>1){ pet.hat=(pet.hat+1)%hats.length; store.set('pet',pet); }
   renderHomePet();
   if(L3()) L3().poke(); else { const w=$('homePet'); w.classList.remove('bounce'); void w.offsetWidth; w.classList.add('bounce'); }
-  talk(['c|¡Hola! Soy Lolo, el ajolote.']);
+  talk([petInfo().hi]);
 };
+/* ======================= store ======================= */
+let shopTab='pets', shopSel=null, shopArm=null;
+function openShop(){ shopSel=null; shopArm=null; renderShop(); show('shop'); shopPreview(); talk(['c|Bienvenidos a la tienda.']); }
+function shopPreview(o){
+  const M=L3(), w=$('shopPet');
+  const sp = o&&o.species || pet.species;
+  $('shopName').textContent = `${PETS[sp].name} ${PETS[sp].kind}` + (sp==='axolotl' ? ` · ${(SKINLIST.find(k=>k.id===(o&&o.skin||pet.skin))||SKINLIST[0]).name}` : '');
+  if(M){ try{ M.live(w, 128, petOpts('happy', o||{})); return; }catch(e){} }
+  w.innerHTML = petHTML(110);
+}
+function renderShop(){
+  $('shopStars').textContent = S.stars;
+  document.querySelectorAll('#shop .shoptabs button').forEach(b=>b.classList.toggle('on', b.dataset.tab===shopTab));
+  const M=L3(), st=petStage();
+  const items = shopTab==='pets'
+    ? Object.entries(PETS).map(([id,P])=>({ id, name:P.name, sub:P.kind, price:P.price, owned:pet.owned.includes(id), using:pet.species===id, o:{species:id, skin: id==='axolotl'?pet.skin:''}, emoji:P.emoji }))
+    : SKINLIST.map(k=>({ id:k.id, name:k.name, sub:'Lolo', price:k.price, owned:pet.skins.includes(k.id), using:pet.species==='axolotl'&&pet.skin===k.id, o:{species:'axolotl', skin:k.id}, emoji:'🦎' }));
+  $('shopGrid').innerHTML = items.map(it=>{
+    let img = `<span style="font-size:70px;line-height:102px">${it.emoji}</span>`;
+    if(M){ try{ img = `<img alt="${it.name}" src="${M.snapshot(120, { ...it.o, stage:st, hat:'', mood:'happy' })}">`; }catch(e){} }
+    const btn = it.using ? ['using','✓ Usando'] : it.owned ? ['own','Usar'] : shopArm===it.id ? ['arm',`¿Comprar? ⭐ ${it.price}`] : S.stars<it.price ? ['poor',`⭐ ${it.price}`] : ['',`⭐ ${it.price}`];
+    return `<div class="shopitem${shopSel===it.id?' sel':''}" data-id="${it.id}">${img}<div class="nm">${it.name}</div><div class="sub">${it.sub}</div><button class="buy ${btn[0]}">${btn[1]}</button></div>`;
+  }).join('');
+  $('shopGrid').querySelectorAll('.shopitem').forEach(el=>{
+    const it = items.find(i=>i.id===el.dataset.id);
+    el.onclick = e=>{
+      const onBtn = e.target.classList.contains('buy');
+      shopSel = it.id;
+      if(onBtn && it.using){ /* already wearing it */ }
+      else if(onBtn && it.owned){ equip(it); }
+      else if(onBtn){
+        if(S.stars < it.price){ el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); talk([`c|Necesitas más estrellas.`]); shopArm=null; }
+        else if(shopArm!==it.id){ shopArm=it.id; renderShop(); shopPreview(it.o); return; }
+        else { setStars(S.stars-it.price); (shopTab==='pets'?pet.owned:pet.skins).push(it.id); store.set('pet',pet); shopArm=null; equip(it);
+          const r=el.getBoundingClientRect(); burst(r.left+r.width/2, r.top+40, ['⭐','✨','🎉', it.emoji], 14); talk(['c|¡Es tuyo!']); return; }
+      } else { shopArm=null; }
+      renderShop(); shopPreview(it.o);
+      if(!onBtn && shopTab==='pets') talk([PETS[it.id].hi]);
+    };
+  });
+}
+function equip(it){
+  if(shopTab==='pets') pet.species=it.id; else { pet.species='axolotl'; pet.skin=it.id; }
+  store.set('pet',pet); renderShop(); shopPreview(); renderHomePet();
+  if(L3()) setTimeout(()=>L3().poke(), 50);
+  if(shopTab==='pets') talk([PETS[it.id].hi]);
+}
+document.querySelectorAll('#shop .shoptabs button').forEach(b=>b.onclick=()=>{ shopTab=b.dataset.tab; shopArm=null; shopSel=null; renderShop(); shopPreview(); });
+$('shopBtn').onclick=openShop;
+window.addEventListener('lolo3d-ready', ()=>{ if($('shop').classList.contains('on')){ renderShop(); shopPreview(); } });
 
 /* ======================= modes & home ======================= */
 const MODES_ALL=[
@@ -2029,7 +2135,7 @@ function levelEnd(pass){
   $('again').textContent = pass ? '🔄 Otra vez' : '🔄 ¡Inténtalo otra vez!';
   $('over').classList.add('on');
   const line = pass ? [worldDone ? 'c|¡Mundo completado!' : 'c|¡Nivel superado!'] : ['c|¡Inténtalo otra vez!'];
-  if(grew) line.push('c|¡Lolo creció!');
+  if(grew) line.push(`c|¡${petName()} creció!`);
   talk(line);
   if(pass){ for(let k=0;k<(worldDone||L.final?5:3);k++) setTimeout(()=>burst(innerWidth/2, innerHeight/3, ['⭐','✨','🎉','👑']),k*400); }
 }
@@ -2648,16 +2754,16 @@ function gameOver(opts={}){
   setOverPet(petPanel(L, grew, newHat));
   $('over').classList.add('on');
   const line = opts.say ? opts.say.slice() : [rec ? 'c|¡Nuevo récord!' : (opts.sayFinish ? 'c|¡Lo lograste!' : 'c|¡Fin del juego!'), val<=150 ? 'p|'+val : null];
-  if(grew) line.push('c|¡Lolo creció!');
+  if(grew) line.push(`c|¡${petName()} creció!`);
   talk(line);
   if(rec||grew){ for(let k=0;k<3;k++) setTimeout(()=>burst(innerWidth/2, innerHeight/3),k*450); }
 }
 function petPanel(L, grew, newHat){
   return `<span class="petwrap">${petHTML(70, S.treats?'eat':'happy')}</span>
-    <div class="t">${S.treats ? `Lolo got ${S.treats} 🍪` : 'Lolo is cheering for you!'}
+    <div class="t">${S.treats ? `${petName()} got ${S.treats} 🍪` : `${petName()} is cheering for you!`}
       <div class="bar"><i style="width:${100*L.into/L.need}%"></i></div>
-      ${grew && L3() && L3().stageOf(L.level)>L3().stageOf(S.lvlBefore) ? `<div class="lvlup">✨ ¡Lolo evolucionó! Ahora es Lolo ${L3().STAGES[L3().stageOf(L.level)].name}</div>`
-        : grew ? `<div class="lvlup">🎉 ¡Lolo creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
+      ${grew && L3() && L3().stageOf(L.level)>L3().stageOf(S.lvlBefore) ? `<div class="lvlup">✨ ¡${petName()} evolucionó! Ahora es ${petName()} ${L3().STAGES[L3().stageOf(L.level)].name}</div>`
+        : grew ? `<div class="lvlup">🎉 ¡${petName()} creció! Nivel ${L.level}${newHat&&newHat.h?` · new ${newHat.h}!`:''}</div>` : `<div class="petsub">Nivel ${L.level} · ${L.into}/${L.need}</div>`}
     </div>`;
 }
 $('again').onclick=()=>{ if(S.level) startLevel(S.level.i); else start(S.cat); };
@@ -2979,7 +3085,7 @@ function hermEnd(){
   $('newRec').classList.remove('on');
   $('overBest').textContent = tie ? '¡Los dos ganan! (You both win!)' : `${S.names[lose]}: ¡te ganó un pedo! 💨`;
   $('overEmoji').textContent = tie ? '🤝' : (win===0 ? '🚀' : '🧸');
-  $('overPet').innerHTML = `<span class="petwrap">${petHTML(70,'happy')}</span><div class="t">Lolo says: good game, ${S.names[0]} and ${S.names[1]}!</div>`;
+  $('overPet').innerHTML = `<span class="petwrap">${petHTML(70,'happy')}</span><div class="t">${petName()} says: good game, ${S.names[0]} and ${S.names[1]}!</div>`;
   $('over').classList.add('on');
   S.mode='hermanos'; S.cat=h.home; S.herm=null;
   talk(tie ? ['c|¡Empate!'] : ['c|¡Felicidades!', S.pedorro ? 'x|fart2' : null, 'c|¡Te ganó un pedo!']);
@@ -3352,7 +3458,7 @@ $('gameLen').onchange=e=>{ S.len=+e.target.value; store.set('gameLen',S.len); };
 $('nChoices').onchange=e=>{ S.nChoices=+e.target.value; store.set('nChoices6',S.nChoices); };
 function confirmBtn(id, fn){ const b=$(id); let armed=false; b.onclick=()=>{ if(!armed){ armed=true; b.textContent='Tap again'; setTimeout(()=>{armed=false; b.textContent='Reset';},2500); return; } fn(); b.textContent='Done ✓'; armed=false; }; }
 confirmBtn('resetStars',()=>{ setStars(0); try{ Object.keys(localStorage).filter(k=>k.startsWith(PREFIX+'best_')).forEach(k=>localStorage.removeItem(k)); }catch(e){} });
-confirmBtn('resetAll',()=>{ stats={}; store.set('stats',stats); pet={xp:0,hat:0}; store.set('pet',pet); renderHomePet(); renderCats(); });
+confirmBtn('resetAll',()=>{ stats={}; store.set('stats',stats); pet={...pet, xp:0, hat:0}; store.set('pet',pet); renderHomePet(); renderCats(); });
 
 ZSCR = store.get('zscript',0) ? 1 : 0;
 setStars(S.stars); renderHomePet(); renderCats(); S.from='map'; renderTareaSlot(); renderMap();

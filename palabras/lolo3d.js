@@ -61,9 +61,19 @@ function makeHat(id){
   return g;
 }
 
+// ---------- Lolo's skins (colors you can buy) ----------
+const SKINS = {
+  clasico: null,
+  menta:   { color:'#BFF2DA', gill:'#1FB58C' },
+  salvaje: { color:'#8A845E', gill:'#5A5338', flecks:'#E2CC6E' },
+  dorado:  { color:'#FFD86B', gill:'#FF8F1C' },
+  blanco:  { color:'#FFF8F3', gill:'#E63950' },
+  galaxia: { color:'#3E3A8C', gill:'#A98BFF', stars:true },
+};
 // ---------- Lolo ----------
-function buildLolo(stageIdx, hatId){
-  const S = STAGES[stageIdx], root = new THREE.Group(), R = { root, gills: [], eyes: [], extras: [] };
+function buildLolo(stageIdx, hatId, skinId){
+  const K = SKINS[skinId];
+  const S = K ? { ...STAGES[stageIdx], color: K.color, gill: K.gill } : STAGES[stageIdx], root = new THREE.Group(), R = { root, gills: [], eyes: [], extras: [] };
   const skin = toon(S.color), belly = toon(new THREE.Color(S.color).lerp(new THREE.Color('#ffffff'), 0.35)), dark = toon(new THREE.Color(S.gill));
   const holder = new THREE.Group(); root.add(holder); R.holder = holder; holder.scale.setScalar(S.scale);
   // body and tail (behind and below the head)
@@ -80,6 +90,9 @@ function buildLolo(stageIdx, hatId){
   // head
   const head = new THREE.Group(); holder.add(head); R.head = head;
   const skull = new THREE.Mesh(new THREE.SphereGeometry(1, 48, 32), skin); skull.scale.set(1.12, 0.92, 0.98); head.add(skull);
+  if(K && (K.flecks || K.stars)){ for(let i=0;i<18;i++){ const a = i*2.4, y = -0.6 + (i%6)*0.24, r = Math.sqrt(Math.max(0.05, 1 - y*y/0.85));
+      const d = new THREE.Mesh(new THREE.SphereGeometry(K.stars ? 0.035 : 0.05, 8, 6), K.stars ? new THREE.MeshBasicMaterial({ color:'#FFFFFF' }) : toon(K.flecks));
+      d.position.set(Math.sin(a)*r*1.12, y, Math.cos(a)*r*0.98); if(d.position.z > -0.2) head.add(d); } }
   if(S.spots){ [[-0.6,0.45,0.6],[0.7,0.35,0.55],[-0.2,0.7,0.55],[0.35,0.68,0.55],[-0.85,-0.05,0.45],[0.9,0.0,0.4]].forEach(([x,y,z])=>{
     const sp = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), dark); sp.position.set(x, y, z); sp.scale.z = 0.4; sp.lookAt(x*2, y*2, z*2); head.add(sp); }); }
   // eyes: small and wide apart, like a real axolotl
@@ -109,16 +122,127 @@ function buildLolo(stageIdx, hatId){
     if(S.gold){ const tip = new THREE.Mesh(new THREE.SphereGeometry(0.09, 12, 8), toon('#FFD43D', { emissive:'#FFB000', emissiveIntensity:0.5 })); tip.position.copy(curve.getPoint(1)); pivot.add(tip); }
     R.gills.push({ pivot, base: pivot.rotation.z, sx, i });
   } });
-  // stage extras: sparkles, bubbles, wings, halo
-  if(S.glow){ for(let i=0;i<5;i++){ const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.08), new THREE.MeshBasicMaterial({ color: S.gold ? '#FFD43D' : '#E8A8FF' })); o.userData = { orbit: 1.7, a: i/5*Math.PI*2, h: -0.2 + (i%3)*0.4, sp: 0.8 }; root.add(o); R.extras.push(o); } }
-  if(S.gold){ for(let i=0;i<6;i++){ const b = new THREE.Mesh(new THREE.SphereGeometry(0.1+0.04*(i%2), 16, 12), new THREE.MeshToonMaterial({ color:'#BDEBFF', gradientMap: GRAD, transparent:true, opacity:0.55 })); b.userData = { rise: true, x: (i-2.5)*0.45, ph: i*0.7 }; root.add(b); R.extras.push(b); } }
-  if(S.wings){ [-1,1].forEach(sx=>{ const w = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 16), new THREE.MeshToonMaterial({ color:'#CFE8FF', gradientMap: GRAD, transparent:true, opacity:0.7 }));
-      w.scale.set(1, 0.55, 0.06); w.position.set(0.55*sx, -0.25, -0.75); w.rotation.set(0.2, sx*0.6, sx*0.5); holder.add(w); R.extras.push(Object.assign(w, { userData:{ wing: sx, base: sx*0.5 } })); });
-    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.05, 12, 40), new THREE.MeshBasicMaterial({ color:'#FFE680' })); halo.rotation.x = Math.PI/2.3; halo.position.set(0, 1.35, -0.1); holder.add(halo); R.halo = halo; }
+  addExtras(R, root, holder, S, {});
   if(hatId){ const h = makeHat(hatId); head.add(h); R.hat = h; }
   root.rotation.y = -0.35;   // a friendly three-quarter view
   return R;
 }
+
+// sparkles, rising bubbles (or snowflakes), wings and a halo for the higher stages
+function addExtras(R, root, holder, S, th){
+  if(S.glow){ for(let i=0;i<5;i++){ const o = new THREE.Mesh(new THREE.OctahedronGeometry(0.08), new THREE.MeshBasicMaterial({ color: S.gold ? '#FFD43D' : (th.spark || '#E8A8FF') })); o.userData = { orbit: 1.7, a: i/5*Math.PI*2, h: -0.2 + (i%3)*0.4, sp: 0.8 }; root.add(o); R.extras.push(o); } }
+  if(S.gold){ for(let i=0;i<6;i++){ const g = th.snow ? new THREE.OctahedronGeometry(0.09) : new THREE.SphereGeometry(0.1+0.04*(i%2), 16, 12);
+      const b = new THREE.Mesh(g, new THREE.MeshToonMaterial({ color: th.bubble || '#BDEBFF', gradientMap: GRAD, transparent:true, opacity:0.55 })); b.userData = { rise: true, x: (i-2.5)*0.45, ph: i*0.7 }; root.add(b); R.extras.push(b); } }
+  if(S.wings){ [-1,1].forEach(sx=>{ const w = new THREE.Mesh(new THREE.SphereGeometry(0.6, 24, 16), new THREE.MeshToonMaterial({ color: th.wing || '#CFE8FF', gradientMap: GRAD, transparent:true, opacity:0.7 }));
+      w.scale.set(1, 0.55, 0.06); w.position.set(0.55*sx, -0.25 + (th.wingY||0), -0.75); w.rotation.set(0.2, sx*0.6, sx*0.5); holder.add(w); R.extras.push(Object.assign(w, { userData:{ wing: sx, base: sx*0.5 } })); });
+    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.45, 0.05, 12, 40), new THREE.MeshBasicMaterial({ color:'#FFE680' })); halo.rotation.x = Math.PI/2.3; halo.position.set(0, 1.35, -0.1); holder.add(halo); R.halo = halo; }
+}
+// shared face pieces
+function addEyes(R, head, x, y, z, size){
+  [-1,1].forEach(sx=>{ const g = new THREE.Group(); g.position.set(x*sx, y, z);
+    const e = new THREE.Mesh(new THREE.SphereGeometry(size, 20, 14), toon('#2B2B3A')); const shine = new THREE.Mesh(new THREE.SphereGeometry(size*0.3, 10, 8), new THREE.MeshBasicMaterial({ color:'#fff' })); shine.position.set(size*0.25, size*0.3, size*0.75);
+    const joy = new THREE.Mesh(new THREE.TorusGeometry(size*0.8, size*0.25, 8, 16, Math.PI), toon('#2B2B3A')); joy.position.z = size*0.5; joy.visible = false;
+    g.add(e, shine, joy); head.add(g); R.eyes.push({ g, e, shine, joy }); });
+}
+function addMouth(R, head, y, z, w, col){
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(w, 0.03, 10, 30, Math.PI*0.75), toon(col||'#3A2A33')); smile.rotation.z = Math.PI + Math.PI*0.125; smile.position.set(0, y, z); smile.scale.y = 0.6; head.add(smile); R.smile = smile;
+  const o = new THREE.Mesh(new THREE.SphereGeometry(w*0.45, 16, 12), toon('#7A2E46')); o.position.set(0, y-0.08, z-0.02); o.scale.set(1, 0.8, 0.3); o.visible = false; head.add(o); R.mouthO = o;
+}
+function addCheeks(head, x, y, z, col){ [-1,1].forEach(sx=>{ const c = new THREE.Mesh(new THREE.SphereGeometry(0.11, 16, 10), new THREE.MeshBasicMaterial({ color: col||'#FF8FB1', transparent:true, opacity:0.5 })); c.position.set(x*sx, y, z); c.scale.set(1, 0.55, 0.3); head.add(c); }); }
+const RAINBOW = ['#FF5E8E','#FFB13D','#FFE14D','#5BD98A','#4FC3FF','#B07BFF'];
+
+// ---------- baby penguin: fluffy gray chick → tuxedo → icy legend ----------
+function buildPenguin(stageIdx, hatId){
+  const S = STAGES[stageIdx], root = new THREE.Group(), R = { root, gills: [], eyes: [], extras: [] };
+  const coat = toon(['#9AA3AD','#7D8592','#2B2F3A','#2B2F3A','#26304A','#2A2F55'][stageIdx]);
+  const white = toon(stageIdx<2 ? '#EEF1F4' : '#FFFFFF');
+  const holder = new THREE.Group(); root.add(holder); R.holder = holder; holder.scale.setScalar(S.scale);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), coat); body.scale.set(0.92, 1.05, 0.85); body.position.set(0, -0.6, -0.1); holder.add(body);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.8, 32, 24), white); belly.scale.set(0.82, 0.98, 0.6); belly.position.set(0, -0.68, 0.32); holder.add(belly);
+  const tail = new THREE.Group(); tail.position.set(0, -1.35, -0.75); holder.add(tail); R.tail = tail;
+  const tl = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.4, 12), coat); tl.rotation.x = -2.2; tail.add(tl);
+  [-1,1].forEach(sx=>{ const f = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), toon(stageIdx<2 ? '#6B6F78' : '#FF9A3C')); f.scale.set(1.1, 0.4, 1.4); f.position.set(0.32*sx, -1.6, 0.25); holder.add(f); });
+  // flippers wave like the axolotl's gills
+  [-1,1].forEach(sx=>{ const pivot = new THREE.Group(); pivot.position.set(0.82*sx, -0.3, 0); holder.add(pivot);
+    const fl = new THREE.Mesh(new THREE.CapsuleGeometry(0.13, 0.62, 8, 16), coat); fl.scale.z = 0.45; fl.position.y = -0.38; pivot.add(fl);
+    pivot.rotation.z = sx*0.35; R.gills.push({ pivot, base: pivot.rotation.z, sx, i:0 }); });
+  const head = new THREE.Group(); head.position.set(0, 0.42, 0.05); holder.add(head); R.head = head;
+  head.add(new THREE.Mesh(new THREE.SphereGeometry(0.86, 40, 28), coat));
+  if(stageIdx < 2){ const mask = new THREE.Mesh(new THREE.SphereGeometry(0.72, 32, 24), white); mask.scale.set(1.05, 0.82, 0.6); mask.position.set(0, -0.08, 0.45); head.add(mask);
+    for(let i=0;i<4;i++){ const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), coat); tuft.position.set((i-1.5)*0.2, 0.82 + (i%2)*0.06, 0.05); head.add(tuft); } }
+  else { [-1,1].forEach(sx=>{ const c = new THREE.Mesh(new THREE.SphereGeometry(0.3, 20, 14), white); c.scale.set(0.9, 1, 0.5); c.position.set(0.38*sx, -0.1, 0.62); head.add(c);
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), toon(S.gold ? '#FFC83D' : '#FFB347', S.glow ? { emissive:'#FF9A00', emissiveIntensity:0.3 } : {})); ear.scale.set(0.6, 1, 0.4); ear.position.set(0.66*sx, -0.32, 0.38); head.add(ear); }); }
+  addEyes(R, head, 0.3, 0.1, 0.78, 0.1);
+  const beak = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.32, 16), toon(stageIdx<2 ? '#4A4E57' : '#FF8A2A')); beak.rotation.x = Math.PI/2; beak.position.set(0, -0.14, 0.92); head.add(beak);
+  addMouth(R, head, -0.32, 0.8, 0.12, '#2B2B3A'); R.smile.visible = false;
+  addCheeks(head, 0.5, -0.18, 0.66);
+  if(stageIdx >= 3){ const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.11, 12, 40), toon(S.rainbow ? '#FF6FB5' : S.gold ? '#FFC83D' : '#E8433A')); scarf.rotation.x = Math.PI/2; scarf.position.y = -0.38; head.add(scarf); }
+  addExtras(R, root, holder, S, { spark:'#BFE6FF', bubble:'#E8F7FF', snow:true, wing:'#DDF2FF' });
+  if(hatId){ const h = makeHat(hatId); head.add(h); h.scale.multiplyScalar(0.85); h.position.y *= 0.98; R.hat = h; }
+  root.rotation.y = -0.35; return R;
+}
+
+// ---------- baby fox: gray kit (like the book!) → red fox → many-tailed legend ----------
+function buildFox(stageIdx, hatId){
+  const S = STAGES[stageIdx], root = new THREE.Group(), R = { root, gills: [], eyes: [], extras: [] };
+  const furC = ['#6A605C','#B06C3E','#E8742A','#F07F33','#F5913A','#FFA545'][stageIdx], fur = toon(furC), white = toon('#FFF7EE'), black = toon('#2B2B3A');
+  const holder = new THREE.Group(); root.add(holder); R.holder = holder; holder.scale.setScalar(S.scale);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(0.7, 32, 24), fur); body.scale.set(0.85, 0.75, 1.3); body.position.set(0, -0.78, -0.5); holder.add(body);
+  if(stageIdx >= 1){ const chest = new THREE.Mesh(new THREE.SphereGeometry(0.45, 24, 16), white); chest.scale.set(0.9, 1, 0.6); chest.position.set(0, -0.62, 0.05); holder.add(chest); }
+  [[-0.38,-0.25],[0.38,-0.25],[-0.36,-0.85],[0.36,-0.85]].forEach(([x,z])=>{ const leg = new THREE.Mesh(new THREE.CapsuleGeometry(0.11, 0.3, 6, 12), fur); leg.position.set(x, -1.2, z); holder.add(leg);
+    const paw = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), stageIdx >= 2 ? black : fur); paw.scale.set(1, 0.6, 1.2); paw.position.set(x, -1.42, z+0.04); holder.add(paw); });
+  // tails: 1, then 3, 5 and 9 bushy tails fanned out behind
+  const tail = new THREE.Group(); tail.position.set(0, -0.75, -1.15); holder.add(tail); R.tail = tail;
+  const n = [1,1,1,3,5,9][stageIdx];
+  for(let i=0;i<n;i++){ const k = n===1 ? 0 : (i/(n-1) - 0.5), g = new THREE.Group(); g.rotation.set(-0.9, 0, k*2.2); tail.add(g);
+    const t = new THREE.Mesh(new THREE.CapsuleGeometry(0.26, 0.75, 8, 16), fur); t.position.y = 0.5; t.scale.set(1, 1, 0.9); g.add(t);
+    const tipCol = S.rainbow ? RAINBOW[i%RAINBOW.length] : S.gold ? '#FFD43D' : '#FFFFFF';
+    if(stageIdx >= 1){ const tip = new THREE.Mesh(new THREE.SphereGeometry(0.25, 16, 12), toon(tipCol, S.glow ? { emissive: tipCol, emissiveIntensity:0.45 } : {})); tip.position.y = 1.0; tip.scale.set(1, 1.2, 0.9); g.add(tip); } }
+  const head = new THREE.Group(); holder.add(head); R.head = head;
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.88, 40, 28), fur); skull.scale.set(1.08, 0.92, 0.95); head.add(skull);
+  if(stageIdx >= 1) [-1,1].forEach(sx=>{ const c = new THREE.Mesh(new THREE.SphereGeometry(0.38, 20, 14), white); c.scale.set(1, 0.7, 0.55); c.position.set(0.42*sx, -0.3, 0.5); head.add(c); });
+  const muz = new THREE.Mesh(new THREE.SphereGeometry(0.32, 24, 16), stageIdx >= 1 ? white : toon('#8C807A')); muz.scale.set(0.95, 0.7, stageIdx===0 ? 0.9 : 1.25); muz.position.set(0, -0.24, 0.78); head.add(muz);
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.08, 12, 8), black); nose.position.set(0, -0.14, stageIdx===0 ? 1.08 : 1.17); head.add(nose);
+  // ears (small and round on the gray kit, tall and pointy later) wiggle a little
+  [-1,1].forEach(sx=>{ const pivot = new THREE.Group(); pivot.position.set(0.48*sx, 0.62, -0.05); head.add(pivot);
+    const big = stageIdx >= 1, ear = new THREE.Mesh(new THREE.ConeGeometry(big ? 0.27 : 0.22, big ? 0.62 : 0.38, 16), fur); ear.position.y = big ? 0.26 : 0.16; pivot.add(ear);
+    const inner = new THREE.Mesh(new THREE.ConeGeometry(big ? 0.15 : 0.12, big ? 0.4 : 0.24, 12), toon(stageIdx>=2 ? '#2B2B3A' : '#F2B6A0')); inner.position.set(0, big ? 0.22 : 0.13, 0.1); inner.scale.z = 0.4; pivot.add(inner);
+    pivot.rotation.z = -0.32*sx; R.gills.push({ pivot, base: pivot.rotation.z, sx, i:0 }); });
+  addEyes(R, head, 0.33, 0.12, 0.76, 0.11);
+  addMouth(R, head, -0.4, 0.98, 0.14, '#2B2B3A');
+  addCheeks(head, 0.6, -0.12, 0.64);
+  addExtras(R, root, holder, S, { spark:'#FFD59A', bubble:'#FFE9C7', wing:'#FFE2C2' });
+  if(hatId){ const h = makeHat(hatId); head.add(h); h.position.y += 0.05; R.hat = h; }
+  root.rotation.y = -0.35; return R;
+}
+
+// ---------- baby seal: fluffy white pup → spotted seal → shining legend ----------
+function buildSeal(stageIdx, hatId){
+  const S = STAGES[stageIdx], root = new THREE.Group(), R = { root, gills: [], eyes: [], extras: [] };
+  const c = ['#FBF9F3','#DCE0E6','#AAB3BE','#9EAACB','#93A4D8','#CAD7FF'][stageIdx], skin = toon(c), dark = toon('#5E6672'), white = toon('#FFFFFF');
+  const holder = new THREE.Group(); root.add(holder); R.holder = holder; holder.scale.setScalar(S.scale);
+  const body = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), skin); body.scale.set(1, 0.72, 1.5); body.position.set(0, -0.82, -0.6); holder.add(body);
+  const tail = new THREE.Group(); tail.position.set(0, -0.95, -2.0); holder.add(tail); R.tail = tail;
+  [-1,1].forEach(sx=>{ const f = new THREE.Mesh(new THREE.SphereGeometry(0.3, 16, 12), skin); f.scale.set(0.9, 0.25, 1.3); f.position.set(0.22*sx, 0, -0.2); f.rotation.y = sx*0.4; tail.add(f); });
+  [-1,1].forEach(sx=>{ const pivot = new THREE.Group(); pivot.position.set(0.82*sx, -1.0, 0.15); holder.add(pivot);
+    const fl = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 12), skin); fl.scale.set(1.2, 0.28, 0.8); fl.position.x = 0.22*sx; pivot.add(fl);
+    pivot.rotation.z = -0.25*sx; R.gills.push({ pivot, base: pivot.rotation.z, sx, i:0 }); });
+  const head = new THREE.Group(); head.position.set(0, 0.05, 0.15); holder.add(head); R.head = head;
+  const skull = new THREE.Mesh(new THREE.SphereGeometry(0.88, 40, 28), skin); skull.scale.set(1.08, 0.95, 0.98); head.add(skull);
+  if(stageIdx === 0){ for(let i=0;i<5;i++){ const tuft = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), skin); tuft.position.set((i-2)*0.18, 0.84 + (i%2)*0.05, 0); head.add(tuft); } }
+  if(stageIdx >= 2){ [[-0.55,0.4,0.55],[0.6,0.35,0.5],[0.1,0.75,0.45],[-0.7,-0.75,0.1],[0.75,-0.65,-0.2],[0.2,-0.4,-1.3],[-0.4,-0.3,-1.0]].forEach(([x,y,z])=>{
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.09, 10, 8), S.rainbow ? toon(RAINBOW[Math.abs(Math.round(x*10))%6]) : dark); sp.position.set(x, y, z); sp.scale.z = 0.4; (z < -0.6 ? holder : head).add(sp); if(z<-0.6) sp.position.y -= 0.6; }); }
+  [-1,1].forEach(sx=>{ const m = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 12), white); m.position.set(0.16*sx, -0.26, 0.76); m.scale.set(1, 0.85, 0.8); head.add(m);
+    for(let k=0;k<3;k++){ const w = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.45, 4), toon(S.gold ? '#FFD43D' : '#7B7B88')); w.rotation.z = Math.PI/2 + sx*(0.15 - k*0.15); w.position.set(0.42*sx, -0.24 + 0.04*(1-k), 0.78); head.add(w); } });
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 8), toon('#2B2B3A')); nose.scale.set(1.2, 0.8, 0.8); nose.position.set(0, -0.12, 0.92); head.add(nose);
+  addEyes(R, head, 0.36, 0.14, 0.7, 0.16);
+  addMouth(R, head, -0.44, 0.84, 0.13, '#3A2A33');
+  addCheeks(head, 0.62, -0.18, 0.6);
+  addExtras(R, root, holder, S, { spark:'#BFE6FF', bubble:'#CFF1FF', wing:'#DDE9FF' });
+  if(hatId){ const h = makeHat(hatId); head.add(h); R.hat = h; }
+  root.rotation.y = -0.35; return R;
+}
+const BUILD = { axolotl: buildLolo, penguin: buildPenguin, fox: buildFox, seal: buildSeal };
 
 // ---------- one renderer per use: live (animated) and snapshot (still images) ----------
 function makeView(preserve){
@@ -130,10 +254,11 @@ function makeView(preserve){
   const cam = new THREE.PerspectiveCamera(32, 1/0.85, 0.1, 50); cam.position.set(0, 0.55, 6.6); cam.lookAt(0, 0.15, 0);
   return { canvas, r, scene, cam, model: null, key: '' };
 }
-function setModel(v, stage, hat){
-  const key = stage+'|'+hat; if(v.key === key) return;
+function setModel(v, o){
+  const stage = o.stage, hat = o.hat, sp = BUILD[o.species] ? o.species : 'axolotl';
+  const key = [sp, o.skin||'', stage, hat].join('|'); if(v.key === key) return;
   if(v.model) v.scene.remove(v.model.root);
-  v.model = buildLolo(stage, hat); v.scene.add(v.model.root); v.key = key;
+  v.model = BUILD[sp](stage, hat, o.skin); v.scene.add(v.model.root); v.key = key;
   // zoom in on small Lolos, back out as Lolo grows (gills, wings and halo need room)
   const z = [4.9, 5.2, 5.6, 6.0, 6.3, 6.7][stage] + (hat ? 0.3 : 0);
   v.cam.position.set(0, 0.5, z); v.cam.lookAt(0, hat ? 0.22 : 0.1, 0);
@@ -162,9 +287,9 @@ function sizeView(v, px){ const w = Math.round(px), h = Math.round(px*0.85); v.r
 
 let snap = null; const snapCache = {};
 function snapshot(px, o){
-  const key = [px, o.stage, o.hat, o.mood].join('|'); if(snapCache[key]) return snapCache[key];
+  const key = [px, o.species, o.skin, o.stage, o.hat, o.mood].join('|'); if(snapCache[key]) return snapCache[key];
   if(!snap) snap = makeView(true);
-  setModel(snap, o.stage, o.hat); snap.model.holder.scale.setScalar(STAGES[o.stage].scale);
+  setModel(snap, o); snap.model.holder.scale.setScalar(STAGES[o.stage].scale);
   sizeView(snap, px); pose(snap.model, 1.1, o.mood, { joy: o.mood==='happy' && false });
   snap.r.render(snap.scene, snap.cam);
   return (snapCache[key] = snap.canvas.toDataURL('image/png'));
@@ -181,7 +306,7 @@ function loop(ms){
       // glow, spin faster and faster, swap to the new form at the top, then land
       extra.spin = Math.PI*6*ease(u); extra.y = Math.sin(Math.PI*u)*0.5; extra.joy = u > 0.55;
       const pulse = 1 + 0.25*Math.sin(Math.PI*u);
-      if(u >= 0.5 && !act.swapped){ act.swapped = true; setModel(live, act.to, liveOpts.hat); liveOpts.stage = act.to; }
+      if(u >= 0.5 && !act.swapped){ act.swapped = true; liveOpts.stage = act.to; setModel(live, liveOpts); }
       extra.scale = STAGES[liveOpts.stage].scale * pulse;
       live.flash.material.opacity = 0.75*Math.max(0, 1-Math.abs(u-0.5)/0.15);
       live.flash.scale.setScalar(0.8 + 0.8*Math.sin(Math.PI*u));
@@ -193,18 +318,18 @@ function loop(ms){
 }
 
 window.Lolo3D = {
-  ok: true, STAGES, stageOf,
+  ok: true, STAGES, stageOf, SKINS: Object.keys(SKINS),
   snapshot(px, o){ return snapshot(Math.round(px*2), o); },
   live(el, px, o){
     if(!live){ live = makeView(false);
       live.flash = new THREE.Mesh(new THREE.SphereGeometry(1.2, 24, 16), new THREE.MeshBasicMaterial({ color:'#FFF6C8', transparent:true, opacity:0, depthWrite:false })); live.scene.add(live.flash);
       live.canvas.className = 'lolo3d'; }
-    liveOpts = { ...o }; setModel(live, o.stage, o.hat); sizeView(live, px);
+    liveOpts = { ...o }; setModel(live, liveOpts); sizeView(live, px);
     el.innerHTML = ''; el.appendChild(live.canvas);
     if(!running){ running = true; requestAnimationFrame(loop); }
   },
   poke(){ return new Promise(res=>{ act = { kind:'poke', t0: performance.now()/1000, dur: 0.9, res }; }); },
-  evolve(from, to){ if(!live) return Promise.resolve(); setModel(live, from, liveOpts.hat); liveOpts.stage = from;
+  evolve(from, to){ if(!live) return Promise.resolve(); liveOpts.stage = from; setModel(live, liveOpts);
     return new Promise(res=>{ act = { kind:'evolve', t0: performance.now()/1000 + 0.4, dur: 2.4, to, res }; }); },
 };
 window.dispatchEvent(new Event('lolo3d-ready'));
