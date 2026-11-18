@@ -1527,9 +1527,9 @@ const GLS_PAL=[['#5f9fd0','#cfd8dc'],['#4d8f93','#e0e0e0'],['#7d8fb3','#eceff1']
 const STP_PAL=[['#d8cbb0','#4b5a66'],['#c9a27e','#3e4a52'],['#bcc6cc','#2f3d47'],['#e6d2c3','#5a4a42']];
 const BOOK_PAL=['#c62828','#1565c0','#2e7d32','#f9a825','#6a1b9a','#ef6c00','#00838f','#ad1457','#4e342e'];
 const CTN_PAL=['#c0392b','#2471a3','#d68910','#1e8449','#7d3c98','#566573'];
-const STK={R_rowhouse:{f:['rhb','rhf','rht'],h:11,n:[5,8],pal:8},R_brownstone:{f:['bsb','bsf','bst'],h:11,n:[6,9],pal:3},R_terrace:{f:['teb','tef','tet'],h:11,n:[6,10],pal:3},
-  R_dcrow:{f:['dcb','dcf','dct'],h:10,n:[5,8],pal:6},R_tenement:{f:['tnb','tnf','tnt'],h:11,n:[8,12],pal:3},R_pencil:{f:['pcb','pcf','pct'],h:10,n:[9,14],pal:4},S_office:{f:['flrbase','flr','flrtop'],h:14,n:[6,15],pal:6},S_apt:{f:['aptb','apt','aptt'],h:12,n:[7,16],pal:5},S_slab:{f:['slabb','slab','slabt'],h:14,n:[4,10],pal:4},
-  S_glass:{f:['glsb','gls','glst'],h:16,n:[7,17],pal:4},S_step:{f:['stp1','stp2','stp3'],h:14,n:[9,16],pal:4,step:1},S_books:{f:['book'],h:10,n:[7,15],pal:9,jit:1},S_box:{f:['ctn'],h:26,n:[2,5],pal:6,jit:2}};
+const STK={R_rowhouse:{c:2,f:['rhb','rhf','rht'],h:11,n:[5,8],pal:8},R_brownstone:{c:2,f:['bsb','bsf','bst'],h:11,n:[6,9],pal:3},R_terrace:{c:2,f:['teb','tef','tet'],h:11,n:[6,10],pal:3},
+  R_dcrow:{c:2,f:['dcb','dcf','dct'],h:10,n:[5,8],pal:6},R_tenement:{c:2,f:['tnb','tnf','tnt'],h:11,n:[8,12],pal:3},R_pencil:{c:2,f:['pcb','pcf','pct'],h:10,n:[9,14],pal:4},S_office:{f:['flrbase','flr','flrtop'],h:14,n:[6,15],pal:6},S_apt:{f:['aptb','apt','aptt'],h:12,n:[7,16],pal:5},S_slab:{f:['slabb','slab','slabt'],h:14,n:[4,10],pal:4},
+  S_glass:{f:['glsb','gls','glst'],h:16,n:[7,17],pal:4},S_step:{f:['stp1','stp2','stp3'],h:14,n:[9,16],pal:4,step:1},S_books:{f:['book'],h:10,n:[7,15],pal:9,jit:1},S_box:{c:1,f:['ctn'],h:26,n:[2,5],pal:6,jit:2}};
 const FLR_PAL=[['#e9e4da','#7fb3d5','#b9b2a5'],['#cfd8dc','#4f7ea8','#90a4ae'],['#f2d7b6','#6d9bc3','#c9a27e'],['#d7ccc8','#5c7f99','#a1887f'],['#dfe9e1','#5d9c8f','#9fb8a5'],['#f4e1e1','#7a8fb8','#c49a9a']];
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();p.g0=VEHICLES.has(k)?.45:0;BUILD[k](p,v);g=p.build();geoCache.set(key,g);}return g;}
@@ -1808,7 +1808,7 @@ const PK=window.__pk||.3,LV_COSTS=[0];{let c=6;for(let L=1;L<400;L++){LV_COSTS[L
 const LSTEP=1.15,LV_COST=L=>10*L;   // Hole.io style: each level costs 10 more than the last (+10, +20, +30...)
 const _oldCost=L=>LV_COSTS[Math.min(L,399)];   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
 const LV_TOTAL=[0,0];for(let L=1;L<400;L++)LV_TOTAL[L+1]=LV_TOTAL[L]+LV_COST(L);
-const lvR=L=>22+10*(L-1);   // hole area grows with your score, like Hole.io
+const lvR=L=>22+14*(L-1);   // hole area grows with your score, like Hole.io
 const lvPts=L=>LV_TOTAL[Math.min(L,400)];                                  // total points needed to reach level L
 const lvOf=xp=>{let L=1;while(L<399&&LV_TOTAL[L+1]<=xp)L++;return L;};
 function lvProg(h){return clamp((h.xp-lvPts(h.lvl))/(lvPts(h.lvl+1)-lvPts(h.lvl)),0,1);}
@@ -2008,13 +2008,23 @@ const SPAWN_SMALL={plaza:['person','person','person','pigeon','flower','bench','
   downtown:['person','person','person','pigeon','trash','bike','bench'],fun:['person','person','ball','pigeon','cart','flower','picnic'],civic:['person','person','ball','bike','dog','tree','picnic','flower']};
 const SPAWN_BLD={houses:['house','house','rowrow','apartment'],rows:['rowrow','rowrow','house'],shops:['shop','diner','gas'],downtown:['office','tower','apartment','shop']};
 let spawnClk=0,bldClk=0,carClk=0,startCount=0,startCars=0;
-function mkStackT(st,x,y,yaw,n,v,spawn){const S=STK[st];if(!S||st==='S_office')return mkStack(x,y,yaw,n,v,spawn);const g=[];let z=0;
-  for(let i=0;i<n;i++){const f=S.f,k=S.step?f[i<n*.4?0:i<n*.75?1:2]:f.length===1?f[0]:i===0?f[0]:i===n-1?f[2]:f[1],h=T[k].h,j=S.jit?rnd(-.12,.12)*(S.jit===2?.3:1):0,yw=yaw+j;
+// a section is several floors fused into one piece (the building comes apart in chunks, not floor by floor)
+const YARG={box:5,cyl:5,ball:3,add:3,plane:4};
+function chunkKind(parts){const ck='c:'+parts.join('+');if(T[ck])return ck;let w=0,d=0,h=0;for(const k of parts){w=Math.max(w,T[k].w);d=Math.max(d,T[k].d);h+=T[k].h;}
+  T[ck]={w,d,h,pts:1,k:ck,r:Math.hypot(w,d)/2*.75};VARIANTS[ck]=VARIANTS[parts[0]]||1;
+  BUILD[ck]=(p,v)=>{let off=0;for(const k of parts){const o=off,px=new Proxy(p,{get:(t,nm)=>{const f=t[nm];if(typeof f!=='function')return f;const i=YARG[nm];
+      return(...a)=>{if(i!==undefined){while(a.length<=i)a.push(undefined);a[i]=(a[i]||0)+o;}return f.apply(t,a);};}});BUILD[k](px,v);off+=T[k].h;}};
+  return ck;}
+function mkStackT(st,x,y,yaw,n,v,spawn){const S=STK[st];if(!S)return[];const g=[];let z=0;
+  const fl=[];for(let i=0;i<n;i++){const f=S.f;fl.push(S.step?f[i<n*.4?0:i<n*.75?1:2]:f.length===1?f[0]:i===0?f[0]:i===n-1?f[2]:f[1]);}
+  const C=S.c||3,secs=[];for(let i=0;i<fl.length;){let m=Math.min(C,fl.length-i);if(fl.length-i-m===1&&m>1)m--;secs.push(fl.slice(i,i+m));i+=m;}
+  for(const sec of secs){const k=sec.length===1?sec[0]:chunkKind(sec),h=T[k].h,j=S.jit?rnd(-.12,.12)*(S.jit===2?.3:1):0,yw=yaw+j;
     _qy.setFromAxisAngle(_up,yw);const ox=S.jit?rnd(-2.5,2.5):0,oz=S.jit?rnd(-2.5,2.5):0,vv=S.f.length===1?ri(0,S.pal-1):v;
-    const ex={yaw:yw,v:vv,pose:{x:x+ox,y:z+h/2+.02,z:y+oz,q:{x:_qy.x,y:_qy.y,z:_qy.z,w:_qy.w}},stk:1,gh:z+h};const o=spawn?spawnObj(k,x+ox,y+oz,ex):mk(k,x+ox,y+oz,ex);if(o){aabb(o);g.push(o);}z+=h;}
+    const ex={yaw:yw,v:vv,pose:{x:x+ox,y:z+h/2+.02,z:y+oz,q:{x:_qy.x,y:_qy.y,z:_qy.z,w:_qy.w}},stk:1,gh:z+h};const o=spawn?spawnObj(k,x+ox,y+oz,ex):mk(k,x+ox,y+oz,ex);if(o){aabb(o);o.pts=1;g.push(o);}z+=h;}
   for(const o of g)o.grp=g;return g;}
 function putStack(st,x,y,yaw){const S=STK[st],n=ri(S.n[0],S.n[1]),v=ri(0,S.pal-1),grp=mkStackT(st,x,y,yaw,n,v);LOTS.push({k:st,st,x,y,yaw,n,v,grp});return grp[0];}
-function mkStack(x,y,yaw,n,v,spawn){const g=[];_qy.setFromAxisAngle(_up,yaw);const q={x:_qy.x,y:_qy.y,z:_qy.z,w:_qy.w};
+function mkStack(x,y,yaw,n,v,spawn){return mkStackT('S_office',x,y,yaw,n,v,spawn);}
+function mkStackOld(x,y,yaw,n,v,spawn){const g=[];_qy.setFromAxisAngle(_up,yaw);const q={x:_qy.x,y:_qy.y,z:_qy.z,w:_qy.w};
   for(let i=0;i<n;i++){const k=i===0?'flrbase':i===n-1?'flrtop':'flr',ex={yaw,v,pose:{x,y:i*14+7.02,z:y,q},stk:1,gh:i*14+14};const o=spawn?spawnObj(k,x,y,ex):mk(k,x,y,ex);if(o){aabb(o);g.push(o);}}
   for(const o of g)o.grp=g;return g;}
 function spawnObj(k,x,y,extra){let ms=(meshByKind.get(k)||[]).filter(m=>m.count<m.cap);if(!ms.length)return null;
