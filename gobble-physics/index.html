@@ -889,9 +889,7 @@ function paintCity(){const G=CITYGEO,WAT='#5fb6df';
   g.save();g.beginPath();for(const s of G.land)shapePath(s);g.clip();
   rect(0,0,W,W,G.ground);
   for(let y=12;y<W;y+=24)for(let x=12;x<W;x+=24){const st=G.styles[G.district(x,y)];if(st&&st.tint)disk(x+hash(x,y)*8-4,y+hash(y,x)*8-4,19,st.tint);}
-  for(let i=0;i<5000;i++){const x=hash(i,7)*W,y=hash(i,8)*W;disk(x,y,1.3,i%2?'rgba(255,255,255,.12)':'rgba(90,80,60,.06)');}
   g.fillStyle='#94d894';g.beginPath();for(const s of G.parks)shapePath(s);g.fill();
-  for(let i=0;i<9000;i++){const x=hash(i,11)*W,y=hash(i,12)*W;if(isPark(x,y))disk(x,y,i%6?1.5:2.6,i%6?'rgba(255,255,255,.28)':(i%2?'#ffc6d0':'#fff3a0'));}
   for(const s of G.parks)if(s.r===undefined&&s.length>3){let cx=0,cy=0;for(const p of s){cx+=p[0];cy+=p[1];}cx/=s.length;cy/=s.length;
     g.save();g.beginPath();shapePath(s);g.clip();for(let k=0;k<s.length;k+=Math.max(1,Math.floor(s.length/4)))polyStroke(crv([[cx,cy],[(cx+s[k][0])/2+20,(cy+s[k][1])/2-15],s[k]],6),'#e6d7ae',8);g.restore();}
   for(const s of G.lakes){g.beginPath();shapePath(s);g.strokeStyle='#d6c9a5';g.lineWidth=12;g.stroke();g.fillStyle=WAT;g.fill();}
@@ -899,7 +897,6 @@ function paintCity(){const G=CITYGEO,WAT='#5fb6df';
   for(const r of G.rivers){polyStroke(r.pts,WAT,r.w);}
   g.restore();
   g.beginPath();for(const s of G.land)shapePath(s);g.strokeStyle='#d8cba5';g.lineWidth=8;g.stroke();
-  for(let i=0;i<1400;i++){const x=hash(i,3)*W,y=hash(i,4)*W;if((maskAt(x,y)&3)===1)continue;line(x,y,x+14,y,'rgba(255,255,255,.4)',2);}
   for(const L of G.lm){if(L.water)continue;const t=T[L.k];g.save();g.translate(L.x,L.y);g.rotate(-L.yaw);rounded(-t.w/2-14,-t.d/2-14,t.w+28,t.d+28,10,'#ddd6c8');g.restore();}
 }
 
@@ -2181,7 +2178,7 @@ function paintGround(){
   const size=Math.min(3584,renderer.capabilities.maxTextureSize);
   if(gcv.width!==size){gcv.width=gcv.height=size;}
   g=gcv.getContext('2d');const S=size/W;g.setTransform(S,0,0,S,0,0);
-  if(CITYGEO){paintCity();groundTex.needsUpdate=true;return;}
+  if(CITYGEO){paintCity();groundTex.needsUpdate=true;buildGroundMask();return;}
   rect(0,0,W,W,'#6f7f89');
   // road texture speckle
   for(let i=0;i<2600;i++)disk(hash(i,1)*W,hash(i,2)*W,1.2,'rgba(255,255,255,.05)');
@@ -2200,14 +2197,14 @@ function paintGround(){
     if(b.type==='park'){const cx=b.x+BLOCK/2,cy=b.y+BLOCK/2;
       rounded(cx-7,b.y+11,14,BLOCK-22,5,'#ead9b1');rounded(b.x+11,cy-7,BLOCK-22,14,5,'#ead9b1');
       for(let i=0;i<60;i++){const xx=b.x+19+hash(b.x,b.y,i)*282,yy=b.y+19+hash(b.y,b.x,i+49)*282;
-        if(Math.abs(xx-cx)<13||Math.abs(yy-cy)<13)continue;disk(xx,yy,i%5?1.5:2.6,i%5?'rgba(255,255,255,.3)':(i%2?'#ffc6d0':'#fff3a0'));}
+}
     }else if(b.type==='fun'){
       for(let xx=b.x+11;xx<b.x+BLOCK-11;xx+=29)for(let yy=b.y+11;yy<b.y+BLOCK-11;yy+=29)
         if(((xx-b.x)/29+(yy-b.y)/29|0)%2)rect(xx,yy,Math.min(29,b.x+BLOCK-11-xx),Math.min(29,b.y+BLOCK-11-yy),'rgba(255,170,190,.25)');
       const cc=['#ff6f91','#5ec8f2','#ffd23a','#7ed957','#b37bff'];
-      for(let i=0;i<70;i++)disk(b.x+16+hash(b.x,b.y,i)*288,b.y+16+hash(b.y,b.x,i+3)*288,1.6,cc[i%5]);
+
     }else if(b.type==='houses'){
-      for(let i=0;i<50;i++)disk(b.x+16+hash(b.x,b.y,i)*288,b.y+16+hash(b.y,b.x,i+7)*288,1.6,'rgba(244,255,216,.45)');
+
       for(const ix of[b.x+BLOCK*.25,b.x+BLOCK*.75])for(const iy of[b.y+BLOCK*.25,b.y+BLOCK*.75])rounded(ix-5,iy+20,10,46,3,'#e8ddc2');
     }else{
       for(let xx=b.x+16;xx<b.x+BLOCK-8;xx+=24)line(xx,b.y+12,xx,b.y+BLOCK-12,'rgba(255,255,255,.18)',1);
@@ -2224,7 +2221,7 @@ function paintGround(){
   if(CITIES[cityId].scramble){const[si,sj]=CITIES[cityId].scramble,x=ROAD/2+si*(BLOCK+ROAD),y=ROAD/2+sj*(BLOCK+ROAD);
     g.save();g.translate(x,y);for(const a of[Math.PI/4,-Math.PI/4]){g.save();g.rotate(a);for(let q=-6;q<=6;q++)rounded(q*7-2.5,-50,5,100,1,'rgba(248,247,230,.8)');g.restore();}g.restore();}
   if(CITIES[cityId].special){for(const b of blocks)if(b.type==='mall'){rounded(b.x+11,b.y+BLOCK/2-12,BLOCK-22,24,6,'#e9dcb6');}}
-  groundTex.needsUpdate=true;
+  groundTex.needsUpdate=true;buildGroundMask();
 }
 
 /* ---------- holes in 3D ---------- */
@@ -2410,7 +2407,8 @@ function buildRoadMesh(){
   if(roadMesh){scene.remove(roadMesh);roadMesh.geometry.dispose();roadMesh=null;}
   if(!RG.edges.length)return;
   const P=[],C=[],col=new THREE.Color(),E=RG.edges,Nn=RG.nodes,US=!city.left;
-  const tri=(ax,az,bx,bz,cx,cz,y,c)=>{col.set(c);P.push(ax,y,az,bx,y,bz,cx,y,cz);for(let i=0;i<3;i++)C.push(col.r,col.g,col.b);};
+  const SU=[],SURF={'#c4c0b6':1,'#aaa59a':1,'#a9a49a':1,'#b9b4aa':2,'#8d99a3':2,'#eceae0':3,'#e3b53c':3,'#9fc47e':4,'#6a6d70':5,'#3a3d40':5};
+  const tri=(ax,az,bx,bz,cx,cz,y,c)=>{col.set(c);P.push(ax,y,az,bx,y,bz,cx,y,cz);const su=SURF[c]||0;for(let i=0;i<3;i++){C.push(col.r,col.g,col.b);SU.push(su);}};
   const quad=(a,b,c,d,y,cl)=>{tri(a[0],a[1],c[0],c[1],b[0],b[1],y,cl);tri(a[0],a[1],d[0],d[1],c[0],c[1],y,cl);};
   // a strip along edge e: from distance t0 to t1, between side offsets q0 and q1
   const strip=(e,t0,t1,q0,q1,y,cl)=>{const A=Nn[e.a],nx=-e.uy,ny=e.ux,p=(t,q)=>[A.x+e.ux*t+nx*q,A.y+e.uy*t+ny*q];quad(p(t0,q0),p(t1,q0),p(t1,q1),p(t0,q1),y,cl);};
@@ -2419,11 +2417,11 @@ function buildRoadMesh(){
   const box=(x,z,ux,uz,len,wid,y,cl)=>{const nx=-uz,nz=ux,l=len/2,w=wid/2;quad([x-ux*l-nx*w,z-uz*l-nz*w],[x+ux*l-nx*w,z+uz*l-nz*w],[x+ux*l+nx*w,z+uz*l+nz*w],[x-ux*l+nx*w,z-uz*l+nz*w],y,cl);};
   const straight=N=>{if(N.e.length!==2)return false;const a=E[N.e[0]],b=E[N.e[1]],sa=Nn[a.a]===N?1:-1,sb=Nn[b.a]===N?1:-1;return(a.ux*b.ux+a.uy*b.uy)*sa*sb<-.985;};
   const maxW=N=>{let m=0;for(const i of N.e)m=Math.max(m,E[i].w);return m;};
-  const SIDE='#e2dccf',DECK='#b9b2a6',CURB='#cfc8b9',ASPH='#59646c',WEAR='#525c64',PAINT='#f4f2e8',YEL='#f0c544';
+  const SIDE='#c4c0b6',DECK='#a9a49a',CURB='#b9b4aa',ASPH='#4d5054',WEAR='#46494d',PAINT='#eceae0',YEL='#e3b53c';
   // 1) sidewalks (+ concrete joints)   2) curbs   3) asphalt
   for(const e of E)strip(e,0,e.len,-(e.w/2+SW),e.w/2+SW,.1,e.bridge?DECK:SIDE);
   for(const N of Nn)if(!straight(N))disc(N.x,N.y,maxW(N)/2+SW,.1,SIDE,N.e.length>2?18:10);
-  for(const e of E){if(e.bridge)continue;for(let t=6;t<e.len-4;t+=13)for(const s of[-1,1])strip(e,t,t+.9,s*(e.w/2+3),s*(e.w/2+SW),.12,'#d3ccbe');}
+  for(const e of E){if(e.bridge)continue;for(let t=6;t<e.len-4;t+=13)for(const s of[-1,1])strip(e,t,t+.9,s*(e.w/2+3),s*(e.w/2+SW),.12,'#aaa59a');}
   for(const e of E)strip(e,0,e.len,-(e.w/2+2.6),e.w/2+2.6,.18,CURB);
   for(const N of Nn)if(!straight(N))disc(N.x,N.y,maxW(N)/2+2.6,.18,CURB,N.e.length>2?18:10);
   for(const e of E)strip(e,0,e.len,-e.w/2,e.w/2,.26,ASPH);
@@ -2433,9 +2431,9 @@ function buildRoadMesh(){
   for(const e of E){const ma=cw(e.a,e),mb=cw(e.b,e),a=ma?ma+SW+26:2,b=e.len-(mb?mb+SW+26:2),n=lanesOf(e),med=e.blvd?8:0,lw=(e.w/2-med)/n;
     // patches, cracks and manholes
     const A=Nn[e.a];for(let t=24,k=0;t<e.len-24;t+=55+hash(k,e.a)*110,k++){const q=(hash(e.b,k)-.5)*e.w*.7,x=A.x+e.ux*t-e.uy*q,z=A.y+e.uy*t+e.ux*q,h=hash(k,e.b);
-      if(h<.35){disc(x,z,4.2,.29,'#7d858b',10);disc(x,z,3.3,.3,'#454d54',10);}
-      else if(h<.75)box(x,z,e.ux,e.uy,14+hash(k,7)*18,6+hash(k,9)*6,.28,'#535d65');
-      else box(x,z,e.ux*.8-e.uy*.6,e.uy*.8+e.ux*.6,10+hash(k,3)*10,.9,.29,'#454e55');}
+      if(h<.35){disc(x,z,4.2,.29,'#6a6d70',10);disc(x,z,3.3,.3,'#3a3d40',10);}
+      else if(h<.75)box(x,z,e.ux,e.uy,14+hash(k,7)*18,6+hash(k,9)*6,.28,'#4f5256');
+      else box(x,z,e.ux*.8-e.uy*.6,e.uy*.8+e.ux*.6,10+hash(k,3)*10,.9,.29,'#3d4043');}
     if(b-a<10)continue;
     // tyre-worn strips in each lane
     if(!e.bridge)for(const s of[-1,1])for(let k=0;k<n;k++){const c=s*(med+lw*(k+.5));for(const o of[-6.5,6.5])strip(e,a-10,b+10,c+o-2.2,c+o+2.2,.27,WEAR);}
@@ -2460,9 +2458,88 @@ function buildRoadMesh(){
   const G=CITYGEO;if(G&&G.scramble){let best=null,bd=1e9;for(const N of Nn)if(N.e.length>=4){const d=Math.hypot(N.x-G.scramble[0],N.y-G.scramble[1]);if(d<bd){bd=d;best=N;}}
     if(best)for(const a of[Math.PI/4,-Math.PI/4]){const ux=Math.cos(a),uz=Math.sin(a);for(let q=-5;q<=5;q++)box(best.x-uz*q*7,best.y+ux*q*7,ux,uz,88,5,.39,PAINT);}}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(P,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
-  const nm=new Float32Array(P.length);for(let i=1;i<nm.length;i+=3)nm[i]=1;geo.setAttribute('normal',new THREE.BufferAttribute(nm,3));
+  const nm=new Float32Array(P.length);for(let i=1;i<nm.length;i+=3)nm[i]=1;geo.setAttribute('normal',new THREE.BufferAttribute(nm,3));geo.setAttribute('aSurf',new THREE.Float32BufferAttribute(SU,1));
   roadMesh=new THREE.Mesh(geo,ROAD_MAT);roadMesh.receiveShadow=true;roadMesh.frustumCulled=false;scene.add(roadMesh);}
 const ROAD_MAT=new THREE.MeshStandardMaterial({vertexColors:true,side:THREE.DoubleSide,roughness:.88,metalness:0,envMapIntensity:.2,...STENCIL_GROUND});ROAD_MAT.onBeforeCompile=sh=>patchLook(sh,false);ROAD_MAT.customProgramCacheKey=()=>'road';
+
+/* ================= realistic ground: world-space detail shaders for grass, paving, paths, water and streets ================= */
+const GNOISE=`
+float h21(vec2 p){p=fract(p*vec2(.1031,.1030));p+=dot(p,p.yx+33.33);return fract((p.x+p.y)*p.x);}
+float vn(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(h21(i),h21(i+vec2(1,0)),f.x),mix(h21(i+vec2(0,1)),h21(i+vec2(1,1)),f.x),f.y);}
+float fbm(vec2 p){float s=0.,a=.5;for(int i=0;i<4;i++){s+=a*vn(p);p=p*2.03+vec2(17.1,9.7);a*=.5;}return s/.9375;}
+`;
+/* material mask derived from the painted zone map: R grass, G water, B gravel/sand, rest paving */
+const gmcv=document.createElement('canvas');gmcv.width=gmcv.height=1536;
+const gMaskTex=new THREE.CanvasTexture(gmcv);gMaskTex.colorSpace=THREE.NoColorSpace;gMaskTex.minFilter=THREE.LinearFilter;gMaskTex.generateMipmaps=false;
+function buildGroundMask(){const n=gmcv.width,c=gmcv.getContext('2d',{willReadFrequently:true});c.imageSmoothingEnabled=true;c.drawImage(gcv,0,0,n,n);
+  const im=c.getImageData(0,0,n,n),d=im.data;
+  for(let i=0;i<d.length;i+=4){const r=d[i],g=d[i+1],b=d[i+2];let R=0,G=0,B=0;
+    if(b>r+35&&b>g+5)G=255;else if(g>r+16&&g>b+8)R=255;else if(r>=g&&g>=b&&r-b>40)B=255;
+    d[i]=R;d[i+1]=G;d[i+2]=B;d[i+3]=255;}
+  c.putImageData(im,0,0);gMaskTex.needsUpdate=true;}
+const GU={uT:SWAY_U,GW:{value:W},gMask:{value:gMaskTex}};
+groundMat.onBeforeCompile=sh=>{Object.assign(sh.uniforms,GU);
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vW;')
+    .replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvW=(modelMatrix*vec4(transformed,1.)).xyz;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vW;uniform float uT,GW;uniform sampler2D gMask;'+GNOISE)
+  .replace('#include <map_fragment>',`
+    vec2 wp=vW.xz;vec2 guv=clamp(vec2(wp.x/GW,1.-wp.y/GW),.0005,.9995);
+    vec3 tint=texture2D(map,guv).rgb;vec3 M=texture2D(gMask,guv).rgb;
+    float pxw=length(fwidth(wp)),fF=clamp(1.6-pxw*1.3,0.,1.),fM=clamp(2.2-pxw*.3,0.,1.);
+    float grass=M.r,wat=M.g,path=M.b,pave=clamp(1.-grass-wat-path,0.,1.);
+    // lawn: patchy natural greens, dry spots, individual blade speckle, faint mowing stripes
+    vec3 gc=vec3(0.),pc=vec3(0.),sc=vec3(0.),wc=vec3(0.);
+    if(grass>.002){float n1=fbm(wp*.018),n2=fbm(wp*.085+7.3),gb=h21(floor(wp*2.4));
+    gc=mix(vec3(.085,.17,.035),vec3(.19,.29,.07),n1);
+    gc=mix(gc,vec3(.29,.30,.12),smoothstep(.58,.8,n2)*.6);
+    gc*=1.+(gb-.5)*.42*fF;gc*=1.+.045*sign(sin(wp.x*.075+n1*2.))*fM;}
+    // paving: slabs with joints, slab-to-slab tone, grime and grain
+    if(pave>.002){vec2 tu=wp/8.;vec2 ti=floor(tu),tf=fract(tu);float ed=min(min(tf.x,1.-tf.x),min(tf.y,1.-tf.y));
+    pc=tint*vec3(.66,.66,.64)*(.9+.14*h21(ti))*(.84+.26*fbm(wp*.04+2.));
+    pc*=1.+(h21(floor(wp*3.1))-.5)*.16*fF;pc*=1.-(1.-smoothstep(.0,.05,ed))*.32*fM;
+    pc*=1.-.18*smoothstep(.6,.85,fbm(wp*.012+4.));}
+    // gravel paths and sandy banks
+    if(path>.002){sc=tint*vec3(.74,.70,.6)*(.86+.2*fbm(wp*.06));sc*=1.+(h21(floor(wp*3.7))-.5)*.4*fF;}
+    // water: deep teal, lighter shallows, drifting foam at the shore
+    if(wat>.002){float wv=fbm(wp*.025+vec2(uT*.02,uT*.013));
+    wc=mix(vec3(.012,.05,.07),vec3(.03,.1,.12),wv);
+    float shore=smoothstep(.98,.55,wat);wc=mix(wc,vec3(.08,.19,.19),shore*.75);
+    float foam=smoothstep(.8,.5,wat)*smoothstep(.1,.35,wat)*smoothstep(.42,.72,vn(wp*.22+vec2(uT*.35,-uT*.2)));
+    wc=mix(wc,vec3(.62,.68,.68),foam*.55);}
+    diffuseColor.rgb=gc*grass+wc*wat+sc*path+pc*pave;
+    float wt=smoothstep(.5,.9,wat);`)
+  .replace('#include <color_fragment>','')
+  .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=mix(mix(.97,.82,pave),.05,wt);')
+  .replace('#include <normal_fragment_maps>',`#include <normal_fragment_maps>
+    if(wt>.01){vec2 q=wp*.05;float t=uT;
+      float a=vn(q+vec2(t*.12,0.))+.5*vn(q*2.4-vec2(0.,t*.18)),e=.08;
+      float bx=vn(q+vec2(e+t*.12,0.))+.5*vn((q+vec2(e,0.))*2.4-vec2(0.,t*.18));
+      float bz=vn(q+vec2(t*.12,e))+.5*vn((q+vec2(0.,e))*2.4-vec2(0.,t*.18));
+      vec3 pn=normalize(vec3(-(bx-a)*1.6,1.,-(bz-a)*1.6));normal=normalize(mix(normal,normalize((viewMatrix*vec4(pn,0.)).xyz),wt));}`)
+  .replace('#include <lights_fragment_maps>','#include <lights_fragment_maps>\n#ifdef USE_ENVMAP\nradiance*=1.+1.6*wt;\n#endif');};
+groundMat.customProgramCacheKey=()=>'gnd2';groundMat.needsUpdate=true;
+outer.material=groundMat;
+
+/* streets: per-surface detail (asphalt aggregate + cracks, concrete grain + stains, worn paint, median grass) */
+ROAD_MAT.onBeforeCompile=sh=>{sh.uniforms.uT=SWAY_U;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nattribute float aSurf;varying float vS;varying vec3 vW;')
+    .replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvW=(modelMatrix*vec4(transformed,1.)).xyz;vS=aSurf;');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying float vS;varying vec3 vW;'+GNOISE)
+  .replace('#include <color_fragment>',`#include <color_fragment>
+    vec2 wp=vW.xz;float pxw=length(fwidth(wp)),fF=clamp(1.6-pxw*1.3,0.,1.);float s=floor(vS+.5);vec3 c=diffuseColor.rgb;float rgh=.92;
+    if(s<.5){float big=fbm(wp*.011),mid=fbm(wp*.07+3.),g=h21(floor(wp*2.7));
+      c*=.82+.34*big;c*=.92+.14*mid;c*=1.+(g-.5)*.34*fF;c+=step(.97,g)*.05*fF;
+      float cr=abs(vn(wp*.06)*2.-1.),crk=(1.-smoothstep(.0,.022,cr))*smoothstep(.66,.8,fbm(wp*.018+9.))*step(.45,vn(wp*.4));c*=1.-crk*.32;
+      c*=1.-.25*smoothstep(.72,.9,fbm(wp*.03+1.7));rgh=.9-.25*smoothstep(.72,.9,fbm(wp*.03+1.7));}
+    else if(s<1.5){c*=.88+.18*fbm(wp*.05);c*=1.+(h21(floor(wp*3.2))-.5)*.15*fF;c*=1.-.14*smoothstep(.6,.82,fbm(wp*.028+5.));}
+    else if(s<2.5){c*=1.+(h21(floor(wp*3.4))-.5)*.12*fF;c*=.93+.1*fbm(wp*.08);}
+    else if(s<3.5){float w=smoothstep(.5,.85,fbm(wp*.22))*.7+(h21(floor(wp*2.6))-.5)*.35*fF;c=mix(c,vec3(.06,.065,.07),clamp(w,0.,.8));rgh=.7;}
+    else if(s<4.5){c=mix(vec3(.085,.17,.035),vec3(.18,.27,.07),fbm(wp*.05));c*=1.+(h21(floor(wp*2.4))-.5)*.4*fF;rgh=.97;}
+    else{c*=.9+.2*h21(floor(wp*1.6));rgh=.45;}
+    diffuseColor.rgb=c;`)
+  .replace('#include <roughnessmap_fragment>','#include <roughnessmap_fragment>\nroughnessFactor=rgh;');};
+ROAD_MAT.customProgramCacheKey=()=>'road2';ROAD_MAT.needsUpdate=true;
+
 
 function stackifyRows(){const rows=objs.filter(o=>ROWT.has(o.k));if(!rows.length)return;const gone=new Set(rows);objs=objs.filter(o=>!gone.has(o));LOTS=LOTS.filter(L=>!gone.has(L.o));
   for(const o of rows){const st='R_'+o.k,S=STK[st];if(!S)continue;const v=Math.min(o.v,S.pal-1),n=ri(S.n[0],S.n[1]),grp=mkStackT(st,o.x,o.y,o.yaw,n,v);LOTS.push({k:st,st,x:o.x,y:o.y,yaw:o.yaw,n,v,grp});}}
