@@ -1809,7 +1809,7 @@ const PK=window.__pk||.3,LV_COSTS=[0];{let c=6;for(let L=1;L<400;L++){LV_COSTS[L
 const LSTEP=1.15,LV_COST=L=>Math.round(10*L*(window.__K||.25));   // Hole.io style: each level costs 10 more than the last (+10, +20, +30...)
 const _oldCost=L=>LV_COSTS[Math.min(L,399)];   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
 const LV_TOTAL=[0,0];for(let L=1;L<400;L++)LV_TOTAL[L+1]=LV_TOTAL[L]+LV_COST(L);
-const lvR=L=>22+4*(L-1);   // hole area grows with your score, like Hole.io
+const lvR=L=>18*Math.pow(1.081,L-1);   // hole area grows with your score, like Hole.io
 const lvPts=L=>LV_TOTAL[Math.min(L,400)];                                  // total points needed to reach level L
 const lvOf=xp=>{let L=1;while(L<399&&LV_TOTAL[L+1]<=xp)L++;return L;};
 function lvProg(h){return clamp((h.xp-lvPts(h.lvl))/(lvPts(h.lvl+1)-lvPts(h.lvl)),0,1);}
