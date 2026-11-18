@@ -209,8 +209,9 @@ const T={
   S_office:{w:66,d:66,h:140,pts:0}, S_apt:{w:50,d:50,h:140,pts:0}, S_slab:{w:110,d:46,h:100,pts:0}, S_glass:{w:80,d:80,h:200,pts:0}, S_step:{w:84,d:84,h:180,pts:0}, S_books:{w:74,d:52,h:110,pts:0}, S_box:{w:82,d:32,h:80,pts:0}, arena:{w:230,d:190,h:80,pts:420}, hospital:{w:220,d:170,h:116,pts:400}, mallblock:{w:242,d:174,h:60,pts:380}, condo:{w:210,d:190,h:216,pts:450}, garage:{w:200,d:182,h:64,pts:300}, twin:{w:212,d:182,h:409,pts:600}, castle:{w:140,d:140,h:150,pts:400,rr:180},
 };
 // size for eating comes from the footprint only, so a landmark goes down as soon as its base fits in the hole (rr just marks landmarks)
+const VEH_K=new Set(['car','taxi','cab','bus','dbus','fire','garbage','icecream']);
 for(const k in T){T[k].r=Math.hypot(T[k].w,T[k].d)/2*0.75;T[k].k=k;if(T[k].rr)T[k].pts=Math.max(40,Math.round(T[k].pts*Math.min(1,T[k].r/120)));
-  if(T[k].pts)T[k].pts=Math.max(1,Math.min(25,Math.round(Math.sqrt(T[k].pts))));}   // flat, Hole.io-like values: eat lots of stuff, not one jackpot
+  if(T[k].pts){const r=T[k].r;T[k].pts=VEH_K.has(k)?3:k==='median'?2:r<10?1:r<22?2:4;}}   // Hole.io style: small stuff 1-2, vehicles 3, anything building-sized 4
 const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'],['icecream','🍦','ICE CREAM TRUCKS!'],['garbage','🚛','GARBAGE TRUCKS!'],
   ['fire','🚒','FIRE TRUCKS!'],['bus','🚌','BUSES are yummy now!'],['rowhouse','🏘️','ROW HOUSES!'],['house','🏠','You can eat HOUSES!'],['carousel','🎠','The CAROUSEL!'],
   ['shop','🏪','STORES too!'],['diner','🍔','DINERS!'],['apartment','🏢','APARTMENTS!'],['gas','⛽','GAS STATIONS!'],
