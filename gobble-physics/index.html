@@ -186,7 +186,7 @@ const T={
   rocket:{w:60,d:60,h:150,pts:70}, duckstatue:{w:90,d:80,h:90,pts:80}, bean:{w:130,d:80,h:54,pts:90}, dino:{w:150,d:50,h:112,pts:110},
   supertall:{w:130,d:130,h:580,pts:600,rr:215},
   // city landmarks and themed things
-  willis:{w:120,d:120,h:560,pts:650,rr:230}, hancock:{w:100,d:100,h:480,pts:500,rr:205}, buckingham:{w:150,d:150,h:52,pts:120},
+  willis:{w:120,d:120,h:560,pts:650,rr:230}, cityhall:{w:162,d:178,h:102,pts:4}, hancock:{w:100,d:100,h:480,pts:500,rr:205}, buckingham:{w:150,d:150,h:52,pts:120},
   empire:{w:110,d:110,h:550,pts:600,rr:225}, chrysler:{w:96,d:96,h:470,pts:450,rr:190}, liberty:{w:96,d:96,h:235,pts:500,rr:210}, billboard:{w:42,d:8,h:52,pts:15},
   capitol:{w:260,d:150,h:185,pts:700,rr:235}, wamonument:{w:44,d:44,h:375,pts:450,rr:200}, lincoln:{w:150,d:100,h:72,pts:150}, whitehouse:{w:150,d:96,h:64,pts:130},
   bigben:{w:64,d:64,h:362,pts:450,rr:200}, towerbridge:{w:280,d:60,h:165,pts:700,rr:240}, eye:{w:200,d:60,h:215,pts:600,rr:215}, stpauls:{w:150,d:110,h:156,pts:180},
@@ -222,7 +222,7 @@ const UNLOCKS=[['car','🚗','You can gobble CARS!'],['tree','🌳','Now TREES!'
   ['pagoda','🏯','The PAGODA!'],['buckingham','⛲','BUCKINGHAM FOUNTAIN!'],['whitehouse','🏠','The WHITE HOUSE!'],['lincoln','🏛️','The LINCOLN MEMORIAL!'],
   ['stpauls','🏰',"ST PAUL'S!"],['chrysler','✨','The CHRYSLER BUILDING!'],['wamonument','🔺','The WASHINGTON MONUMENT!'],['bigben','🕰️','BIG BEN!'],
   ['hancock','🏢','The HANCOCK!'],['liberty','🗽','The STATUE OF LIBERTY!'],['eye','🎡','The LONDON EYE!'],['empire','🏙️','The EMPIRE STATE!'],
-  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!'],['bungalow','🏠','BUNGALOWS!'],['threeflat','🏘️','THREE-FLATS!'],['brownstone','🏘️','BROWNSTONES!'],['tenement','🏢','TENEMENTS!'],['nysetback','🏙️','ART DECO TOWERS!'],['federal','🏛️','GOVERNMENT BUILDINGS!'],['dcrow','🏘️','PAINTED ROWHOUSES!'],['terrace','🏘️','TERRACE HOUSES!'],['victorian','🏚️','VICTORIAN HOUSES!'],['pub','🍽️','PUBS!'],['gherkin','🥒','The GHERKIN!'],['shard','🔷','The SHARD!'],['jhouse','🏠','JAPANESE HOUSES!'],['pencil','✏️','PENCIL BUILDINGS!'],['konbini','🏪','CORNER STORES!'],['tkapt','🏢','APARTMENT BLOCKS!'],['castle','🏯','The CASTLE!'],['tlight','🚦','TRAFFIC LIGHTS!'],['flr','📚','TOWER FLOORS! Knock them over!'],['apt','🏢','APARTMENT FLOORS!'],['rhf','🏘️','ROW HOUSE FLOORS!'],['bsf','🏘️','BROWNSTONE FLOORS!'],['tef','🏘️','TERRACE FLOORS!'],['dcf','🏘️','ROWHOUSE FLOORS!'],['tnf','🏢','TENEMENT FLOORS!'],['pcf','✏️','PENCIL TOWER FLOORS!'],['book','📕','GIANT BOOKS!'],['ctn','📦','SHIPPING CONTAINERS!'],['gls','🏙️','GLASS TOWER FLOORS!'],['slab','🧱','SLAB BLOCKS!'],['stp1','🎂','WEDDING-CAKE TOWERS!'],['garage','🅿️','PARKING GARAGES!'],['hospital','🏥','HOSPITALS!'],['condo','🏢','CONDO TOWERS!'],['twin','🏙️','TWIN TOWERS!'],['mallblock','🛍️','SHOPPING MALLS!'],['arena','🏟️','ARENAS!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
+  ['tokyotower','🗼','TOKYO TOWER!'],['willis','🏙️','WILLIS TOWER!'],['cityhall','🏛️','CITY HALL!'],['capitol','🏛️','The CAPITOL!'],['towerbridge','🌉','TOWER BRIDGE!'],['skytree','📡','The SKYTREE!'],['robot','🤖','The GIANT ROBOT!'],['stadium','🏟️','The STADIUM!'],['fountain','⛲','Fountains!'],['ferris','🎡','The FERRIS WHEEL!!'],['tower','🏙️','SKYSCRAPERS!!'],['bungalow','🏠','BUNGALOWS!'],['threeflat','🏘️','THREE-FLATS!'],['brownstone','🏘️','BROWNSTONES!'],['tenement','🏢','TENEMENTS!'],['nysetback','🏙️','ART DECO TOWERS!'],['federal','🏛️','GOVERNMENT BUILDINGS!'],['dcrow','🏘️','PAINTED ROWHOUSES!'],['terrace','🏘️','TERRACE HOUSES!'],['victorian','🏚️','VICTORIAN HOUSES!'],['pub','🍽️','PUBS!'],['gherkin','🥒','The GHERKIN!'],['shard','🔷','The SHARD!'],['jhouse','🏠','JAPANESE HOUSES!'],['pencil','✏️','PENCIL BUILDINGS!'],['konbini','🏪','CORNER STORES!'],['tkapt','🏢','APARTMENT BLOCKS!'],['castle','🏯','The CASTLE!'],['tlight','🚦','TRAFFIC LIGHTS!'],['flr','📚','TOWER FLOORS! Knock them over!'],['apt','🏢','APARTMENT FLOORS!'],['rhf','🏘️','ROW HOUSE FLOORS!'],['bsf','🏘️','BROWNSTONE FLOORS!'],['tef','🏘️','TERRACE FLOORS!'],['dcf','🏘️','ROWHOUSE FLOORS!'],['tnf','🏢','TENEMENT FLOORS!'],['pcf','✏️','PENCIL TOWER FLOORS!'],['book','📕','GIANT BOOKS!'],['ctn','📦','SHIPPING CONTAINERS!'],['gls','🏙️','GLASS TOWER FLOORS!'],['slab','🧱','SLAB BLOCKS!'],['stp1','🎂','WEDDING-CAKE TOWERS!'],['garage','🅿️','PARKING GARAGES!'],['hospital','🏥','HOSPITALS!'],['condo','🏢','CONDO TOWERS!'],['twin','🏙️','TWIN TOWERS!'],['mallblock','🛍️','SHOPPING MALLS!'],['arena','🏟️','ARENAS!']].sort((a,b)=>T[a[0]].r-T[b[0]].r);
 let UNL=UNLOCKS;   // only the unlocks this map actually has
 const WSPD={duck:[10,25],dog:[18,42],cat:[8,22],pigeon:[6,16],person:[10,20]};
 const CAR_COLS=['#e74c3c','#3498db','#2ecc71','#9b59b6','#f1c40f','#ecf0f1','#ff8c42','#1abc9c'];
@@ -755,7 +755,7 @@ const PLANS={
     G.road(lsd,76,{blvd:true,free:true});
     G.road([[2380,1132],[2745,1132]],40,{free:true});                                  // pier road
     G.road([[1300,1060],[-40,-40]],58);G.road([[1350,1420],[-40,2350]],58);G.road([[1320,1900],[500,2920]],54);  // Milwaukee, Ogden, Archer
-    G.landmarks.push(['willis',1460,1500,0],['hancock',1880,880,0],['bean',2060,1330,0],['buckingham',2110,1720,0],['ferris',2580,1040,0,{water:1}]);
+    G.landmarks.push(['cityhall',1790,1315,0],['willis',1460,1500,0],['hancock',1880,880,0],['bean',2060,1330,0],['buckingham',2110,1720,0],['ferris',2580,1040,0,{water:1}]);
     const loop=(x,y)=>Math.hypot((x-1750)/640,(y-1420)/470);
     G.district=(x,y)=>{const d=loop(x,y);if(d<1)return'core';if(d<1.9||(x>1500&&y<950))return'mid';return'res';};
     G.styles={core:{tint:'#d3d3cf',zone:'downtown',set:[0,4],gap:[3,8],dens:.35,ppl:2.2,tree:.08,front:[['office',3],['tower',3],['apartment',2],['shop',1],['supertall',.35]],fill:[['office',2],['tower',1.5],['tree',1],['bench',.6],['person',1],['trash',.4],['pigeon',.6]]},
@@ -2346,6 +2346,52 @@ Object.assign(BUILD,{
     p.g0=g0;},
 });
 VARIANTS.lamp=2;
+
+
+/* ================= Chicago City Hall – County Building (121 N LaSalle): granite base, giant Corinthian colonnades, attic, cornice, rooftop garden ================= */
+BUILD.cityhall=function(p){const g0=p.g0;p.g0=.08;
+  const W=150,D=166,gr='#9a968c',st='#b6b1a5',wl='#aaa498',dk='#22262a',cap='#cfc9bc';
+  gBox(p,W+12,2.4,D+12,'#9d998f',0,0,0,0,.05);                                       // granite plinth / sidewalk step
+  gBox(p,W+4,22,D+4,gr,0,2.4,0,0,.2);                                                 // rusticated base (2 storeys)
+  gBox(p,W-6,74,D-6,wl,0,24.4,0,0,.05);                                               // main block behind the columns
+  const faces=[{x:0,z:(D+4)/2,r:0,L:W+4,n:10},{x:(W+4)/2,z:0,r:Math.PI/2,L:D+4,n:11},{x:0,z:-(D+4)/2,r:Math.PI,L:W+4,n:10},{x:-(W+4)/2,z:0,r:-Math.PI/2,L:D+4,n:11}];
+  faces.forEach((F,fi)=>{const L=F.L,inF={x:F.x*(W-6)/(W+4),z:F.z*(D-6)/(D+4),r:F.r};
+    for(let i=0;i<6;i++)fPl(p,F,0,4.2+i*3.4,.03,L-.4,.35,shade(gr,-.25));            // rustication joints
+    // arched entrances: five on LaSalle (west) and Clark (east), three on Randolph / Washington
+    const na=(fi%2)?5:3;for(let i=0;i<na;i++){const ox=(i-(na-1)/2)*15;
+      fBox(p,F,ox,9.6,.1,10.4,14.6,.6,shade(gr,-.12));fPl(p,F,ox,8.6,.42,7.6,11.4,dk);
+      p.add(new THREE.CircleGeometry(3.8,12,0,Math.PI),dk,F.x+Math.sin(F.r)*.43+Math.cos(F.r)*ox,14.3,F.z+Math.cos(F.r)*.43-Math.sin(F.r)*ox,0,F.r,0);
+      fPl(p,F,ox,9,.45,6.8,1,'#7d6a4a');fBox(p,F,ox,17.6,.5,2,2.6,1,cap);}
+    for(const s of[-1,1])for(let i=0;i<3;i++){const ox=s*((na-1)/2*15+14+i*10);if(Math.abs(ox)>L/2-6)continue;fPl(p,F,ox,7,.04,4,4.8,BGLASS);fPl(p,F,ox,16,.04,4,4.8,BGLASS);}
+    fBox(p,F,0,23.6,.6,L+1.2,1.8,1.8,st);                                               // belt course / column stylobate
+    // window grid on the wall behind the colonnade, attic windows above the entablature
+    const nb=F.n,step=(L-22)/nb;
+    for(let i=0;i<nb;i++){const ox=-(L-22)/2+step*(i+.5);
+      for(const y of[28,39,50])fPl(p,inF,ox,y+3.6,.05,step*.46,7.2,BGLASS);
+      for(const y of[74.5,81.5,88.5])fPl(p,inF,ox,y+2.4,.05,step*.42,4.8,BGLASS);}
+    // giant Corinthian columns between solid corner pavilions
+    for(let i=0;i<=nb;i++){const ox=-(L-22)/2+step*i,s=Math.sin(F.r),c=Math.cos(F.r),x=F.x-ox*0+ox*c-2.4*s,z=F.z-ox*s-2.4*c;
+      p.box(7.4,1.6,7.4,st,x,24.4,z);p.cyl(2.9,3.2,1.4,12,st,x,26,z);
+      p.cyl(2.75,3.05,33.6,14,st,x,27.4,z);
+      p.cyl(3.6,2.75,3.2,12,cap,x,61,z);p.box(7.6,1.2,7.6,cap,x,64.2,z);}
+    for(const s of[-1,1]){fBox(p,F,s*(L/2-5),44.6,-2.5,10,40,5,shade(st,-.04));fPl(p,F,s*(L/2-5),46,.02,4.6,8,BGLASS);fBox(p,F,s*(L/2-5),41.6,.3,6.4,.7,1,cap);}
+    // entablature: architrave, frieze, cornice; attic storey; crowning cornice with dentils + parapet
+    fBox(p,F,0,66.8,-1.8,L+1,2.8,7.2,st);fBox(p,F,0,69.6,-2,L+1,2.8,6.8,shade(st,.04));fBox(p,F,0,72.3,-1.4,L+2.4,1.4,8.6,cap);
+    for(let i=0;i<Math.floor(L/5);i++)fBox(p,F,-L/2+2.5+i*5,93.4,-4,1.4,1.2,2,cap);
+    fBox(p,F,0,95.2,-3,L+1,2.4,6.4,cap);fBox(p,F,0,97.8,-5.4,L-9,3,1.2,st);});
+  // roof: City Hall (west) half is the famous rooftop garden; County (east) half gravel + penthouses; light courts
+  p.box(W-6,.6,D-6,'#5f6164',0,98.4,0);
+  p.add(new THREE.PlaneGeometry(W/2-10,D-22).rotateX(-Math.PI/2),'#4f7a3a',-W/4+1,99.05,0);
+  for(let i=0;i<14;i++){const x=-W/4+1+(hsh(i,3)-.5)*(W/2-22),z=(hsh(i,7)-.5)*(D-40);p.ball(2.4+hsh(i,9)*2.2,['#3f6f33','#5a8a3e','#6f9a46','#c9b14a'][i%4],x,100.6,z,1,1,.7,1);}
+  for(const z of[-30,30])p.add(new THREE.PlaneGeometry(W/2-14,2.4).rotateX(-Math.PI/2),'#c9bfa6',-W/4+1,99.1,z);
+  for(const[x,z]of[[W/4,-D/4],[W/4,D/4]])p.box(26,.5,34,'#1d2023',x,98.9,z);
+  p.box(22,9,18,shade(wl,-.05),W/4,98.9,0);p.box(10,5,10,'#a9adb0',W/4-14,98.9,-42);
+  // flagpoles with the Chicago flag out front on LaSalle
+  for(const s of[-1,1]){const fx=-(W+4)/2-9,fz=s*22;p.box(2.4,1,2.4,'#7a776f',fx,0,fz);p.cyl(.3,.38,38,6,'#d9dcdf',fx,1,fz);p.ball(.7,'#c9a54a',fx,39.4,fz,1);
+    const fl=new THREE.PlaneGeometry(13,8.4);p.add(fl,'#f7f7f4',fx,34.4,fz+6.6,0,-Math.PI/2,0);
+    for(const y of[36.1,32.7])p.add(new THREE.PlaneGeometry(13,1.4),'#7cc3e8',fx-.02,y,fz+6.6,0,-Math.PI/2,0);
+    for(let i=0;i<4;i++)p.add(new THREE.CircleGeometry(.7,6),'#d6263a',fx-.04,34.4,fz+6.6-3.6+i*2.4,0,-Math.PI/2,0);}
+  p.g0=g0;};
 
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();p.g0=VEHICLES.has(k)?.45:0;BUILD[k](p,v);g=p.build();if(T[k].sc)g.scale(T[k].sc,T[k].sc,T[k].sc);geoCache.set(key,g);}return g;}
