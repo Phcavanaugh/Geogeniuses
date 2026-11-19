@@ -2670,7 +2670,7 @@ const PK=window.__pk||.3,LV_COSTS=[0];{let c=6;for(let L=1;L<400;L++){LV_COSTS[L
 const LSTEP=1.15,LV_COST=L=>Math.round(3*L+.1*L*L+.002*L*L*L);   // each level costs more than the last, accelerating   // Hole.io style: each level costs 10 more than the last (+10, +20, +30...)
 const _oldCost=L=>LV_COSTS[Math.min(L,399)];   // gentler above level 20 so 30+ is reachable   // points to go from level L to L+1
 const LV_TOTAL=[0,0];for(let L=1;L<400;L++)LV_TOTAL[L+1]=LV_TOTAL[L]+LV_COST(L);
-const lvR=L=>1.21*(18+200/(1+Math.exp(-(L-30)/8))-200/(1+Math.exp(29/8)));   // S-curve: slow start, steady middle, levels off near r=210   // hole area grows with your score, like Hole.io
+const lvR=L=>1.331*(18+200/(1+Math.exp(-(L-30)/8))-200/(1+Math.exp(29/8)));   // S-curve: slow start, steady middle, levels off near r=210   // hole area grows with your score, like Hole.io
 const lvPts=L=>LV_TOTAL[Math.min(L,400)];                                  // total points needed to reach level L
 const lvOf=xp=>{let L=1;while(L<399&&LV_TOTAL[L+1]<=xp)L++;return L;};
 function lvProg(h){return clamp((h.xp-lvPts(h.lvl))/(lvPts(h.lvl+1)-lvPts(h.lvl)),0,1);}
@@ -3058,8 +3058,9 @@ function deactivate(o){__dbg.deact++;const t=o.body.translation(),q=o.body.rotat
     else if(o.wander){o.wb=o.wander;o.vx=o.vy=0;o.moveT=rnd(.5,1.5);}}
   else{o.pose={x:t.x,y:Math.max(t.y,.5),z:t.z,q:{x:q.x,y:q.y,z:q.z,w:q.w}};}
   setInst(o);}
-function creditEat(o,h){__dbg.eat++;h.score+=o.pts;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,o.pts);
-  if(h===player){sfx(o.r);if(!pend.pts)pend.t=.4;pend.pts+=o.pts;if(o.r>30){buzz(25);shake=Math.min(8,o.r*.07);}}}
+const BIG15=()=>.92*lvR(14);   // too big for a level-14 hole => a level 15+ item
+function creditEat(o,h){__dbg.eat++;const pv=o.pts+(o.r>=BIG15()?1:0);h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
+  if(h===player){sfx(o.r);if(!pend.pts)pend.t=.4;pend.pts+=pv;if(o.r>30){buzz(25);shake=Math.min(8,o.r*.07);}}}
 function nearestHole(o){let best=null,bd=1e9;for(const h of holes){if(!h.alive)continue;const d=Math.hypot(h.x-o.x,h.y-o.y)-h.r;if(d<bd){bd=d;best=h;}}return[best,bd];}
 function stepPhysics(dt){
   // move each mouth's ring of ground (teleport: no dragging of things sitting on it)
