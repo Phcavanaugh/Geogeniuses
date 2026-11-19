@@ -2892,6 +2892,7 @@ function buildRing(h){for(const c of h.pcols)world.removeCollider(c,false);h.pco
   const ld=lidDepth(h);
   h.pcols.push(world.createCollider(RAPIER.ColliderDesc.cylinder(4,h.r*1.22).setTranslation(0,-ld-4,0).setFriction(.9).setCollisionGroups(grp(lidBit(h.idx),G_OBJ)),h.pb));
   h.pR=h.r;}
+const SLIM_K=new Set(['tree','sakura','palm','pine']);
 const tooBig=(o,h)=>o.r>=h.rTo*.92;
 // lowest corner of an object's box (world y)
 function lowestY(o,t,q){const m10=2*(q.x*q.y+q.w*q.z),m11=1-2*(q.x*q.x+q.z*q.z),m12=2*(q.y*q.z-q.w*q.x);
@@ -2907,7 +2908,7 @@ function activate(o,h){__dbg.act++;const p=restPose(o);
   if(o.r<9)bd.setCcdEnabled(true);
   if(o.moving||o.wb)bd.setLinvel(o.vx||0,0,o.vy||0);
   o.body=world.createRigidBody(bd);
-  o.col=world.createCollider(RAPIER.ColliderDesc.cuboid(o.t.w/2,o.h/2,o.t.d/2).setDensity(o.r>30?.5:1).setFriction(.75).setRestitution(.08).setCollisionGroups(groupsFor(o,h)),o.body);
+  const _sl=SLIM_K.has(o.k)?.32:1;o.col=world.createCollider(RAPIER.ColliderDesc.cuboid(o.t.w/2*_sl,o.h/2,o.t.d/2*_sl).setDensity(o.r>30?.5:1).setFriction(.75).setRestitution(.08).setCollisionGroups(groupsFor(o,h)),o.body);
   o.hole=h;o.big=tooBig(o,h);active.add(o);
   if(o.moving){o.lane=1;o.moving=false;}
   if(o.walk)o.walk=null;
