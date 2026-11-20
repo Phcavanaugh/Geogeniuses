@@ -130,7 +130,18 @@
       <button class="opt on" data-v="easy">🐣 Little kids<small>Nobody can gobble you</small></button>
       <button class="opt" data-v="normal">😎 Normal<small>Watch out for big holes!</small></button>
     </div>
-    <label class="lbl">Round length</label>
+    <label class="lbl">Win by</label>
+    <div class="opts" id="wins">
+      <button class="opt on" data-v="time">⏱️ Time<small>Most points when time runs out</small></button>
+      <button class="opt" data-v="score">🏁 Points<small>First to the target wins</small></button>
+    </div>
+    <label class="lbl" id="lensLbl">Round length</label>
+    <div class="opts" id="goals" style="display:none">
+      <button class="opt" data-v="250">250</button>
+      <button class="opt on" data-v="500">500</button>
+      <button class="opt" data-v="1000">1,000</button>
+      <button class="opt" data-v="2000">2,000</button>
+    </div>
     <div class="opts" id="lens">
       <button class="opt" data-v="60">1 min</button>
       <button class="opt on" data-v="120">2 min</button>
@@ -2662,7 +2673,7 @@ function syncHole(h,now){const m=h.m;if(!m)return;const vis=h.alive;
 /* ================= holes / players ================= */
 const BOTS=[['Muncher','#ff9f1c'],['Gulpy','#2ec4b6'],['Captain Crumb','#8e44ad'],['Snacky','#e71d36'],['Big Bertha','#3a86ff'],['Zoomer','#06d6a0'],['Chompy','#ffbe0b']];
 const COLORS=['#ff5a5f','#3a86ff','#8338ec','#06d6a0','#ffbe0b','#ff70a6','#fb5607'];
-let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myColor=COLORS[0];
+let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myColor=COLORS[0],winBy='time',goal=500,timeLen=120,raceT=0;
 /* ---- levels: growth fills a bar; size only changes on level-up ---- */
 // Each level costs 20 points until about level 7, then 21% more per level. Each level = 10% bigger. No top level.
 // each level costs 21% more than the last, and above level 15 that step keeps growing, so levels get harder and harder
@@ -2894,7 +2905,7 @@ function newGame(){
   initPhysics();
   UNL=UNLOCKS.filter(u=>objs.some(o=>o.k===u[0]));
   for(const[k]of UNL)if(T[k].r<player.rTo*.92)unlocked.add(k);
-  timeLeft=roundLen;state='play';cam.x=player.x;cam.y=player.y;cam.D=targetD(player.rTo);
+  roundLen=winBy==='score'?600:timeLen;timeLeft=roundLen;raceT=0;state='play';cam.x=player.x;cam.y=player.y;cam.D=targetD(player.rTo);
   ['menu','over'].forEach(i=>$(i).classList.add('hidden'));
   ['topl','timer','board','mute','pause'].forEach(i=>$(i).classList.remove('hidden'));paused=false;$('pausem').classList.add('hidden');
   qualityClock=-2;updateHud();
@@ -2909,14 +2920,16 @@ function endGame(){
   const medal=['🥇','🥈','🥉'];
   $('place').textContent=pos===1?'🏆 You WON!':pos<=3?medal[pos-1]+' You got #'+pos+'!':'You got #'+pos+'!';
   let best=0;try{best=+localStorage.getItem('gobblePhysBest')||0;if(player.score>best)localStorage.setItem('gobblePhysBest',player.score);}catch(e){}
-  $('overSub').textContent=player.score>best&&best>0?'⭐ New best score: '+player.score+'!':'Your score: '+player.score+' pts';
+  const rt=Math.round(raceT),rts=Math.floor(rt/60)+':'+String(rt%60).padStart(2,'0');
+  $('overSub').textContent=winBy==='score'?(rk[0]===player?'You reached '+goal+' pts in '+rts+'!':esc(rk[0].name)+' reached '+goal+' first ('+rts+') · you had '+player.score):player.score>best&&best>0?'⭐ New best score: '+player.score+'!':'Your score: '+player.score+' pts';
   $('results').innerHTML=rk.map((h,i)=>`<div class="${h===player?'me':''}"><span>${medal[i]||(i+1)+'.'} <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${h.color}"></span> ${esc(h.name)}</span><span>${h.score}</span></div>`).join('');
   $('over').classList.remove('hidden');['topl','timer','board','pause'].forEach(i=>$(i).classList.add('hidden'));
   for(const h of holes)if(h.m)h.m.el.style.display='none';
   chime();
 }
 function updateHud(){
-  const m=Math.max(0,Math.ceil(timeLeft)),t=$('timer');t.textContent=Math.floor(m/60)+':'+String(m%60).padStart(2,'0');t.classList.toggle('low',m<=10);
+  const m=Math.max(0,Math.ceil(timeLeft)),t=$('timer');if(winBy==='score'){const lead=Math.max(...holes.map(h=>h.score));t.textContent='🏁 '+Math.min(player.score,goal)+' / '+goal;t.classList.toggle('low',lead>=goal*.85&&rank()[0]!==player);}
+  else{t.textContent=Math.floor(m/60)+':'+String(m%60).padStart(2,'0');t.classList.toggle('low',m<=10);}
   $('lvl').textContent='Level '+player.lvl;$('score').textContent=player.score+' pts';
   const rk=rank();let html='';rk.slice(0,6).forEach((h,i)=>{html+=`<div class="${h===player?'me':''}"><span><span class="dot" style="background:${h.color}"></span>${i===0?'👑 ':''}${esc(h.name)}</span><span>${h.score}</span></div>`;});
   $('board').innerHTML=html;
@@ -3144,7 +3157,8 @@ function update(dt){animT+=dt;SWAY_U.value=animT;trafficFollow(dt);
       const ea=Math.min(1,dt*5);o.vx+=((o.tvx||0)-o.vx)*ea;o.vy+=((o.tvy||0)-o.vy)*ea;if(Math.abs(o.vx)+Math.abs(o.vy)<.5&&!o.tvx&&!o.tvy)o.vx=o.vy=0;
       o.x=clamp(o.x+o.vx*dt,o.wb[0]+6,o.wb[2]-6);o.y=clamp(o.y+o.vy*dt,o.wb[1]+6,o.wb[3]-6);}}
   if(state!=='play'){cam.x+=dt*22;cam.y+=dt*10;if(cam.x>W-350)cam.x=350;if(cam.y>W-350)cam.y=350;cam.D=targetD(55);return;}
-  timeLeft-=dt;if(timeLeft<=0){timeLeft=0;updateHud();endGame();return;}
+  timeLeft-=dt;raceT+=dt;if(winBy==='score'&&holes.some(h=>h.score>=goal)){updateHud();endGame();return;}
+  if(timeLeft<=0){timeLeft=0;updateHud();endGame();return;}
   for(const h of holes){
     if(!h.alive){h.respawn-=dt;if(h.respawn<=0){spawn(h);if(h===player)$('msg').style.display='none';}continue;}
     let dx,dy;
@@ -3276,7 +3290,8 @@ COLORS.forEach((c,i)=>{const b=document.createElement('button');b.className='sw'
 function optGroup(id,fn){const el=$(id);el.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{el.querySelectorAll('.opt').forEach(x=>x.classList.remove('on'));b.classList.add('on');fn(b.dataset.v);});}
 optGroup('modes',v=>mode=v);
 optGroup('maps',v=>{cityId=v;city=CITIES[v];try{localStorage.setItem('gobbleMap',v);}catch(e){}newTown();});
-$('maps').querySelectorAll('.opt').forEach(b=>b.classList.toggle('on',b.dataset.v===cityId));optGroup('lens',v=>roundLen=+v);
+$('maps').querySelectorAll('.opt').forEach(b=>b.classList.toggle('on',b.dataset.v===cityId));optGroup('lens',v=>{roundLen=timeLen=+v;});optGroup('goals',v=>goal=+v);
+optGroup('wins',v=>{winBy=v;const sc=v==='score';$('goals').style.display=sc?'':'none';$('lens').style.display=sc?'none':'';$('lensLbl').textContent=sc?'Target score':'Round length';roundLen=sc?600:timeLen;});
 function showBest(){try{const b=+localStorage.getItem('gobblePhysBest');if(b)$('best').textContent='⭐ Best score: '+b;}catch(e){}}
 try{const n=localStorage.getItem('gobbleName');if(n)$('name').value=n;}catch(e){}showBest();
 $('play').onclick=()=>{initAudio();try{localStorage.setItem('gobbleName',$('name').value);}catch(e){}newGame();};
