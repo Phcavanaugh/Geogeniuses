@@ -2645,6 +2645,72 @@ function fillCemetery(G){const C=G.cemetery;if(!C)return;
     const v=wpick([[0,30],[1,14],[2,9],[3,20],[4,5],[5,22]]);if(put('grave',jx,jy,rnd(-.06,.06),v,1))ng++;}
   G.cemCount=ng;}
 
+
+/* ================= condo complexes and parking garages, rebuilt ================= */
+const CONC='#bcb8af',CONC_D='#8f8b83',RAIL_GL='#a9c7cf';GLASSY.add(RAIL_GL);
+/* retail/lobby podium with a landscaped amenity deck on top */
+function podium(p,W,D,H,st,acc){gBox(p,W,H,D,st,0,0,0,0,.12);
+  FACES4(0).forEach((F0,fi)=>{const L=fi%2?D:W,F={x:F0.x+(fi===1?W/2:fi===3?-W/2:0),z:F0.z+(fi===0?D/2:fi===2?-D/2:0),r:F0.r};
+    fPl(p,F,0,6.5,.05,L-14,9,BGLASS2);for(let i=0;i<=Math.floor((L-14)/12);i++)fPl(p,F,-(L-14)/2+i*12,6.5,.08,.5,9,'#2a2f34');
+    fBox(p,F,0,12,.4,L-10,1.4,1,'#2a2f34');fPl(p,F,0,15.6,.05,L-14,3,shade(st,-.12));});
+  const E={x:0,z:D/2,r:0};fBox(p,E,0,11.4,4,30,.8,8,acc);fPl(p,E,0,13.4,.12,16,1.6,'#f4f2ec');
+  for(const x of[-W/2+14,W/2-14])for(const z of[D/2+3])p.box(5,2.2,3,'#5a5d60',x,0,z);
+  p.box(W-4,.4,D-4,'#c9c1b3',0,H);p.box(W,2.2,1,shade(st,-.1),0,H,D/2-.5);p.box(W,2.2,1,shade(st,-.1),0,H,-D/2+.5);p.box(1,2.2,D,shade(st,-.1),W/2-.5,H,0);p.box(1,2.2,D,shade(st,-.1),-W/2+.5,H,0);}
+function amenity(p,x,z,w,d,H){p.box(w,.3,d*.45,'#3f86c4',x,H+.4,z);p.box(w+3,.5,d*.45+3,'#e8e4dc',x,H+.2,z);
+  for(let i=0;i<5;i++)p.box(2,.8,5,'#f4f2ec',x-w/2+3+i*(w-6)/4,H+.6,z+d*.3);
+  for(const[a,b]of[[-1,-1],[1,-1],[-1,1],[1,1]]){p.box(5,2.4,5,'#6b6e70',x+a*(w/2+4),H+.4,z+b*(d*.32));p.ball(3,'#4f8a3e',x+a*(w/2+4),H+5,z+b*(d*.32),1,1,.9,1);}
+  p.add(new THREE.PlaneGeometry(w+10,d*.3).rotateX(-Math.PI/2),'#6f9a4f',x,H+.55,z-d*.3);}
+/* glass condo tower with wrap-around balconies */
+function balTower(p,x,z,s,H,fl,gl,sl){p.box(s-6,H,s-6,shade(gl,-.25),x,20,z);
+  for(const F of FACES4((s-6)/2).map(f=>({x:f.x+x,z:f.z+z,r:f.r}))){fPl(p,F,0,20+H/2,.05,s-6,H,gl);for(let i=1;i<6;i++)fPl(p,F,-(s-6)/2+i*(s-6)/6,20+H/2,.07,.35,H,'#d6dadd');}
+  for(let y=20+fl;y<20+H-2;y+=fl){p.box(s,1.1,s,sl,x,y,z);for(const F of FACES4(s/2).map(f=>({x:f.x+x,z:f.z+z,r:f.r})))fPl(p,F,0,y+2.6,.0,s,3,RAIL_GL);}
+  p.box(s-14,10,s-14,sl,x,20+H,z);p.box(s-18,1,s-18,'#9aa0a6',x,30+H,z);p.cyl(.3,.3,10,4,'#c9cdd1',x+s/4,30+H,z);}
+/* undulating-balcony tower (Aqua-inspired): each floor slab has a wavy outline */
+function wavyTower(p,x,z,s,H,fl,gl){p.box(s-8,H,s-8,gl,x,20,z);for(const F of FACES4((s-8)/2).map(f=>({x:f.x+x,z:f.z+z,r:f.r})))for(let i=1;i<7;i++)fPl(p,F,-(s-8)/2+i*(s-8)/7,20+H/2,.06,.3,H,'#cfe0e4');
+  let n=0;for(let y=20+fl;y<20+H-2;y+=fl,n++){const sh=new THREE.Shape(),N=72;for(let i=0;i<=N;i++){const t=i/N,per=4*(s-8);let u=t*per,px,pz;const hs=(s-8)/2;
+      if(u<s-8){px=-hs+u;pz=hs;}else if(u<2*(s-8)){px=hs;pz=hs-(u-(s-8));}else if(u<3*(s-8)){px=hs-(u-2*(s-8));pz=-hs;}else{px=-hs;pz=-hs+(u-3*(s-8));}
+      const off=2.6+2.4*Math.sin(t*Math.PI*2*3+n*.55)+1.2*Math.sin(t*Math.PI*2*7-n*.3),l=Math.hypot(px,pz)||1;const ox=px+px/l*off,oz=pz+pz/l*off;i?sh.lineTo(ox,oz):sh.moveTo(ox,oz);}
+    const g=new THREE.ExtrudeGeometry(sh,{depth:.9,bevelEnabled:false,curveSegments:1});g.rotateX(Math.PI/2);p.add(g,'#f4f3ef',x,y+.9,z);}
+  p.box(s-14,8,s-14,'#e8e6e0',x,20+H,z);}
+/* brick U-shaped mid-rise with punched windows, Juliet balconies, cornice */
+function brickWing(p,x,z,w,d,H,br){gBox(p,w,H,d,br,x,20,z,0,.08);p.box(w+1,5,d+1,'#d9d0bd',x,20,z);
+  for(const F of FACES4(0).map((f,fi)=>({x:x+(fi===1?w/2:fi===3?-w/2:0),z:z+(fi===0?d/2:fi===2?-d/2:0),r:f.r,L:fi%2?d:w}))){const nx=Math.floor((F.L-8)/9);
+    for(let y=27;y<20+H-8;y+=10)for(let i=0;i<nx;i++){const ox=-(nx-1)/2*9+i*9;fPl(p,F,ox,y+3,.05,4.4,6,BGLASS);fPl(p,F,ox,y-.2,.08,5.4,.6,'#d9d0bd');if((i+((y/10)|0))%3===0)fBox(p,F,ox,y+1,.7,5.6,.25,.25,'#2a2d30');}}
+  p.box(w+3,2.4,d+3,'#d9d0bd',x,20+H-2.4,z);p.box(w-4,.5,d-4,'#55585b',x,20+H,z);}
+
+Object.assign(BUILD,{
+  condo(p,v){const g0=p.g0;p.g0=.3;
+    if(v===0){podium(p,210,190,20,'#c9c4b8','#1f4f6a');balTower(p,-55,-40,58,170,10,'#4e7488','#f2f0ea');balTower(p,58,-48,56,130,10,'#5a7f8c','#f2f0ea');balTower(p,10,52,52,100,10,'#47697d','#f2f0ea');amenity(p,-45,55,36,60,20);}
+    else if(v===1){podium(p,210,190,20,'#d5d0c4','#7a2c2c');wavyTower(p,-38,-30,70,190,8,'#6f9aa3');balTower(p,62,40,50,90,10,'#567a86','#efede6');amenity(p,30,-55,40,50,20);}
+    else{podium(p,210,190,20,'#c9bba3','#2f4f3a');const br='#a7563f';brickWing(p,-70,-10,48,150,100,br);brickWing(p,70,-10,48,150,100,br);brickWing(p,0,-62,92,46,100,br);amenity(p,0,40,56,60,20);}
+    p.g0=g0;},
+  /* parking structure: open decks, precast spandrels, columns, ramp, lit ceilings, parked cars, roof stalls + light poles, stair/elevator tower */
+  garage(p,v){const g0=p.g0;p.g0=.15;const st=v?'#b5b1a8':CONC,H=12.8,cars=['#f2f2f0','#1d1f22','#9aa0a6','#5f646a','#2a3f66','#8c1f22','#c9c4b8','#2f5e3e'];
+    p.box(196,2,178,shade(st,-.3),0,0);p.box(190,10,172,'#2a2c2e',0,2);
+    for(let f=0;f<5;f++){const y=f*H;if(f>0){p.box(200,1.6,182,st,0,y);}
+      if(f<4){p.box(150,H-3.6,92,'#34373a',-6,y+1.6,0);p.box(198,.2,180,'#3a3c3e',0,y+H-1.8);for(let i=0;i<6;i++)for(let j=0;j<4;j++)p.box(10,.2,1.2,'#fff7d6',-80+i*32,y+H-2,-60+j*40);}
+      if(f<4)for(const x of[-96,-48,0,48,96])for(const z of[-88,-30,30,88])p.box(2.4,H-1.6,4,shade(st,-.12),x,y+1.6,z);
+      if(f>0||true){const yy=y+1.6;for(const F of FACES4(0).map((q,fi)=>({x:fi===1?100:fi===3?-100:0,z:fi===0?91:fi===2?-91:0,r:q.r,L:fi%2?182:200}))){
+          if(v===0)fBox(p,F,0,yy+1.8,-.4,F.L,3.6,.8,shade(st,.05));else fBox(p,F,0,yy+1.8,-.4,F.L,3.6,.8,shade(st,.02));}}
+      if(f<4)for(let i=0;i<22;i++){const r=hsh(f*7+i,3);if(r<.18)continue;const row=i<11?-1:1,x=-85+(i%11)*16.5,z=row*62,c=cars[(f*5+i*3)%cars.length];
+        p.box(7,3,13.4,c,x,y+1.6,z);p.box(6.2,2.2,7,shade(c,-.2),x,y+4.6,z+row*.6);fPl(p,{x,z:z+row*6.71,r:row>0?0:Math.PI},0,y+5.6,.0,5.6,1.6,BGLASS);}}
+    // roof deck: stall lines, light poles, a few cars
+    const R=4*H+1.6;for(let i=0;i<12;i++)for(const z of[-62,62])p.add(new THREE.PlaneGeometry(.4,13).rotateX(-Math.PI/2),'#f2f2ee',-90+i*16.5,R+.05,z);
+    for(const x of[-60,0,60]){p.cyl(.35,.35,14,6,'#7a7f84',x,R,0);p.box(4,.6,1.4,'#7a7f84',x,R+14,0);p.add(new THREE.PlaneGeometry(3.4,1).rotateX(Math.PI/2),'#fff6d0',x,R+13.65,0);}
+    for(let i=0;i<9;i++){const r=hsh(i,11);if(r<.4)continue;const row=i%2?1:-1,x=-82+i*20,z=row*62,c=cars[i%cars.length];p.box(7,3,13.4,c,x,R,z);p.box(6.2,2.2,7,shade(c,-.2),x,R+3,z+row*.6);}
+    // internal ramp visible through the openings
+    for(let f=0;f<4;f++)p.add(new THREE.BoxGeometry(80,1.2,22),shade(st,-.05),20,f*H+H/2+1.6,0,0,0,(f%2?1:-1)*Math.atan2(H,80));
+    // v1: coloured metal fin screen on the long faces
+    if(v){for(const s of[-1,1])for(let i=0;i<40;i++)p.box(.6,4*H,2.4,['#c9643c','#d9b14a','#4f7fa8','#6f9a6a'][(i>>2)%4],-97.5+i*5,4,s*92);}
+    // stair / elevator tower with glass and the P sign
+    gBox(p,22,R+12,22,shade(st,-.06),88,0,-78,0,.1);p.box(18.4,R+6,.4,BGLASS2,88,4,-66.8);p.box(.4,R+6,18.4,BGLASS2,99.2,4,-78);
+    p.box(14,14,1,'#1f5fb8',88,R-2,-66.4);p.add(new THREE.PlaneGeometry(6,9),'#ffffff',88,R+5,-65.85);p.add(new THREE.PlaneGeometry(3.4,4),'#1f5fb8',88.8,R+7.2,-65.83);
+    // street entrance: ticket booth + barrier arm + sign
+    p.box(30,2,8,'#2a2d30',-60,13.6,93);p.add(new THREE.PlaneGeometry(26,1.4),'#f2c12e',-60,14.6,97.05);
+    p.box(5,7,5,'#d9dcdf',-74,2,96);p.box(4.6,2,.3,BGLASS,-74,5.4,98.6);p.box(16,.6,.6,'#d23b2f',-64,5.6,97);p.box(1.2,5,1.2,'#e3c23c',-72,2,97);
+    p.g0=g0;},
+});
+
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();p.g0=VEHICLES.has(k)?.45:0;BUILD[k](p,v);g=p.build();if(T[k].sc)g.scale(T[k].sc,T[k].sc,T[k].sc);geoCache.set(key,g);}return g;}
 const OBJ_MAT=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.86,metalness:0,envMapIntensity:.32});
