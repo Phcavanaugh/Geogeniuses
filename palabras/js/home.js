@@ -174,6 +174,7 @@ function levelEnd(pass){
   const unlocked = pass && J.open<=L.i;
   if(unlocked) J.open=L.i+1;
   saveJ();
+  if(pass && window.TD) TD.earn();      // every level beaten unlocks one ¡Defensa! round
   const next=LEVELS[L.i+1], worldDone = pass && L.boss && !L.final;
   $('overTitle').textContent = !pass ? '¡Casi! Inténtalo otra vez' : L.final ? '¡Terminaste la aventura!' : worldDone ? '¡Mundo completado!' : '¡Nivel superado!';
   $('overEmoji').textContent = !pass ? '💪' : L.final ? '🏆' : worldDone ? '👑' : '🎉';
@@ -185,6 +186,8 @@ function levelEnd(pass){
   const Lv=petLevel(), grew=Lv.level>S.lvlBefore, newHat = grew ? HATS.filter(h=>h.lvl>S.lvlBefore && h.lvl<=Lv.level).pop() : null;
   setOverPet(petPanel(Lv, grew, newHat));
   $('nextLvl').style.display = pass && next ? '' : 'none';
+  $('tdOverBtn').style.display = pass && window.TD && TD.available() ? '' : 'none';
+  if(window.TD) $('tdOverBtn').textContent = `🏰 ¡A defender! · Ronda ${TD.state.round}`;
   $('again').textContent = pass ? '🔄 Otra vez' : '🔄 ¡Inténtalo otra vez!';
   $('over').classList.add('on');
   const line = pass ? [worldDone ? 'c|¡Mundo completado!' : 'c|¡Nivel superado!'] : ['c|¡Inténtalo otra vez!'];

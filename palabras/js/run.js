@@ -112,7 +112,7 @@ function scoreMiss(target){
 function gameOver(opts={}){
   if(S.level) return levelEnd(!!(opts.sayFinish || opts.lowerBetter));
   S.run++;
-  $('nextLvl').style.display='none'; $('again').textContent='🔄 ¡Otra vez!'; $('newRec').textContent='🏆 ¡Nuevo récord! 🏆';
+  $('nextLvl').style.display='none'; $('tdOverBtn').style.display='none'; $('again').textContent='🔄 ¡Otra vez!'; $('newRec').textContent='🏆 ¡Nuevo récord! 🏆';
   const lowerBetter = !!opts.lowerBetter;
   const val = opts.value ?? S.score;
   const prev = store.get(bestKey(), lowerBetter ? 0 : 0);
