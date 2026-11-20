@@ -62,8 +62,9 @@ if todo:
 G = collections.defaultdict(list)
 for g, key, text in clips: G[g].append((key, text))
 extra = set(json.load(open(os.path.join(HERE, 'silly_extra.json'))))   # everyday words ¿Cuál no va? needs in the silly pack
+in_silly = {k for k, _ in G['silly']}
 for g, key, text in clips:
-    if key in extra and g != 'silly': G['silly'].append((key, text))
+    if key in extra and g != 'silly' and key not in in_silly: G['silly'].append((key, text)); in_silly.add(key)
 for f in os.listdir(AUDIO): os.remove(os.path.join(AUDIO, f))
 recorded, total = {}, 0
 for g, items in G.items():

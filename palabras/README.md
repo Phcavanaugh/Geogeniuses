@@ -17,6 +17,7 @@ No build step: GitHub Pages serves these files as-is.
 | `js/tarea.js` | Homework unit screens |
 | `js/run.js` | Flashcards and the shared game run (hearts, score) |
 | `js/word-games.js`, `js/arcade.js` | The mini-games |
+| `js/defensa.js` | ¡Defensa!: the tower defense round unlocked by each map level (towers, critters, difficulty at the top) |
 | `js/app.js` | Settings, install, offline |
 | `lolo3d.js`, `monster3d.js` | 3D pets and Ñamñam (three.js in `lib/`) |
 | `sw.js` | Offline support |

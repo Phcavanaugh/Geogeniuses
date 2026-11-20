@@ -14,7 +14,7 @@
 <title>¡Hola, Palabras!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/palabras.css?v=25">
+<link rel="stylesheet" href="css/palabras.css?v=26">
 </head>
 <body>
 <header>
@@ -43,7 +43,7 @@
     <div id="tareaSlot"></div>
     <div class="mapbar">
       <div class="tot">⭐ <span id="mapStars">0</span></div>
-      <div class="mapbtns"><button class="shopbtn" id="shopBtn">🛒 Tienda</button><button class="freebtn" id="freeBtn">🎮 Juego libre</button></div>
+      <div class="mapbtns"><button class="tdbtn" id="tdMapBtn">🏰<small>Ronda 1</small></button><button class="shopbtn" id="shopBtn">🛒<small>Tienda</small></button><button class="freebtn" id="freeBtn">🎮<small>Juego libre</small></button></div>
     </div>
     <div id="mapwrap"></div>
   </section>
@@ -350,6 +350,20 @@
     <div class="shopgrid" id="shopGrid"></div>
   </section>
 
+  <section class="view" id="defensa">
+    <div class="topbar">
+      <button class="iconbtn" id="tdExit" aria-label="Salir">🗺️</button>
+      <div class="title" id="tdTitle">🏰 ¡Defensa!</div>
+      <div style="width:46px"></div>
+    </div>
+    <div class="tdhud"><span>❤️ <b id="tdLives">10</b></span><span>🪙 <b id="tdCoins">0</b></span><span id="tdLeft"></span></div>
+    <div class="tdstage"><canvas id="tdCanvas"></canvas><div class="tdmenu" id="tdMenu"></div>
+      <div class="tdend" id="tdEnd"><div class="tdcard"><div class="e" id="tdEndE"></div><div class="t" id="tdEndT"></div><div class="s" id="tdEndS"></div><div class="b" id="tdEndB"></div></div></div>
+    </div>
+    <div class="tdtip" id="tdTip"></div>
+    <div class="tdbar"><div class="tdtowers" id="tdTowers"></div><button class="tdgo" id="tdGo">▶ ¡Empieza!</button></div>
+  </section>
+
   <section class="view" id="album">
     <div class="topbar">
       <button class="iconbtn" data-home aria-label="Home">🏠</button>
@@ -392,6 +406,7 @@
     <div class="newrec" id="newRec">🏆 ¡Nuevo récord! 🏆</div>
     <div class="overbest" id="overBest"></div>
     <div class="overpet" id="overPet"></div>
+    <button class="big again tdover" id="tdOverBtn" style="display:none">🏰 ¡A defender!</button>
     <button class="big again" id="nextLvl" style="display:none">▶ ¡Siguiente nivel!</button>
     <button class="big again" id="again">🔄 ¡Otra vez!</button>
     <button class="big homebtn" data-home>🏠</button>
@@ -431,19 +446,20 @@
 </div>
 
 <!-- Game code, in load order. Each file can use what the files above it define. -->
-<script src="js/words.js?v=25"></script>
-<script src="js/riddles.js?v=25"></script>
-<script src="js/content7.js?v=25"></script>
-<script src="js/units.js?v=25"></script>
-<script src="js/core.js?v=25"></script>
-<script src="js/pet.js?v=25"></script>
-<script src="js/home.js?v=25"></script>
-<script src="js/tarea.js?v=25"></script>
-<script src="js/run.js?v=25"></script>
-<script src="js/word-games.js?v=25"></script>
-<script src="js/arcade.js?v=25"></script>
-<script src="js/app.js?v=25"></script>
-<script type="module" src="monster3d.js?v=25"></script>
-<script type="module" src="lolo3d.js?v=25"></script>
+<script src="js/words.js?v=26"></script>
+<script src="js/riddles.js?v=26"></script>
+<script src="js/content7.js?v=26"></script>
+<script src="js/units.js?v=26"></script>
+<script src="js/core.js?v=26"></script>
+<script src="js/pet.js?v=26"></script>
+<script src="js/home.js?v=26"></script>
+<script src="js/tarea.js?v=26"></script>
+<script src="js/run.js?v=26"></script>
+<script src="js/word-games.js?v=26"></script>
+<script src="js/arcade.js?v=26"></script>
+<script src="js/defensa.js?v=26"></script>
+<script src="js/app.js?v=26"></script>
+<script type="module" src="monster3d.js?v=26"></script>
+<script type="module" src="lolo3d.js?v=26"></script>
 </body>
 </html>
