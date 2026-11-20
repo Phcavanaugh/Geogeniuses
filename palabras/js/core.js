@@ -2,10 +2,13 @@
 // Plain script (not a module): files load in order and share one global scope; see index.html.
 /* ======================= storage ======================= */
 // Two ages, each with its own stars, stickers, pet and records. Voice settings are shared.
-const AGE = (()=>{ try{ const a=localStorage.getItem('hp_age'); return a==='10' ? 10 : a==='7' ? 7 : 4; }catch(e){ return 4; } })();
+// Test mode (open the game with ?test): its own separate save, plus a test panel (js/test.js)
+const TEST = (()=>{ try{ return new URLSearchParams(location.search).has('test'); }catch(e){ return false; } })();
+const KP = TEST ? 'hpT' : 'hp';
+const AGE = (()=>{ try{ const a=localStorage.getItem(KP+'_age'); return a==='10' ? 10 : a==='7' ? 7 : 4; }catch(e){ return 4; } })();
 const BIG = AGE>=7;          // reads on her own
 const TEN = AGE===10;
-const PREFIX = TEN ? 'hp10_' : BIG ? 'hp7_' : 'hp_';
+const PREFIX = KP + (TEN ? '10_' : BIG ? '7_' : '_');
 const SHARED = new Set(['showEn','sayArt','rate','voiceURI','recVoice','gameLen','nameBig','nameLittle']);
 const store = {
   key(k){ return (SHARED.has(k) ? 'hp_' : PREFIX) + k; },

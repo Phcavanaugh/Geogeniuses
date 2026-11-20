@@ -28,7 +28,7 @@ MODES.forEach(m=>{
 });
 document.querySelectorAll('.agesw button').forEach(b=>{
   b.classList.toggle('on', +b.dataset.age===AGE);
-  b.onclick=()=>{ if(+b.dataset.age===AGE) return; try{ localStorage.setItem('hp_age', b.dataset.age); }catch(e){} location.reload(); };
+  b.onclick=()=>{ if(+b.dataset.age===AGE) return; try{ localStorage.setItem(KP+'_age', b.dataset.age); }catch(e){} location.reload(); };
 });
 const hasRiddles = c => c.words.filter(w=>RIDDLES[w[2]]).length >= 12;   // Adivina only asks about words that have a riddle
 function renderCats(){
