@@ -7,8 +7,8 @@ No build step: GitHub Pages serves these files as-is.
 |---|---|
 | `index.html` | The screens (HTML) and the list of scripts, in load order |
 | `css/palabras.css` | All the styles |
-| `js/words.js` | Every world and its words |
-| `js/riddles.js` | ¡Adivina! riddles |
+| `js/words.js` | Every world, and every word as one entry: Spanish, English, picture, riddle |
+| `js/riddles.js` | ¡Adivina! helpers (how riddles end, look-alike pictures) |
 | `js/content7.js` | True/false, odd-one-out and silly lines for the older kids |
 | `js/units.js` | Homework units (the fox unit) |
 | `js/core.js` | Saving, speech, Dora's voice, helpers |
@@ -28,5 +28,8 @@ defined in the files loaded before it.
 **When you change anything:** bump `VERSION` in `sw.js`, and the `?v=` numbers in
 `index.html` and `sw.js` when you change JS or CSS.
 
-**Test before shipping:** serve the repo (`python3 -m http.server 8770`) and run
+**Adding a word:** add one line to `WORDS` in `js/words.js` (the comment at the top explains each field),
+add its voice lines to `tools/voice/clips.json`, run the voice tool, then `node palabras/tests/check-words.js`.
+
+**Test before shipping:** `node palabras/tests/check-words.js` checks every word is complete and its recordings match. Then serve the repo (`python3 -m http.server 8770`) and run
 `node palabras/tests/smoke.js` (needs Playwright). It plays every mode at every age and fails on any error.
