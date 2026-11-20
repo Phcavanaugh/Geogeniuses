@@ -348,5 +348,7 @@ window.TD = (() => {
 
   return { open, earn, available, badge, state: st,
            // for tests: play without the screen loop
-           _t: { get G(){ return G; }, setup: r => { cv = $('tdCanvas'); setup(r); }, place, upgrade, upCost, unlockedTowers, go, update, canBuild, towerAt, TOWERS, COLS, ROWS, stat } };
+           _t: { get G(){ return G; }, setup: r => { cv = $('tdCanvas'); setup(r); }, place, upgrade, upCost, save,
+           win: () => { if(!G || G.phase === 'won' || G.phase === 'lost') return; G.phase = 'wave'; G.queue = []; G.foes = []; update(0); },
+           unlockedTowers, go, update, canBuild, towerAt, TOWERS, COLS, ROWS, stat } };
 })();

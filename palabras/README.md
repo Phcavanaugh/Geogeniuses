@@ -19,6 +19,7 @@ No build step: GitHub Pages serves these files as-is.
 | `js/word-games.js`, `js/arcade.js` | The mini-games |
 | `js/defensa.js` | ¡Defensa!: the tower defense round unlocked by each map level (towers, critters, difficulty at the top) |
 | `js/app.js` | Settings, install, offline |
+| `js/test.js` | Test mode: open with `?test` for a separate save and a 🧪 panel of shortcuts |
 | `lolo3d.js`, `monster3d.js` | 3D pets and Ñamñam (three.js in `lib/`) |
 | `sw.js` | Offline support |
 | `audio/` | Dora's voice packs, made by `tools/voice/` |
