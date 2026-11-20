@@ -137,10 +137,11 @@
     </div>
     <label class="lbl" id="lensLbl">Round length</label>
     <div class="opts" id="goals" style="display:none">
-      <button class="opt" data-v="250">250</button>
-      <button class="opt on" data-v="500">500</button>
-      <button class="opt" data-v="1000">1,000</button>
-      <button class="opt" data-v="2000">2,000</button>
+      <button class="opt" data-v="450">Lv 10<small>450</small></button>
+      <button class="opt on" data-v="1050">Lv 15<small>1,050</small></button>
+      <button class="opt" data-v="1900">Lv 20<small>1,900</small></button>
+      <button class="opt" data-v="3000">Lv 25<small>3,000</small></button>
+      <button class="opt" data-v="4350">Lv 30<small>4,350</small></button>
     </div>
     <div class="opts" id="lens">
       <button class="opt" data-v="60">1 min</button>
@@ -2673,7 +2674,7 @@ function syncHole(h,now){const m=h.m;if(!m)return;const vis=h.alive;
 /* ================= holes / players ================= */
 const BOTS=[['Muncher','#ff9f1c'],['Gulpy','#2ec4b6'],['Captain Crumb','#8e44ad'],['Snacky','#e71d36'],['Big Bertha','#3a86ff'],['Zoomer','#06d6a0'],['Chompy','#ffbe0b']];
 const COLORS=['#ff5a5f','#3a86ff','#8338ec','#06d6a0','#ffbe0b','#ff70a6','#fb5607'];
-let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myColor=COLORS[0],winBy='time',goal=500,timeLen=120,raceT=0;
+let holes=[],player=null,mode='easy',roundLen=120,timeLeft=120,state='menu',myColor=COLORS[0],winBy='time',goal=1050,timeLen=120,raceT=0;
 /* ---- levels: growth fills a bar; size only changes on level-up ---- */
 // Each level costs 20 points until about level 7, then 21% more per level. Each level = 10% bigger. No top level.
 // each level costs 21% more than the last, and above level 15 that step keeps growing, so levels get harder and harder
@@ -2905,7 +2906,7 @@ function newGame(){
   initPhysics();
   UNL=UNLOCKS.filter(u=>objs.some(o=>o.k===u[0]));
   for(const[k]of UNL)if(T[k].r<player.rTo*.92)unlocked.add(k);
-  roundLen=winBy==='score'?600:timeLen;timeLeft=roundLen;raceT=0;state='play';cam.x=player.x;cam.y=player.y;cam.D=targetD(player.rTo);
+  roundLen=winBy==='score'?1200:timeLen;timeLeft=roundLen;raceT=0;state='play';cam.x=player.x;cam.y=player.y;cam.D=targetD(player.rTo);
   ['menu','over'].forEach(i=>$(i).classList.add('hidden'));
   ['topl','timer','board','mute','pause'].forEach(i=>$(i).classList.remove('hidden'));paused=false;$('pausem').classList.add('hidden');
   qualityClock=-2;updateHud();
@@ -3291,7 +3292,7 @@ function optGroup(id,fn){const el=$(id);el.querySelectorAll('.opt').forEach(b=>b
 optGroup('modes',v=>mode=v);
 optGroup('maps',v=>{cityId=v;city=CITIES[v];try{localStorage.setItem('gobbleMap',v);}catch(e){}newTown();});
 $('maps').querySelectorAll('.opt').forEach(b=>b.classList.toggle('on',b.dataset.v===cityId));optGroup('lens',v=>{roundLen=timeLen=+v;});optGroup('goals',v=>goal=+v);
-optGroup('wins',v=>{winBy=v;const sc=v==='score';$('goals').style.display=sc?'':'none';$('lens').style.display=sc?'none':'';$('lensLbl').textContent=sc?'Target score':'Round length';roundLen=sc?600:timeLen;});
+optGroup('wins',v=>{winBy=v;const sc=v==='score';$('goals').style.display=sc?'':'none';$('lens').style.display=sc?'none':'';$('lensLbl').textContent=sc?'Target score':'Round length';roundLen=sc?1200:timeLen;});
 function showBest(){try{const b=+localStorage.getItem('gobblePhysBest');if(b)$('best').textContent='⭐ Best score: '+b;}catch(e){}}
 try{const n=localStorage.getItem('gobbleName');if(n)$('name').value=n;}catch(e){}showBest();
 $('play').onclick=()=>{initAudio();try{localStorage.setItem('gobbleName',$('name').value);}catch(e){}newGame();};
