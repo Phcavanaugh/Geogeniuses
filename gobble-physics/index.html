@@ -912,7 +912,7 @@ const scene=new THREE.Scene();
 const SKY=new THREE.Color('#cfe0ea');scene.background=new THREE.Color('#9cc4e4');scene.fog=new THREE.Fog(SKY,1500,4000);
 const camera=new THREE.PerspectiveCamera(38,1,10,9000);
 let CW=0,CH=0;
-function resize(){CW=innerWidth;CH=innerHeight;renderer.setSize(CW,CH);camera.aspect=CW/CH;camera.updateProjectionMatrix();}
+function resize(){CW=innerWidth;CH=innerHeight;renderer.setSize(CW,CH);camera.aspect=CW/CH;camera.updateProjectionMatrix();if(typeof PITCH!=='undefined')PITCH=THREE.MathUtils.degToRad(CW/CH>1.15?48:40);}
 addEventListener('resize',resize);resize();
 
 const hemi=new THREE.HemisphereLight(0xdbe8ff,0x8a8070,.55);scene.add(hemi);
@@ -2899,7 +2899,7 @@ function newGame(){
   ['topl','timer','board','mute','pause'].forEach(i=>$(i).classList.remove('hidden'));paused=false;$('pausem').classList.add('hidden');
   qualityClock=-2;updateHud();
 }
-function targetD(r){const base=(212+5.5*r)*(camera.aspect<1?1.08:1);return Math.max(base,2.2*r/(.344*Math.min(1,camera.aspect)));}   // mouth (with its lips) stays well inside the screen   // pulls back more gently as you grow
+function targetD(r){const base=(212+5.5*r)*(camera.aspect<1?1.08:1.45);return Math.max(base,2.2*r/(.344*Math.min(1,camera.aspect)));}   // mouth (with its lips) stays well inside the screen   // pulls back more gently as you grow
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');toastT=2.2;}
 function showMsg(t,s){const e=$('msg');e.textContent=t;e.style.display='block';msgT=s;}
 function rank(){return holes.slice().sort((a,b)=>b.score-a.score);}
@@ -3178,7 +3178,7 @@ function update(dt){animT+=dt;SWAY_U.value=animT;trafficFollow(dt);
 }
 
 /* ================= render sync ================= */
-const PITCH=THREE.MathUtils.degToRad(40);
+var PITCH=THREE.MathUtils.degToRad(innerWidth/innerHeight>1.15?48:40);
 const _p=new THREE.Vector3();
 let shadowHalf=0;
 const INDS=[];
