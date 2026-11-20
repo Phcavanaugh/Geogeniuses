@@ -2679,7 +2679,7 @@ function setLevel(h,L){h.lvl=Math.max(1,L);h.xp=lvPts(h.lvl);h.r=h.rTo=lvR(h.lvl
 function grow(h,pts){h.xp+=pts;const L=lvOf(h.xp);
   if(L>h.lvl){h.lvl=L;h.rFrom=h.r;h.rTo=lvR(L);h.lvT=0;h.chomp=1;
     if(h===player){addPopup(h.x,h.y,'LEVEL UP! ⬆️','#ffd23a',h);lvlSound();buzz(30);shake=Math.max(shake,6);}}}
-function mkHole(name,color,bot){return{xp:0,lvl:1,rTo:R0,rFrom:R0,lvT:1,name,color,bot,x:0,y:0,r:R0,score:0,alive:true,respawn:0,dx:0,dy:0,think:0,target:null,wx:0,wy:0,spd:bot?rnd(.82,1):1};}
+function mkHole(name,color,bot){return{xp:0,lvl:1,rTo:R0,rFrom:R0,lvT:1,name,color,bot,x:0,y:0,r:R0,score:0,alive:true,respawn:0,dx:0,dy:0,think:0,target:null,wx:0,wy:0,spd:bot?(mode==='easy'?rnd(.82,1):rnd(.95,1)):1};}
 function spawn(h){
   for(let t=0;t<60;t++){const p=randRoadPt();if(!p)break;const[x,y]=p;if(x<120||y<120||x>W-120||y>W-120)continue;h.x=x;h.y=y;
     if(holes.every(o=>o===h||!o.alive||Math.hypot(o.x-x,o.y-y)>o.r+h.r+250))break;}
@@ -2935,10 +2935,13 @@ function think(b){
     if(h.r>b.r*1.15&&d<h.r+230){fx-=dx/d*(h.r+230-d);fy-=dy/d*(h.r+230-d);}
     else if(b.r>h.r*1.15&&d<340&&!(mode==='easy'&&h===player)){const s=(30+h.r)/(d+40);if(s>bestS){bestS=s;bestT=h;}}}
   if(fx||fy){const m=Math.hypot(fx,fy);b.dx=fx/m;b.dy=fy/m;b.target=null;return;}
-  const lim=b.r*.92;
-  for(const o of objs){if(o.eaten||o.r>=lim)continue;const dx=o.x-b.x,dy=o.y-b.y;if(dx>430||dx<-430||dy>430||dy<-430)continue;
-    const d=Math.hypot(dx,dy),s=(o.pts+o.r*.4)/(d+40);if(s>bestS){bestS=s;bestT=o;}}
-  if(bestT&&Math.random()<(mode==='easy'?.6:.75)){b.target=bestT;return;}
+  if(bestT&&Math.random()<(mode==='easy'?.6:.85)){b.target=bestT;return;}
+  // head for the richest nearby patch of food it can actually swallow (value-weighted centroid of a grid cell)
+  const lim=b.rTo*.9,cs=Math.max(44,b.r*1.7),cells=new Map(),b11=BIG11(),b15=BIG15();
+  for(const o of objs){if(o.eaten||o.gone||o.fall||o.r>=lim)continue;const v=o.pts+(o.r>=b11?1:0)+(o.r>=b15?1:0),key=Math.floor(o.x/cs)*4096+Math.floor(o.y/cs);
+    let c=cells.get(key);if(!c){c={v:0,x:0,y:0};cells.set(key,c);}c.v+=v;c.x+=o.x*v;c.y+=o.y*v;}
+  let bc=null,bs=0;for(const c of cells.values()){const x=c.x/c.v,y=c.y/c.v,d=Math.hypot(x-b.x,y-b.y),s=c.v/(d+cs*1.5);if(s>bs){bs=s;bc={x,y};}}
+  if(bc&&Math.random()<(mode==='easy'?.7:.97)){b.target=bc;return;}
   b.target=null;if(Math.hypot(b.wx-b.x,b.wy-b.y)<60||!b.wx||Math.random()<.15){const p=randRoadPt()||[rnd(100,W-100),rnd(100,W-100)];b.wx=clamp(p[0],100,W-100);b.wy=clamp(p[1],100,W-100);}
   const dx=b.wx-b.x,dy=b.wy-b.y,m=Math.hypot(dx,dy)||1;b.dx=dx/m;b.dy=dy/m;
 }
@@ -3149,7 +3152,7 @@ function update(dt){animT+=dt;SWAY_U.value=animT;trafficFollow(dt);
       if(h.target){if(h.target.eaten||h.target.gone||h.target.alive===false){h.target=null;h.think=0;dx=h.dx;dy=h.dy;}
         else{const tx=h.target.x-h.x,ty=h.target.y-h.y,m=Math.hypot(tx,ty)||1;dx=tx/m;dy=ty/m;if(m<3){dx=0;dy=0;}h.dx=dx;h.dy=dy;}}
       else{dx=h.dx;dy=h.dy;}
-      const mul=(mode==='easy'?.72:.92)*h.spd;dx*=mul;dy*=mul;}
+      const mul=(mode==='easy'?.72:1)*h.spd;dx*=mul;dy*=mul;}
     else{[dx,dy]=inputDir();}
     h.mvx+=(dx-h.mvx)*Math.min(1,dt*6);h.mvy+=(dy-h.mvy)*Math.min(1,dt*6);
     if(h.lvT<1){h.lvT=Math.min(1,h.lvT+dt/.45);h.r=h.rFrom+(h.rTo-h.rFrom)*backOut(h.lvT);}
