@@ -1,0 +1,130 @@
+// ¡Hola, Palabras! — Content for the 7- and 10-year-old games (true/false, odd one out, silly lines).
+// Plain script (not a module): files load in order and share one global scope; see index.html.
+/* ======================= 7-year-old games: content (humor levels 1–3) ======================= */
+// Extra words that only appear in the silly games
+const EXTRA_WORDS = { '💩':['la','popó','poop'], '💨':['el','pedo','fart'] };
+
+// ¿Verdad o mentira?  [picture, Spanish, English, true?, level]
+// Level 1 = silly, 2 = gross-out (mostly real animal facts), 3 = full potty
+const VERDAD = [
+  ['🦨','El zorrillo huele a flores.','The skunk smells like flowers.',false,1],
+  ['👶','El bebé usa pañal.','The baby wears a diaper.',true,1],
+  ['🐘','El elefante es muy pequeño.','The elephant is very small.',false,1],
+  ['🦒','La jirafa tiene el cuello largo.','The giraffe has a long neck.',true,1],
+  ['🐮','La vaca dice miau.','The cow says meow.',false,1],
+  ['🐶','El perro dice guau.','The dog says woof.',true,1],
+  ['🐧','El pingüino vive en el desierto.','The penguin lives in the desert.',false,1],
+  ['🦀','El cangrejo camina de lado.','The crab walks sideways.',true,1],
+  ['🐌','El caracol corre muy rápido.','The snail runs very fast.',false,1],
+  ['🍌','El plátano es azul.','The banana is blue.',false,1],
+  ['🍓','La fresa es roja.','The strawberry is red.',true,1],
+  ['☀️','El sol sale de noche.','The sun comes out at night.',false,1],
+  ['❄️','La nieve está caliente.','The snow is hot.',false,1],
+  ['🐝','La abeja hace miel.','The bee makes honey.',true,1],
+  ['🐢','La tortuga lleva su casa en la espalda.','The turtle carries its house on its back.',true,1],
+  ['🧦','Los calcetines van en las manos.','Socks go on your hands.',false,1],
+  ['🪥','Me lavo los dientes con un cepillo.','I brush my teeth with a toothbrush.',true,1],
+  ['🐷','Al cerdo le gusta el lodo.','The pig likes mud.',true,1],
+  ['🦁','El león es un pájaro.','The lion is a bird.',false,1],
+  ['🌙','La luna es de queso.','The moon is made of cheese.',false,1],
+  ['🐸','La rana salta muy alto.','The frog jumps very high.',true,1],
+  ['🎈','El globo pesa mucho.','The balloon is very heavy.',false,1],
+  ['🦓','La cebra tiene rayas.','The zebra has stripes.',true,1],
+  ['🐙','El pulpo tiene ocho brazos.','The octopus has eight arms.',true,1],
+  ['🐊','El cocodrilo tiene muchos dientes.','The crocodile has lots of teeth.',true,1],
+  ['🦘','El canguro lleva a su bebé en una bolsa.','The kangaroo carries its baby in a pouch.',true,1],
+  ['🍕','La pizza crece en los árboles.','Pizza grows on trees.',false,1],
+  ['🐼','El panda come hamburguesas.','The panda eats hamburgers.',false,1],
+  ['🌈','El arcoíris tiene muchos colores.','The rainbow has lots of colors.',true,1],
+  ['🧠','El cerebro está en el pie.','Your brain is in your foot.',false,1],
+  ['🐷','El cerdo usa perfume.','The pig wears perfume.',false,1],
+  ['🦖','El tiranosaurio se lavaba los dientes.','The T. rex used to brush its teeth.',false,1],
+
+  ['🦥','El perezoso baja del árbol una vez a la semana para hacer popó.','The sloth climbs down from its tree once a week to poop.',true,2],
+  ['🐮','La vaca eructa mucho.','The cow burps a lot.',true,2],
+  ['🦈','El tiburón usa calzones.','The shark wears underpants.',false,2],
+  ['🪰','A las moscas les encanta la popó.','Flies love poop.',true,2],
+  ['🦨','Si asustas al zorrillo, hace un olor horrible.','If you scare a skunk, it makes a horrible smell.',true,2],
+  ['🐶','Los perros se huelen la cola para saludarse.','Dogs sniff each other\'s bottoms to say hello.',true,2],
+  ['🦛','El hipopótamo avienta su popó con la cola.','The hippo flings its poop with its tail.',true,2],
+  ['👃','Los mocos son de chocolate.','Boogers are made of chocolate.',false,2],
+  ['🐦','Los pájaros hacen popó desde el cielo.','Birds poop from the sky.',true,2],
+  ['🐔','La gallina pone huevos por la boca.','The hen lays eggs out of her mouth.',false,2],
+  ['🧦','Los calcetines sucios huelen a rosas.','Dirty socks smell like roses.',false,2],
+  ['🐳','La ballena hace popó en el mar.','The whale poops in the ocean.',true,2],
+  ['🐱','El gato hace popó en su caja de arena.','The cat poops in its litter box.',true,2],
+  ['🦆','Los patos usan pañales.','Ducks wear diapers.',false,2],
+  ['🐻','El oso no hace popó en todo el invierno.','The bear doesn\'t poop all winter long.',true,2],
+  ['🦒','La jirafa se limpia la nariz con la lengua.','The giraffe cleans its nose with its tongue.',true,2],
+  ['🐸','La rana se come su piel vieja.','The frog eats its old skin.',true,2],
+  ['🪳','La cucaracha puede vivir una semana sin cabeza.','A cockroach can live for a week without its head.',true,2],
+  ['🦠','Hay microbios en las manos sucias.','There are germs on dirty hands.',true,2],
+  ['🧻','El papel de baño se come.','You eat toilet paper.',false,2],
+  ['🐛','La oruga hace popó.','The caterpillar poops.',true,2],
+  ['🐐','La cabra hace popó en bolitas.','The goat poops in little balls.',true,2],
+
+  ['👨','Papá se tiró un pedo tan grande que voló a la luna.','Dad farted so hard he flew to the moon.',false,3],
+  ['🐴','El caballo se tira muchos pedos.','The horse farts a lot.',true,3],
+  ['🐟','Algunos peces se hablan con pedos.','Some fish talk to each other with farts.',true,3],
+  ['🦍','Los gorilas se tiran pedos cuando comen.','Gorillas fart while they eat.',true,3],
+  ['🐮','Los pedos de vaca huelen a fresa.','Cow farts smell like strawberries.',false,3],
+  ['🐨','El bebé koala come la popó de su mamá.','The baby koala eats its mom\'s poop.',true,3],
+  ['🐰','El conejo se come su propia popó.','The rabbit eats its own poop.',true,3],
+  ['🦄','El unicornio se tira pedos de arcoíris.','The unicorn farts rainbows.',false,3],
+  ['🐘','El elefante se tira pedos enormes.','The elephant does huge farts.',true,3],
+  ['🧑‍🚀','Los astronautas hacen pipí en el espacio.','Astronauts pee in space.',true,3],
+  ['👃','Si te tapas la nariz, no hueles el pedo.','If you hold your nose, you can\'t smell the fart.',true,3],
+  ['🚽','La popó va en el inodoro.','Poop goes in the toilet.',true,3],
+  ['🍽️','La popó es un postre delicioso.','Poop is a delicious dessert.',false,3],
+  ['💨','Los pedos tienen colores bonitos.','Farts come in pretty colors.',false,3],
+  ['👶','El bebé se tiró un pedo en la bañera y salieron burbujas.','The baby farted in the bath and bubbles came out.',true,3],
+];
+
+// ¿Cuál no va?  [Spanish question, English, [three that go together...], the one that doesn't, level]
+const CUAL = [
+  ['¿Cuál no es un animal?','Which one is not an animal?',['🐶','🐱','🐮'],'🚗',1],
+  ['¿Cuál no es una fruta?','Which one is not a fruit?',['🍎','🍌','🍓'],'🧦',1],
+  ['¿Cuál no vuela?','Which one can\'t fly?',['🐦','🦋','🐝'],'🐘',1],
+  ['¿Cuál no vive en el mar?','Which one doesn\'t live in the sea?',['🐙','🐬','🦈'],'🦒',1],
+  ['¿Cuál no es ropa?','Which one is not clothing?',['👕','👖','🧦'],'🍕',1],
+  ['¿Cuál no tiene ruedas?','Which one has no wheels?',['🚗','🚲','🚌'],'⛵',1],
+  ['¿Cuál no es frío?','Which one is not cold?',['❄️','⛄','🧊'],'🔥',1],
+  ['¿Cuál no es comida?','Which one is not food?',['🍕','🌮','🍔'],'🪑',1],
+  ['¿Cuál no tiene patas?','Which one has no legs?',['🐶','🐴','🐸'],'🐍',1],
+  ['¿Cuál no es un pájaro?','Which one is not a bird?',['🦜','🐧','🦉'],'🦇',1],
+  ['¿Cuál no es verde?','Which one is not green?',['🐸','🥦','🌵'],'🍓',1],
+  ['¿Cuál no va en la cabeza?','Which one doesn\'t go on your head?',['🧢','👒','👑'],'👟',1],
+  ['¿Cuál no se come?','Which one can\'t you eat?',['🍎','🍪','🧀'],'🧸',1],
+  ['¿Cuál no es un juguete?','Which one is not a toy?',['🧸','🪀','🪁'],'🥦',1],
+  ['¿Cuál no es un insecto?','Which one is not an insect?',['🐝','🐜','🦋'],'🕷️',1],
+  ['¿Cuál no está en el cielo?','Which one is not in the sky?',['☀️','🌙','⭐'],'🐟',1],
+  ['¿Cuál no es dulce?','Which one is not sweet?',['🍩','🍭','🍫'],'🧄',1],
+  ['¿Cuál no vive en la granja?','Which one doesn\'t live on the farm?',['🐮','🐷','🐔'],'🦈',1],
+  ['¿Cuál no tiene cola?','Which one has no tail?',['🐶','🐵','🦊'],'🐸',1],
+  ['¿Cuál no va en los pies?','Which one doesn\'t go on your feet?',['🧦','👟','👢'],'🧢',1],
+  ['¿Cuál no es pegajoso?','Which one is not sticky?',['🍯','🍭','🕸️'],'🪶',1],
+
+  ['¿Cuál huele bien?','Which one smells good?',['🦨','🗑️','🧦'],'🌸',2],
+  ['¿Cuál NO hace popó?','Which one does NOT poop?',['🐶','🐱','🐘'],'🪨',2],
+  ['¿Cuál no va en el baño?','Which one doesn\'t belong in the bathroom?',['🚽','🧻','🧼'],'🎂',2],
+  ['¿Cuál no tiene mocos?','Which one has no boogers?',['👶','👦','👧'],'🤖',2],
+  ['¿Cuál no es asqueroso?','Which one is not gross?',['🪳','🪰','🗑️'],'🍦',2],
+  ['¿Cuál no eructa?','Which one doesn\'t burp?',['🐮','👶','🐶'],'🌻',2],
+
+  ['¿Cuál NO se tira pedos?','Which one does NOT fart?',['🐴','🐘','🦍'],'🧸',3],
+  ['¿Cuál sí se tira pedos?','Which one DOES fart?',['🧸','🪨','🚗'],'🐴',3],
+  ['¿Cuál no va en el inodoro?','Which one doesn\'t go in the toilet?',['🧻','💩','💧'],'🎂',3],
+  ['¿Cuál no huele mal?','Which one doesn\'t smell bad?',['💩','🦨','💨'],'🌹',3],
+  ['¿Cuál no es asqueroso?','Which one is not gross?',['💩','🪳','💨'],'🍓',3],
+  ['¿Cuál no es comida?','Which one is not food?',['🍕','🍪','🍌'],'💩',3],
+];
+
+// Funny lines (Dora says one after a miss, sometimes after a right answer). [text, level]
+const MISS_LINES = [
+  ['¡Uy! ¡Eso huele a calcetín sucio!',1],['¡Uy! ¡Qué apestoso!',1],
+  ['¡Ups! ¡Hasta el zorrillo se tapa la nariz!',2],['¡Guácala! ¡Esa respuesta tiene mocos!',2],['¡Uy! ¡Esa respuesta huele a popó!',2],
+  ['¡Ay, no! ¡Esa respuesta se tiró un pedo!',3],['¡Pum! ¡Se me salió un pedo de la sorpresa!',3],
+];
+const HIT_LINES = [['¡Excelente! ¡Hueles a rosas!',1],['¡Bravo! ¡Le ganaste al zorrillo!',2],['¡Genial! ¡Ni un pedo te gana!',3]];
+const SILLY_CLIPS = ['¡Es verdad!','¡Es mentira!','¡Te toca!','¡Felicidades!','¡Empate!','¡Te ganó un pedo!','¿El o la?','¿Verdad o mentira?','¿Cuál no va?','¡Hermanos!'];
+
