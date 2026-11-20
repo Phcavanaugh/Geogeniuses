@@ -3278,9 +3278,9 @@ function startFall(o,h){const dx=h.x-o.x,dy=h.y-o.y,d=Math.hypot(dx,dy);
   let ax,az;if(d>1){ax=dx/d;az=dy/d;}else{const a=rnd(0,TAU);ax=Math.cos(a);az=Math.sin(a);}
   o.fall={h,t:0,dur:.5+o.r*.007,ax,az,t0:Math.max(0,o.tilt)};}
 function eatHole(a,b){
-  const bonus=5+Math.round(b.r/12);a.score+=bonus;a.chomp=1;grow(a,bonus);
-  b.alive=false;b.respawn=2.5;holeDied(b);setLevel(b,b.lvl-2);b.target=null;
-  if(a===player){addPopup(b.x,b.y,'Gobbled '+b.name+'!',a.color);sfx(0,'big');buzz(40);shake=12;}
+  const bonus=Math.max(5,Math.round(b.score*.1));a.score+=bonus;a.chomp=1;grow(a,bonus);
+  b.alive=false;b.respawn=2.5;holeDied(b);setLevel(b,b.lvl-1);b.target=null;
+  if(a===player){addPopup(b.x,b.y,'Gobbled '+b.name+'! +'+bonus,a.color);sfx(0,'big');buzz(40);shake=12;}
   if(b===player){showMsg('Oh no! '+a.name+' gobbled you!\nBack in a sec…',2.5);sfx(0,'big');buzz(120);}
 }
 let animT=0;
