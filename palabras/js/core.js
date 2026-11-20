@@ -1,0 +1,237 @@
+// ¡Hola, Palabras! — Saving, speech, Dora's recorded voice, helpers and smart practice.
+// Plain script (not a module): files load in order and share one global scope; see index.html.
+/* ======================= storage ======================= */
+// Two ages, each with its own stars, stickers, pet and records. Voice settings are shared.
+const AGE = (()=>{ try{ const a=localStorage.getItem('hp_age'); return a==='10' ? 10 : a==='7' ? 7 : 4; }catch(e){ return 4; } })();
+const BIG = AGE>=7;          // reads on her own
+const TEN = AGE===10;
+const PREFIX = TEN ? 'hp10_' : BIG ? 'hp7_' : 'hp_';
+const SHARED = new Set(['showEn','sayArt','rate','voiceURI','recVoice','gameLen','nameBig','nameLittle']);
+const store = {
+  key(k){ return (SHARED.has(k) ? 'hp_' : PREFIX) + k; },
+  get(k,d){ try{ const v=localStorage.getItem(this.key(k)); return v===null?d:JSON.parse(v);}catch(e){return d;} },
+  set(k,v){ try{ localStorage.setItem(this.key(k),JSON.stringify(v)); }catch(e){} }
+};
+const $ = id => document.getElementById(id);
+const S = {
+  mode: TEN ? 'escribe' : BIG ? 'adivina' : 'cards', cat:null, list:[], i:0, run:0,
+  showEn: store.get('showEn', false),
+  sayArt: store.get('sayArt', true),
+  rate: store.get('rate', 0.8),
+  voiceURI: store.get('voiceURI', ''),
+  nChoices: store.get('nChoices6', 6),
+  len: store.get('gameLen', 10),        // words per game (0 = no limit)
+  pedorro: store.get('pedorro', BIG),  // fart sound on misses
+  readAloud: store.get('readAloud', !TEN), // read each question out loud automatically (off by default at 10)
+  names: [store.get('nameBig','Grande'), store.get('nameLittle','Peque')],
+  stars: store.get('stars', 0),
+};
+let stats = store.get('stats', {});   // emoji -> {r:right, w:wrong, s:current streak}
+let pet = store.get('pet', {xp:0, hat:0});
+// store: animals and Lolo colors, bought with ⭐. All pets share the same level, so each one evolves too.
+const PETS = {
+  axolotl:{ name:'Lolo',   kind:'el ajolote',  en:'axolotl', price:0,   emoji:'🦎', hi:'c|¡Hola! Soy Lolo, el ajolote.' },
+  penguin:{ name:'Pipo',   kind:'el pingüino', en:'penguin', price:50,  emoji:'🐧', hi:'c|¡Hola! Soy Pipo, el pingüino.' },
+  fox:    { name:'Chispa', kind:'la zorrita',  en:'fox',     price:75,  emoji:'🦊', hi:'c|¡Hola! Soy Chispa, la zorrita.' },
+  seal:   { name:'Nieve',  kind:'la foquita',  en:'seal',    price:100, emoji:'🦭', hi:'c|¡Hola! Soy Nieve, la foquita.' },
+};
+const SKINLIST = [
+  { id:'clasico', name:'Rosa',    price:0 },
+  { id:'menta',   name:'Menta',   price:25 },
+  { id:'salvaje', name:'Salvaje', price:25 },
+  { id:'dorado',  name:'Dorado',  price:40 },
+  { id:'blanco',  name:'Blanco',  price:40 },
+  { id:'galaxia', name:'Galaxia', price:60 },
+];
+pet = { species:'axolotl', skin:'clasico', owned:['axolotl'], skins:['clasico'], ...pet };
+if(!PETS[pet.species]) pet.species='axolotl';
+const petInfo = () => PETS[pet.species];
+const petName = () => petInfo().name;
+
+/* ======================= speech ======================= */
+const synth = window.speechSynthesis;
+let voices = [];
+function rankVoice(v){
+  const l=(v.lang||'').toLowerCase().replace('_','-');
+  if(!l.startsWith('es')) return -1;
+  let s = 1;
+  if(l==='es-mx') s=6; else if(l==='es-us') s=5; else if(l==='es-419') s=4; else if(l==='es-es') s=3;
+  if(/google|premium|enhanced|natural|neural/i.test(v.name)) s+=0.5;
+  return s;
+}
+function loadVoices(){
+  if(!synth) return;
+  voices = synth.getVoices().filter(v=>rankVoice(v)>=0).sort((a,b)=>rankVoice(b)-rankVoice(a));
+  const sel=$('voice'); sel.innerHTML='';
+  if(!voices.length){ sel.innerHTML='<option>Default</option>'; $('warn').classList.add('on'); return; }
+  $('warn').classList.remove('on');
+  voices.forEach(v=>{ const o=document.createElement('option'); o.value=v.voiceURI; o.textContent=`${v.name} (${v.lang})`; sel.appendChild(o); });
+  if(!voices.find(v=>v.voiceURI===S.voiceURI)) S.voiceURI = voices[0].voiceURI;
+  sel.value = S.voiceURI;
+}
+if(synth){ loadVoices(); synth.onvoiceschanged = loadVoices; setTimeout(loadVoices,500); }
+else { $('warn').textContent='This browser can’t speak words aloud. Try Chrome or Safari.'; $('warn').classList.add('on'); }
+
+function speak(text, rateMult=1){
+  return new Promise(res=>{
+    if(!synth) return res();
+    let done=false; const fin=()=>{ if(!done){done=true;res();} };
+    try{
+      synth.cancel(); stopClips();
+      const u = new SpeechSynthesisUtterance(text);
+      const v = voices.find(v=>v.voiceURI===S.voiceURI) || voices[0];
+      if(v){ u.voice=v; u.lang=v.lang; } else u.lang='es-MX';
+      u.rate = S.rate*rateMult; u.pitch = 1.1;
+      u.onend=fin; u.onerror=fin;
+      synth.speak(u);
+      setTimeout(fin, 900 + text.length*90/S.rate);
+    }catch(e){ fin(); }
+  });
+}
+const wait = ms => new Promise(r=>setTimeout(r,ms));
+const phrase = w => S.sayArt ? `${w[0]} ${w[1]}` : w[1];
+const plural = w => w[0]==='los'||w[0]==='las';
+const fem = w => w[4]==='f' || w[0]==='la' || w[0]==='las';
+const esta = w => plural(w) ? 'están' : 'está';
+const thatIs = w => plural(w) ? (fem(w)?'Esas son':'Esos son') : (fem(w)?'Esa es':'Ese es');
+const wordHTML = w => `<span class="art">${w[0]}</span> ${w[1]}`;
+
+/* ======================= recorded voice (Dora) ======================= */
+// Clips live in audio/<group>.mp3 with an index in audio/<group>.json. Keys:
+//  w|🐶 "el perro."  d|🐶 "¿Dónde está el perro?"  b|🐶 "¡Busca el perro!"  q|🐶 "¡Quiero el perro!"
+//  c|<text> common phrase,  r|N streak,  p|N points,  j|N moves
+const VOICE = { on: store.get('recVoice', true), clips:{}, loading:{}, tok:0, unlocked:false, status:'', loadedGroups:0 };
+const WORD = {}; Object.values(VOCAB).forEach(c=>c.words.forEach(w=>WORD[w[2]]=w));
+for(const e in EXTRA_WORDS){ const [a,w,en]=EXTRA_WORDS[e]; WORD[e]=[a,w,e,en]; }
+// One normal <audio> element plays everything: unlike Web Audio it still plays when an iPhone is on silent.
+const player = new Audio(); player.preload='auto'; player.setAttribute('playsinline',''); player.setAttribute('webkit-playsinline','');
+const SILENT='data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NExAAAAANIAAAAAExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMu//NExFMAAANIAAAAADEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMu//NExKYAAANIAAAAADEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVTEFNRTMu//NExKwAAANIAAAAADEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NExKwAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NExKwAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV';
+function unlockAudio(){
+  try{ if(navigator.audioSession) navigator.audioSession.type='playback'; }catch(e){}
+  if(VOICE.unlocked || VOICE.tok) return;          // a real clip is (or was) playing: nothing to unlock
+  try{ player.src=SILENT; const p=player.play(); if(p&&p.then) p.then(()=>{ VOICE.unlocked=true; }).catch(()=>{}); }catch(e){}
+}
+['touchend','click'].forEach(ev=>document.addEventListener(ev, unlockAudio, {capture:true}));
+// each group = audio/<g>.mp3 (MP3 clips back to back) + audio/<g>.json ({key:[offset,length]})
+function loadGroup(g){
+  if(!VOICE.loading[g]) VOICE.loading[g] = Promise.all([
+      fetch(`audio/${g}.json`).then(r=>{ if(!r.ok) throw new Error('json '+r.status); return r.json(); }),
+      fetch(`audio/${g}.mp3`).then(r=>{ if(!r.ok) throw new Error('mp3 '+r.status); return r.arrayBuffer(); })
+    ]).then(([idx,bin])=>{ for(const k in idx) VOICE.clips[k]={bin, off:idx[k][0], len:idx[k][1]}; VOICE.loadedGroups++; return true; })
+      .catch(e=>{ VOICE.status='Could not download the recordings ('+(e&&e.message||e)+').'; delete VOICE.loading[g]; return false; });
+  return VOICE.loading[g];
+}
+const groupsFor = cat => cat==='todas' ? Object.keys(VOCAB).filter(k=>k!=='todos'&&k!=='todas')
+                       : cat==='todos' ? Object.keys(VOCAB).filter(k=>VOCAB[k].animal) : [cat];
+const loadCat = cat => Promise.all(groupsFor(cat).map(loadGroup));
+function keyText(k){
+  const i=k.indexOf('|'), t=k.slice(0,i), v=k.slice(i+1), w=WORD[v];
+  switch(t){
+    case 'c': return v;
+    case 'w': return phrase(w)+'.';
+    case 'd': return `¿Dónde ${esta(w)} ${phrase(w)}?`;
+    case 'b': return `¡Busca ${phrase(w)}!`;
+    case 'q': return `¡Quiero ${phrase(w)}!`;
+    case 'e': return `${plural(w)?'Son':'Es'} ${phrase(w)}.`;
+    case 'a': return RIDDLES[v][0]+' '+riddleQ(v)[0];
+    case 'v': return VERDAD[+v][1];
+    case 'k': return CUAL[+v][0];
+    case 'x': return '';
+    case 'z': { const t=v[0], rest=v.slice(1);
+      if(t==='r') return ZORRO.frases[+rest][1];
+      if(t==='s') return scriptLines(0)[+rest].es;
+      if(t==='p') return scriptLines(1)[+rest].es;
+      if(t==='v') return ZORRO.vocab[+rest][0]+'.';
+      if(t==='t') return ZORRO.lessons[+rest].t+'.';
+      const [li,fi]=rest.split('_').map(Number), f=ZORRO.lessons[li]&&ZORRO.lessons[li].facts[fi];
+      if(t==='f') return f ? plainEs(f[1]) : '';
+      if(t==='k') return f && f[3] ? f[3][0] : '';
+      return ''; }
+    case 'r': return `¡Racha de ${v}!`;
+    case 'p': return v==='1' ? 'un punto.' : `${v} puntos.`;
+    case 'j': return `en ${v} jugadas.`;
+  }
+  return '';
+}
+let lastURL=null;
+function stopClips(){ try{ player.pause(); }catch(e){} }
+// Say a list of clip keys. Dora's recordings are joined into one MP3 and played; if that can't play, the device voice says it.
+async function talk(keys){
+  keys=keys.filter(Boolean);
+  if(S.fartNext){ S.fartNext=false; keys=['x|fart'+(1+Math.floor(Math.random()*3)), ...keys]; }
+  const tok=++VOICE.tok; stopClips(); synth&&synth.cancel();
+  if(VOICE.on && keys.every(k=>VOICE.clips[k])){
+    const parts=keys.map(k=>{ const c=VOICE.clips[k]; return new Uint8Array(c.bin, c.off, c.len); });
+    const bytes=parts.reduce((t,p)=>t+p.length,0);
+    const url=URL.createObjectURL(new Blob(parts,{type:'audio/mpeg'}));
+    try{
+      player.src=url;
+      await player.play();
+      VOICE.unlocked=true; VOICE.status='ok';
+      if(lastURL) URL.revokeObjectURL(lastURL); lastURL=url;
+      await new Promise(res=>{
+        const t=setTimeout(fin, bytes/4000*1000 + 1500);   // 32 kbps ≈ 4000 bytes per second
+        function fin(){ clearTimeout(t); player.removeEventListener('ended',fin); player.removeEventListener('error',fin); player.removeEventListener('pause',fin); res(); }
+        player.addEventListener('ended',fin); player.addEventListener('error',fin); player.addEventListener('pause',fin);
+      });
+      return;
+    }catch(e){
+      URL.revokeObjectURL(url);
+      VOICE.status = 'The phone blocked the recording ('+(e&&e.name||e)+'), so the device voice was used.';
+      if(tok!==VOICE.tok) return;
+    }
+  } else if(VOICE.on && !VOICE.status) VOICE.status='Recordings still downloading — the device voice was used.';
+  if(tok!==VOICE.tok) return;
+  return speak(keys.map(keyText).filter(Boolean).join(' '));
+}
+loadGroup('common'); if(BIG || S.pedorro) loadGroup('silly');
+
+/* ======================= helpers ======================= */
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
+function setStars(n){ S.stars=n; store.set('stars',n); $('starCount').textContent=n; }
+function burst(x,y,set=['⭐','✨','🎉','💛'],n=12){
+  for(let k=0;k<n;k++){
+    const b=document.createElement('div'); b.className='burst'; b.textContent=set[k%set.length];
+    b.style.left=x+'px'; b.style.top=y+'px';
+    const a=Math.random()*Math.PI*2, d=90+Math.random()*120;
+    b.style.setProperty('--dx',Math.cos(a)*d+'px'); b.style.setProperty('--dy',Math.sin(a)*d+'px'); b.style.setProperty('--r',(Math.random()*360)+'deg');
+    document.body.appendChild(b); setTimeout(()=>b.remove(),1000);
+  }
+}
+function banner(text, cls=''){
+  const c=document.createElement('div'); c.className='cheer '+cls; c.innerHTML=`<div class="b">${text}</div>`;
+  document.body.appendChild(c); setTimeout(()=>c.remove(),1200);
+}
+const PRAISE=['¡Muy bien!','¡Excelente!','¡Sí!','¡Bravo!','¡Genial!','¡Eso es!'];
+const praise = () => PRAISE[Math.floor(Math.random()*PRAISE.length)];
+function toast(html){ document.querySelectorAll('.toast').forEach(t=>t.remove()); const t=document.createElement('div'); t.className='toast'; t.innerHTML=html; document.body.appendChild(t); setTimeout(()=>t.remove(),1900); }
+
+/* ======================= smart practice ======================= */
+// Words missed recently come back more; words answered right 3+ times in a row show up less.
+function weight(w){
+  const st=stats[w[2]];
+  if(!st) return 2;                  // never tried
+  if(st.s===0 && st.w>0) return 4;   // missed last time
+  if(st.s>=3) return 0.35;           // mastered
+  return 1.2;
+}
+function pickTarget(words){
+  S.recent = S.recent || [];
+  let pool = words.filter(w=>!S.recent.includes(w[2]));
+  if(!pool.length) pool = words;
+  let total = pool.reduce((t,w)=>t+weight(w),0), r=Math.random()*total;
+  let pick = pool[pool.length-1];
+  for(const w of pool){ r-=weight(w); if(r<=0){ pick=w; break; } }
+  S.recent.push(pick[2]); if(S.recent.length>Math.min(6, Math.floor(words.length/2))) S.recent.shift();
+  return pick;
+}
+function distractors(words, target, n){ return shuffle(uniq(words.filter(w=>w[2]!==target[2]))).slice(0,n); }
+function record(w, ok){
+  const st = stats[w[2]] || (stats[w[2]]={r:0,w:0,s:0});
+  const first = ok && st.r===0;
+  if(ok){ st.r++; st.s++; } else { st.w++; st.s=0; }
+  store.set('stats', stats);
+  if(first) toast(`<b>${w[2]}</b> ¡Nueva estampa!`);
+}
+const found = w => (stats[w[2]]||{}).r>0;
+

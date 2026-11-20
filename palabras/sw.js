@@ -1,8 +1,8 @@
 // ¡Hola, Palabras! offline support.
 // The page itself: network first (so updates show up), cached copy when offline.
 // Dora's sound packs and fonts: cache first (they never change for a given version).
-const VERSION = 'palabras-v23';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3', './monster3d.js?v=21', './lolo3d.js?v=21', './lib/three.module.min.js'];
+const VERSION = 'palabras-v24';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3', './css/palabras.css?v=24', './js/words.js?v=24', './js/riddles.js?v=24', './js/content7.js?v=24', './js/units.js?v=24', './js/core.js?v=24', './js/pet.js?v=24', './js/home.js?v=24', './js/tarea.js?v=24', './js/run.js?v=24', './js/word-games.js?v=24', './js/arcade.js?v=24', './js/app.js?v=24', './monster3d.js?v=24', './lolo3d.js?v=24', './lib/three.module.min.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
@@ -20,8 +20,8 @@ self.addEventListener('fetch', e => {
       .catch(() => caches.match('./index.html')));
     return;
   }
-  // game code: network first too (fresh from the server, skipping the browser cache), saved copy when offline
-  if (url.pathname.endsWith('.js') && url.pathname.includes('/palabras/') && !url.pathname.includes('/lib/')) {
+  // game code and styles: network first too (fresh from the server, skipping the browser cache), saved copy when offline
+  if (/\.(js|css)$/.test(url.pathname) && url.pathname.includes('/palabras/') && !url.pathname.includes('/lib/')) {
     e.respondWith(fetch(req, { cache: 'no-cache' }).then(r => { if (r.ok) { const copy = r.clone(); caches.open(VERSION).then(c => c.put(req, copy)); } return r; })
       .catch(() => caches.match(req)));
     return;
