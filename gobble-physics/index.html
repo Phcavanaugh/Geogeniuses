@@ -3084,8 +3084,8 @@ function think(b){
   if(fx||fy){const m=Math.hypot(fx,fy);b.dx=fx/m;b.dy=fy/m;b.target=null;return;}
   if(bestT&&Math.random()<(mode==='easy'?.6:.85)){b.target=bestT;return;}
   // head for the richest nearby patch of food it can actually swallow (value-weighted centroid of a grid cell)
-  const lim=b.rTo*.9,cs=Math.max(44,b.r*1.7),cells=new Map(),b5=BIG5(),b11=BIG11(),b15=BIG15(),b20=BIG20(),b8=BIG8(),b13=BIG13();
-  for(const o of objs){if(o.eaten||o.gone||o.fall||o.r>=lim)continue;const v=o.pts+(o.r>=b5?1:0)+(o.r>=b11?1:0)+(o.r>=b15?1:0)+(o.r>=b20?4:0)+(o.r>=b8?1:0)+(o.r>=b13?2:0),key=Math.floor(o.x/cs)*4096+Math.floor(o.y/cs);
+  const lim=b.rTo*.9,cs=Math.max(44,b.r*1.7),cells=new Map(),b5=BIG5(),b11=BIG11(),b15=BIG15(),b20=BIG20(),b8=BIG8(),b13=BIG13(),b21=BIG21();
+  for(const o of objs){if(o.eaten||o.gone||o.fall||o.r>=lim)continue;const v=o.pts+(o.r>=b5?1:0)+(o.r>=b11?1:0)+(o.r>=b15?1:0)+(o.r>=b20?4:0)+(o.r>=b8?1:0)+(o.r>=b13?2:0)+(o.r>=b5?1:0)+(o.r>=b21?5:0),key=Math.floor(o.x/cs)*4096+Math.floor(o.y/cs);
     let c=cells.get(key);if(!c){c={v:0,x:0,y:0};cells.set(key,c);}c.v+=v;c.x+=o.x*v;c.y+=o.y*v;}
   let bc=null,bs=0;for(const c of cells.values()){const x=c.x/c.v,y=c.y/c.v,d=Math.hypot(x-b.x,y-b.y),s=c.v/(d+cs*1.5);if(s>bs){bs=s;bc={x,y};}}
   if(bc&&Math.random()<(mode==='easy'?.7:.97)){b.target=bc;return;}
@@ -3209,8 +3209,8 @@ function deactivate(o){__dbg.deact++;const t=o.body.translation(),q=o.body.rotat
     else if(o.wander){o.wb=o.wander;o.vx=o.vy=0;o.moveT=rnd(.5,1.5);}}
   else{o.pose={x:t.x,y:Math.max(t.y,.5),z:t.z,q:{x:q.x,y:q.y,z:q.z,w:q.w}};}
   setInst(o);}
-const BIG8=()=>.92*lvR(7),BIG13=()=>.92*lvR(12),BIG5=()=>.92*lvR(4),BIG11=()=>.92*lvR(10),BIG15=()=>.92*lvR(14),BIG20=()=>.92*lvR(19);   // too big for a level-10 / level-14 hole => level 11+ / 15+ item
-function creditEat(o,h){__dbg.eat++;const pv=o.pts+(o.r>=BIG5()?1:0)+(o.r>=BIG11()?1:0)+(o.r>=BIG15()?1:0)+(o.r>=BIG20()?4:0)+(o.r>=BIG8()?1:0)+(o.r>=BIG13()?2:0);h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
+const BIG21=()=>.92*lvR(20),BIG8=()=>.92*lvR(7),BIG13=()=>.92*lvR(12),BIG5=()=>.92*lvR(4),BIG11=()=>.92*lvR(10),BIG15=()=>.92*lvR(14),BIG20=()=>.92*lvR(19);   // too big for a level-10 / level-14 hole => level 11+ / 15+ item
+function creditEat(o,h){__dbg.eat++;const pv=o.pts+(o.r>=BIG5()?1:0)+(o.r>=BIG11()?1:0)+(o.r>=BIG15()?1:0)+(o.r>=BIG20()?4:0)+(o.r>=BIG8()?1:0)+(o.r>=BIG13()?2:0)+(o.r>=BIG5()?1:0)+(o.r>=BIG21()?5:0);h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
   if(h===player){sfx(o.r);if(!pend.pts)pend.t=.4;pend.pts+=pv;if(o.r>30){buzz(25);shake=Math.min(8,o.r*.07);}}}
 function nearestHole(o){let best=null,bd=1e9;for(const h of holes){if(!h.alive)continue;const d=Math.hypot(h.x-o.x,h.y-o.y)-h.r;if(d<bd){bd=d;best=h;}}return[best,bd];}
 function stepPhysics(dt){
