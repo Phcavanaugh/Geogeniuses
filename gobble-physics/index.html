@@ -3058,8 +3058,8 @@ function deactivate(o){__dbg.deact++;const t=o.body.translation(),q=o.body.rotat
     else if(o.wander){o.wb=o.wander;o.vx=o.vy=0;o.moveT=rnd(.5,1.5);}}
   else{o.pose={x:t.x,y:Math.max(t.y,.5),z:t.z,q:{x:q.x,y:q.y,z:q.z,w:q.w}};}
   setInst(o);}
-const BIG15=()=>.92*lvR(14);   // too big for a level-14 hole => a level 15+ item
-function creditEat(o,h){__dbg.eat++;const pv=o.pts+(o.r>=BIG15()?1:0);h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
+const BIG11=()=>.92*lvR(10),BIG15=()=>.92*lvR(14);   // too big for a level-10 / level-14 hole => level 11+ / 15+ item
+function creditEat(o,h){__dbg.eat++;const pv=o.pts+(o.r>=BIG11()?1:0)+(o.r>=BIG15()?1:0);h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
   if(h===player){sfx(o.r);if(!pend.pts)pend.t=.4;pend.pts+=pv;if(o.r>30){buzz(25);shake=Math.min(8,o.r*.07);}}}
 function nearestHole(o){let best=null,bd=1e9;for(const h of holes){if(!h.alive)continue;const d=Math.hypot(h.x-o.x,h.y-o.y)-h.r;if(d<bd){bd=d;best=h;}}return[best,bd];}
 function stepPhysics(dt){
