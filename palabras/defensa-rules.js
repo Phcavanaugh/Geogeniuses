@@ -292,7 +292,7 @@ export class Game {
   spawn(k, p, d = 0, from = null){
     const f = FOES[k], [x, y, dir] = this.posAt(p, d);
     const foe = { id: nid(), k, p, hp: f.hp, max: f.hp, spd: bu(f.speed) * this.A.speed, d, pts: f.pts, size: f.size, fly: !!f.fly, shell: !!f.shell, boss: !!f.boss,
-      slowT: 0, slowF: 1, dot: 0, dotT: 0, alive: true, x, y, dir, hitAt: -9, atWall: null, rbe: rbeOf(k) };
+      slowT: 0, slowF: 1, dot: 0, dotT: 0, alive: true, x, y, dir, hitAt: -9, atWall: null, rbe: rbeOf(k), kid: !!from };
     this.foes.push(foe); if(from) this.fx.push({ t:'kids', x, y, from }); return foe;
   }
   hit(f, dmg, by){
@@ -300,6 +300,7 @@ export class Game {
     if(f.shell && by && TOWERS[by.i].sharp && !this.stat(by).shell){ this.fx.push({ t:'bounce', x:f.x, y:f.y }); return; }
     const d = Math.min(dmg, f.hp); f.hp -= d; f.hitAt = this.time; f.rbe -= d;
     this.frac = (this.frac || 0) + d * this.A.pay; const c = Math.floor(this.frac); this.frac -= c; this.coins += c;   // coins for each hit
+    if(f.hp > 0 && f.max > 1) this.fx.push({ t:'layer', x:f.x, y:f.y });       // a layer pops off
     if(f.hp <= 0){ f.alive = false; this.points += f.pts; this.fx.push({ t:'die', x:f.x, y:f.y, pts:f.pts, foe:f });
       for(const [n, kk] of (FOES[f.k].kids || []).entries()) this.spawn(kk, f.p, Math.max(0, f.d - n * .25), f); }
   }
