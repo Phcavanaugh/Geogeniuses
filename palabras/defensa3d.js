@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES } from './defensa-rules.js?v=31';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES } from './defensa-rules.js?v=32';
 
 // ====================================================================================
 // materials
@@ -248,6 +248,37 @@ function tex(name){
   if(texCache[name]) return texCache[name];
   const t = new THREE.TextureLoader().load(ART + name + '.jpg'); t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = maxAniso; return texCache[name] = t;
+}
+// ====================================================================================
+// effect pictures (pops, hits, explosions…), shown as flat sprites that pop in, spin and fade.
+// When a picture exists in art/defensa/fx/<name>.png, list its name in FX_ART and it's used;
+// until then a simple drawing stands in.
+// ====================================================================================
+const FX_ART = new Set([]);
+const fxTex = {};
+function fxDraw(name){
+  const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d'), O = '#1E5560';
+  c.lineJoin = 'round'; c.lineWidth = 7; c.strokeStyle = O;
+  const star = (n, ro, ri, fill, rot = -Math.PI / 2, cx = 64, cy = 64) => { c.beginPath(); for(let i = 0; i < n * 2; i++){ const r = i % 2 ? ri : ro, a = rot + i * Math.PI / n; c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); } c.closePath(); c.fillStyle = fill; c.fill(); c.stroke(); };
+  const blob = (pts, fill) => { c.fillStyle = fill; for(const [x, y, r] of pts){ c.beginPath(); c.arc(x, y, r, 0, 7); c.stroke(); } for(const [x, y, r] of pts){ c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); } };
+  if(name === 'pop'){ star(8, 56, 30, '#FFFFFF'); star(8, 34, 18, '#FFE14D', -Math.PI / 2 + .2); }
+  else if(name === 'hit'){ star(5, 50, 22, '#FFFFFF'); star(5, 28, 13, '#FF8FB1'); }
+  else if(name === 'puff') blob([[44, 72, 26], [70, 56, 30], [84, 80, 22], [56, 88, 20]], '#FFFFFF');
+  else if(name === 'boom'){ blob([[64, 40, 26], [40, 62, 26], [88, 62, 26], [50, 88, 24], [80, 88, 24]], '#FF8A2A'); blob([[64, 66, 26]], '#FFD23F'); blob([[64, 64, 12]], '#FFF6C8'); }
+  else if(name === 'ink'){ blob([[64, 64, 34], [100, 50, 9], [28, 84, 8], [92, 98, 7], [36, 36, 6]], '#6A4FB0'); }
+  else if(name === 'sparkle'){ star(4, 58, 14, '#FFD23F'); c.fillStyle = '#FFFFFF'; c.beginPath(); c.arc(56, 52, 6, 0, 7); c.fill(); }
+  else if(name === 'confetti'){ const C = ['#FF5E7A', '#FFD23F', '#4FA8FF', '#7DD483', '#B57BFF']; c.lineWidth = 4; for(let i = 0; i < 14; i++){ const a = i * 2.4, r = 18 + (i * 7) % 40; c.save(); c.translate(64 + Math.cos(a) * r, 64 + Math.sin(a) * r); c.rotate(a); c.fillStyle = C[i % 5]; if(i % 3) { c.fillRect(-7, -4, 14, 8); c.strokeRect(-7, -4, 14, 8); } else { c.beginPath(); c.arc(0, 0, 6, 0, 7); c.fill(); c.stroke(); } c.restore(); } }
+  else if(name === 'pum'){ c.translate(64, 64); c.rotate(-.15); c.font = '700 44px Fredoka, system-ui, sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 10; c.strokeText('¡PUM!', 0, 2); c.fillStyle = '#FFD23F'; c.fillText('¡PUM!', 0, 2); }
+  else if(name === 'tink'){ star(6, 40, 14, '#E8ECF2'); c.lineWidth = 5; for(const a of [-.6, 0, .6]){ c.beginPath(); c.moveTo(64 + Math.cos(a - 1.57) * 48, 64 + Math.sin(a - 1.57) * 48); c.lineTo(64 + Math.cos(a - 1.57) * 60, 64 + Math.sin(a - 1.57) * 60); c.stroke(); } }
+  else if(name === 'smoke') blob([[42, 74, 24], [66, 58, 28], [88, 78, 22], [62, 88, 20]], '#BFB2A0');
+  else blob([[64, 64, 30]], '#FFFFFF');
+  return cv;
+}
+function fxTexture(name){
+  if(fxTex[name]) return fxTex[name];
+  const t = fxTex[name] = new THREE.CanvasTexture(fxDraw(name)); t.colorSpace = THREE.SRGBColorSpace;
+  if(FX_ART.has(name)) new THREE.TextureLoader().load(ART + 'fx/' + name + '.png', img => { t.image = img.image; t.needsUpdate = true; });
+  return t;
 }
 // ---- smooth noise for the land ----
 const hash = (x, y) => { const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); };
@@ -764,7 +795,7 @@ function start(el, host){
   const tmpV = new THREE.Vector3();
   function addTower(t){
     const md = towerModel(t.i, look(t)), h = hAt(t.x, t.y); md.g.position.set(wx(t.x), h, wz(t.y)); world.add(md.g);
-    const e = { ...md, t, lvl: look(t), born: G.time, kick: 0, yaw: Math.PI, h }; stuff.towers.set(t.id, e);
+    const e = { ...md, t, lvl: look(t), born: G.time, kick: 0, yaw: Math.PI, h, base: md.animal.scale.x, y0: md.animal.position.y }; stuff.towers.set(t.id, e);
     md.g.traverse(o => { if(o.isMesh && o.material !== INK) o.castShadow = true; });
     return e;
   }
@@ -801,6 +832,17 @@ function start(el, host){
     for(let i = 0; i < n; i++){ const o = new THREE.Mesh(sph(size, 8, 6), basic(color, { transparent: true, opacity: .95, depthWrite: false })); o.position.set(x, y, z); world.add(o);
       const a = Math.random() * 6.28, sp = .6 + Math.random() * .9; stuff.fx.push({ o, life, max: life, v: [Math.sin(a) * sp, up * (.5 + Math.random()), Math.cos(a) * sp], grow: 1.6 }); }
   }
+  // an effect picture: pops in a bit bigger, settles, spins a little, fades out
+  function burst(name, x, y, z, size, life = .4, o = {}){
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: fxTexture(name), transparent: true, depthWrite: false, depthTest: false, color: o.tint || '#FFFFFF' }));
+    sp.position.set(x, y, z); sp.renderOrder = 9; sp.material.rotation = o.rot ?? (Math.random() - .5) * .8; world.add(sp);
+    stuff.fx.push({ o: sp, life, max: life, spr: size, spin: o.spin ?? (Math.random() - .5) * 3, rise: o.rise || 0, y0: y, v: null, drift: o.drift }); return sp;
+  }
+  // a flat picture on the ground (ink splats)
+  function stain(name, x, y, z, size, life){ const o = new THREE.Mesh(new THREE.PlaneGeometry(size, size), new THREE.MeshBasicMaterial({ map: fxTexture(name), transparent: true, depthWrite: false, opacity: .9 }));
+    o.rotation.set(-Math.PI / 2, 0, Math.random() * 6.28); o.position.set(x, y + .03, z); o.renderOrder = 2; world.add(o); stuff.fx.push({ o, life, max: life, stain: true }); }
+  let shake = 0, slowmo = 0;
+  const shakeIt = a => { shake = Math.max(shake, a); };
   function flash(x, y, z, color, r, life){ const o = new THREE.Mesh(sph(1, 16, 12), basic(color, { transparent: true, opacity: .8, depthWrite: false })); o.position.set(x, y, z); o.scale.setScalar(r * .3); world.add(o); stuff.fx.push({ o, life, max: life, boom: r }); }
   function decal(x, y, z, color, r, life){ const o = new THREE.Mesh(new THREE.CircleGeometry(r, 20), basic(color, { transparent: true, opacity: .55, depthWrite: false })); o.rotation.x = -Math.PI / 2; o.position.set(x, y + .02, z); world.add(o); stuff.fx.push({ o, life, max: life, fade: true }); }
   const numTex = {};
@@ -813,6 +855,10 @@ function start(el, host){
     stuff.fx.push({ o: g, life: .9, max: .9, coin: c, rise: 1.1, sprite: sp, y0: y0 + .5 });
   }
 
+  // how each tower throws: wind = seconds of wind-up, hit = seconds of follow-through; back / fwd = lean, lunge = step forward, hop = jump
+  const POSE = { gato: { wind: .22, hit: .3, back: .45, fwd: .5, lunge: .14, hop: 0 }, abeja: { wind: .13, hit: .2, back: .18, fwd: .35, lunge: .26, hop: 0 },
+    pulpo: { wind: .3, hit: .35, back: .25, fwd: .3, lunge: .06, hop: .14 }, dragon: { wind: .42, hit: .42, back: .6, fwd: .55, lunge: .18, hop: .08 },
+    huerto: { wind: 0, hit: .01, back: 0, fwd: 0, lunge: 0, hop: 0, sway: .04 } };
   // how each critter moves: f = steps per second when moving at speed s (board units a second); faster = quicker steps
   const GAIT = { hormiga: { f: 9, s: 1 }, raton: { f: 11, s: .75 }, caracol: { f: 2.6, s: .36 }, murcielago: { f: 5, s: 1.05 }, mapache: { f: 7.5, s: .57 }, cocodrilo: { f: 4.5, s: .42 }, oso: { f: 3.6, s: .33 } };
   function animateFoe(e, f, now, dt, slow){
@@ -851,16 +897,22 @@ function start(el, host){
       if(e && e.lvl !== look(tw)){ world.remove(e.g); stuff.towers.delete(tw.id); e = addTower(tw); e.born = G.time - .5; e.kick = .4; }
       if(!e){ e = addTower(tw); }
       const drop = 1 - Math.min(1, (G.time - e.born) / .35); e.g.position.y = e.h + drop * drop * 1.6;
-      let d = tw.aim - e.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); e.yaw += d * Math.min(1, dt * 10); e.animal.rotation.y = e.yaw;
-      const since = G.time - tw.shotAt, k = since < .18 ? Math.sin(since / .18 * Math.PI) : 0;
-      e.animal.scale.set(.95 * (1 + k * .12), .95 * (1 - k * .14) * (1 + Math.sin(now * 2 + tw.id) * .015), .95 * (1 + k * .12));
+      let d = tw.aim - e.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); e.yaw += d * Math.min(1, dt * 12);
+      // throwing: lean back and crouch just before a shot (wind-up), then snap forward with the shot, and settle
+      const P = POSE[TOWERS[tw.i].id] || POSE.huerto, since = G.time - tw.shotAt, busy = G.phase === 'wave' && since < 2;
+      const wind = busy && tw.cd > 0 && tw.cd < P.wind ? Math.pow(1 - tw.cd / P.wind, 1.6) : 0;
+      const st = since < .05 ? since / .05 : since < P.hit ? Math.pow(1 - (since - .05) / (P.hit - .05), 2) : 0;
+      const pitch = -wind * P.back + st * P.fwd, lunge = st * P.lunge - wind * P.lunge * .35, B = e.base, breathe = 1 + Math.sin(now * 2 + tw.id) * .015;
+      e.animal.rotation.order = 'YXZ'; e.animal.rotation.set(pitch, e.yaw, P.sway ? Math.sin(now * 1.3 + tw.id) * P.sway : 0);
+      e.animal.position.set(Math.sin(e.yaw) * lunge, e.y0 + st * P.hop, Math.cos(e.yaw) * lunge);
+      e.animal.scale.set(B * (1 + wind * .07 - st * .05), B * (1 - wind * .11 + st * .13) * breathe, B * (1 + wind * .07 - st * .05));
       e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1);
       for(const w of e.roles.wing || []) w.rotation.z = Math.sin(now * (w.userData.fast ? 42 : 4) + w.userData.sx) * (w.userData.fast ? .5 : .25) * w.userData.sx;
       for(const h of e.roles.hover || []) h.position.y = .42 + Math.sin(now * 3 + tw.id) * .05;
-      for(const tl of e.roles.tail || []) tl.rotation.y = Math.sin(now * 2.5 + tw.id) * .35;
-      for(const te of e.roles.tentacle || []) te.rotation.x = Math.sin(now * 3 + te.userData.ph) * .15;
+      for(const tl of e.roles.tail || []) tl.rotation.y = Math.sin(now * 2.5 + tw.id) * .35 + st * .8;
+      for(const te of e.roles.tentacle || []) te.rotation.x = Math.sin(now * 3 + te.userData.ph) * .15 - wind * .5 + st * .8;
       for(const f2 of e.roles.flag || []) f2.rotation.y = Math.sin(now * 5 + tw.id) * .4;
-      for(const mf of e.roles.mouthfire || []){ mf.material.opacity = k * .9; mf.scale.setScalar(1 + k * 1.5); }
+      for(const mf of e.roles.mouthfire || []){ mf.material.opacity = st * .9; mf.scale.setScalar(1 + st * 1.5); }
     }
     for(const [id, e] of stuff.towers) if(!G.towers.includes(e.t)){ world.remove(e.g); stuff.towers.delete(id); }
     // walls
@@ -880,8 +932,9 @@ function start(el, host){
       const slow = f.slowT > 0, hitK = animateFoe(e, f, now, dt, slow);
       const ramp = Math.min(1, f.d / .9, (G.paths[f.p].len - f.d) / .9), lane = e.lane * Math.max(0, ramp);
       const px = f.x + Math.cos(f.dir) * lane - Math.sin(f.dir) * hitK * .1, py = f.y - Math.sin(f.dir) * lane - Math.cos(f.dir) * hitK * .1;
-      e.holder.position.set(wx(px), hAt(px, py), wz(py)); e.last = [px, py];
-      e.holder.scale.setScalar(Math.min(1, (G.time - e.born) / .3));
+      const age = G.time - e.born, hop = f.kid && age < .45 ? Math.sin(age / .45 * Math.PI) * .7 : 0;     // kids jump out of the bigger critter
+      e.holder.position.set(wx(px), hAt(px, py) + hop, wz(py)); e.last = [px, py];
+      e.holder.scale.setScalar(Math.min(1, age / (f.kid ? .12 : .3)) * (f.max > 1 ? .82 + .18 * f.hp / f.max : 1));   // a bit smaller with each layer lost
       e.ink.visible = slow;
       e.bar.visible = f.hp < f.max; if(e.bar.visible){ e.bar.quaternion.copy(camera.quaternion); const u = Math.max(0, f.hp / f.max); e.bar.userData.fg.scale.x = Math.max(.001, u); e.bar.userData.fg.position.x = -.23 * (1 - u); e.bar.userData.fg.material = basic(u > .4 ? '#3DCB6C' : '#FF5E5E', { depthTest: false }); }
     }
@@ -893,30 +946,33 @@ function start(el, host){
     }
     for(const e of stuff.dying){ e.dieT += dt; const u = Math.min(1, e.dieT / .5);
       e.holder.rotation.set(0, 0, 0); e.g.rotation.z = u * 1.7 * e.dieDir; e.holder.position.y = e.y0 + Math.sin(u * Math.PI) * .3; e.holder.scale.setScalar(1 - u * .55);
-      if(u >= 1){ world.remove(e.holder); const p = e.holder.position; puff(p.x, p.y + .2, p.z, '#FFFFFF', 8, .1, 1, .5); coinPop(p.x, p.y, p.z, e.f.pts); } }
+      if(u >= 1){ world.remove(e.holder); const p = e.holder.position; burst('puff', p.x, p.y + .25, p.z, .8, .45, { rise: .3 }); coinPop(p.x, p.y, p.z, e.f.pts); } }
     stuff.dying = stuff.dying.filter(e => e.dieT < .5);
     // shots: fly in an arc
     for(const s of G.shots){ let e = stuff.shots.get(s.id); if(!e) e = addShot(s);
       const rem = Math.hypot(s.tx - s.x, s.ty - s.y), u = 1 - Math.min(1, rem / e.d0), base = e.h0 === undefined ? (e.h0 = hAt(s.tower.x, s.tower.y)) : e.h0, ht = hAt(s.tx, s.ty);
       e.o.position.set(wx(s.x), (base + .95) * (1 - u) + (ht + .3) * u + Math.sin(u * Math.PI) * (s.b.id === 'abeja' ? .1 : .45), wz(s.y));
       if(s.b.id === 'abeja') e.o.lookAt(wx(s.tx), ht + .3, wz(s.ty)); else e.o.rotation.x += dt * 12;
+      if(s.b.id !== 'dragon' && G.shots.length < 40 && (e.tr = (e.tr || 0) + dt) > .035){ e.tr = 0; const tc = { gato: '#FF9FB4', abeja: '#FFE680', pulpo: '#8C74C8' }[s.b.id];
+        if(tc){ const o = new THREE.Mesh(sph(s.b.id === 'abeja' ? .025 : .045, 8, 6), basic(tc, { transparent: true, opacity: .9, depthWrite: false })); o.position.copy(e.o.position); world.add(o); stuff.fx.push({ o, life: .2, max: .2, v: [0, 0, 0], grow: -.6 }); } }
       if(s.b.id === 'dragon' && Math.random() < .5) puff(e.o.position.x, e.o.position.y, e.o.position.z, Math.random() < .5 ? '#FF8A3D' : '#FFD23F', 1, .05, .3, .3);
     }
     for(const [id, e] of stuff.shots) if(!G.shots.includes(e.s)){ world.remove(e.o); stuff.shots.delete(id); }
     // things that just happened
     for(const ev of G.fx){
       const h = ev.x !== undefined ? hAt(ev.x, ev.y) : 0;
-      if(ev.t === 'hit'){ const cc = { gato: '#FFC2CE', abeja: '#FFE680', pulpo: '#6B55A8', dragon: '#FFB13D' }[ev.kind] || '#FFFFFF'; puff(wx(ev.x), h + .35, wz(ev.y), cc, 4, .06, .6, .3); }
-      else if(ev.t === 'ink') decal(wx(ev.x), h, wz(ev.y), '#4B3A78', .3, 1.6);
-      else if(ev.t === 'boom'){ flash(wx(ev.x), h + .3, wz(ev.y), '#FF9A3D', 1.1, .45); puff(wx(ev.x), h + .3, wz(ev.y), '#FFD23F', 8, .08, 1.4, .5); decal(wx(ev.x), h, wz(ev.y), '#5A3A2A', .5, 1.2); sfx('boom'); }
-      else if(ev.t === 'die'){ sfx('coin'); }
-      else if(ev.t === 'leak'){ hurt = .6; const hp = stuff.home.position; puff(hp.x, hp.y + .5, hp.z, '#C98A4B', 8, .05, 1.6, .6); puff(hp.x, hp.y + .7, hp.z, '#FF5E7A', 3, .07, 1.5, .6); sfx('ow'); pill('lives').classList.remove('hurt'); void pill('lives').offsetWidth; pill('lives').classList.add('hurt'); }
-      else if(ev.t === 'build'){ puff(wx(ev.x), h + .1, wz(ev.y), '#FFFFFF', 8, .1, .4, .45); sfx('build'); }
-      else if(ev.t === 'up'){ for(let i = 0; i < 10; i++) puff(wx(ev.x), h + .4 + i * .08, wz(ev.y), i % 2 ? '#FFD23F' : '#FFFFFF', 1, .06, 1.6, .7); sfx('up'); }
+      if(ev.t === 'hit'){ if(ev.kind !== 'pulpo') burst('hit', wx(ev.x) + (Math.random() - .5) * .2, h + .4 + Math.random() * .15, wz(ev.y), .42, .2); }
+      else if(ev.t === 'ink') stain('ink', wx(ev.x), h, wz(ev.y), .75, 1.6);
+      else if(ev.t === 'boom'){ const r = (ev.r || 1.5); burst('boom', wx(ev.x), h + .45, wz(ev.y), r * 1.6, .42, { spin: 0 }); burst('smoke', wx(ev.x), h + .6, wz(ev.y), r * 1.2, .9, { rise: .7, spin: .4 }); decal(wx(ev.x), h, wz(ev.y), '#5A3A2A', .5, 1.2); shakeIt(.12); sfx('boom'); }
+      else if(ev.t === 'layer'){ burst('pop', wx(ev.x), h + .45, wz(ev.y), .35, .18); }
+      else if(ev.t === 'die'){ sfx('coin'); burst('pop', wx(ev.x), h + .5, wz(ev.y), .8 + Math.min(1, ev.foe.max / 20) * .7, .26); if(ev.foe && ev.foe.max >= 10){ burst('pum', wx(ev.x), h + 1.1, wz(ev.y), ev.foe.boss ? 2.2 : 1.3, .9, { rise: .5, spin: 0, rot: -.12 }); shakeIt(ev.foe.boss ? .45 : .14); if(ev.foe.boss) slowmo = .35; } }
+      else if(ev.t === 'leak'){ hurt = .6; shakeIt(.1); const hp = stuff.home.position; puff(hp.x, hp.y + .5, hp.z, '#C98A4B', 8, .05, 1.6, .6); puff(hp.x, hp.y + .7, hp.z, '#FF5E7A', 3, .07, 1.5, .6); sfx('ow'); pill('lives').classList.remove('hurt'); void pill('lives').offsetWidth; pill('lives').classList.add('hurt'); }
+      else if(ev.t === 'build'){ burst('puff', wx(ev.x), h + .25, wz(ev.y), 1.3, .45, { spin: .5 }); burst('sparkle', wx(ev.x) + .35, h + .9, wz(ev.y), .5, .5); sfx('build'); }
+      else if(ev.t === 'up'){ for(let i = 0; i < 6; i++) setTimeout(() => alive && world && burst('sparkle', wx(ev.x) + (Math.random() - .5) * .8, h + .5 + Math.random() * .6, wz(ev.y) + (Math.random() - .5) * .8, .45, .6, { rise: .9 }), i * 70); burst('pop', wx(ev.x), h + .8, wz(ev.y), 1.1, .35); sfx('up'); }
       else if(ev.t === 'sell'){ puff(wx(ev.x), h + .4, wz(ev.y), '#FFE680', 8, .1, 1.2, .5); sfx('coin'); }
-      else if(ev.t === 'wallbreak'){ puff(wx(ev.x), h + .3, wz(ev.y), '#A8743F', 10, .07, 1.4, .6); puff(wx(ev.x), h + .2, wz(ev.y), '#FFFFFF', 6, .1, .8, .5); sfx('boom'); }
-      else if(ev.t === 'kids'){ puff(wx(ev.x), h + .35, wz(ev.y), '#FFFFFF', 10, .1, 1.2, .5); sfx('boom'); }
-      else if(ev.t === 'bounce'){ puff(wx(ev.x), h + .4, wz(ev.y), '#C9C9D6', 2, .05, 1, .25); sfx('tink'); }
+      else if(ev.t === 'wallbreak'){ puff(wx(ev.x), h + .3, wz(ev.y), '#A8743F', 10, .07, 1.4, .6); burst('smoke', wx(ev.x), h + .4, wz(ev.y), 1.6, .8, { rise: .5 }); shakeIt(.12); sfx('boom'); }
+      else if(ev.t === 'kids'){ burst('pop', wx(ev.x), h + .5, wz(ev.y), 1.6, .4); burst('confetti', wx(ev.x), h + .6, wz(ev.y), 1.4, .7, { rise: .4 }); shakeIt(.1); sfx('boom'); }
+      else if(ev.t === 'bounce'){ burst('tink', wx(ev.x), h + .45, wz(ev.y), .45, .25); sfx('tink'); }
       else if(ev.t === 'farm'){ coinPop(wx(ev.x), h + .6, wz(ev.y), ev.n); }
       else if(ev.t === 'gift'){ setTimeout(() => toast('¡Un camino nuevo!', ev.n, 'Toma monedas para protegerlo.'), 300); }
       else if(ev.t === 'end'){ if(ev.won && !ev.done) roundDone(ev); else setTimeout(() => endCard(ev.won), 700); }
@@ -928,8 +984,11 @@ function start(el, host){
       else if(fx.boom){ fx.o.scale.setScalar(fx.boom * (.3 + u * .9)); fx.o.material.opacity = .8 * (1 - u); }
       else if(fx.fade){ fx.o.material.opacity = .55 * Math.min(1, (1 - u) * 2); }
       else if(fx.no){ fx.o.scale.setScalar(.5 + u * .6); fx.o.material.opacity = .9 * (1 - u); }
+      else if(fx.spr){ const k = u < .18 ? u / .18 * 1.2 : 1.2 - (u - .18) * .3; fx.o.scale.setScalar(fx.spr * Math.max(.05, k)); fx.o.material.rotation += fx.spin * dt;
+        fx.o.material.opacity = u < .55 ? 1 : (1 - u) / .45; if(fx.rise) fx.o.position.y = fx.y0 + fx.rise * u; if(fx.drift){ fx.o.position.x += fx.drift[0] * dt; fx.o.position.y += fx.drift[1] * dt; fx.o.position.z += fx.drift[2] * dt; fx.drift[1] -= 3 * dt; } }
+      else if(fx.stain){ fx.o.material.opacity = .9 * Math.min(1, (1 - u) * 3); fx.o.scale.setScalar(Math.min(1, u * 8)); }
       else if(fx.coin){ fx.o.position.y = fx.y0 + u * fx.rise; fx.coin.rotation.z += dt * 12; fx.sprite.material.opacity = Math.min(1, (1 - u) * 2.5); fx.o.scale.setScalar(Math.min(1, u * 6)); }
-      if(fx.life <= 0) world.remove(fx.o);
+      if(fx.life <= 0){ world.remove(fx.o); if(fx.spr || fx.stain) fx.o.material.dispose(); }
     }
     stuff.fx = stuff.fx.filter(fx => fx.life > 0);
     // home, pet, water, snow, clouds
@@ -940,6 +999,8 @@ function start(el, host){
     if(stuff.water) stuff.water.position.y = WATER + Math.sin(now * 1.1) * .012;
     for(const d of stuff.deco){ if(d.cloud) d.cloud.position.x = d.x0 + Math.sin(now * d.sp * .2) * 1.5; }
     if(stuff.snow){ const p = stuff.snow.geometry.attributes.position; for(let i = 0; i < p.count; i++){ let y = p.getY(i) - dt * .7; if(y < -1) y = 9; p.setY(i, y); p.setX(i, p.getX(i) + Math.sin(now + i) * dt * .1); } p.needsUpdate = true; }
+    // screen shake (explosions, big critters knocked out, food eaten)
+    if(shake > 0){ shake = Math.max(0, shake - dt * .9); placeCam(); if(shake > 0){ const a = shake * .5; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; camera.updateMatrixWorld(); } }
     // a trail just opened: the rocks in its burrow go poof
     stuff.burrows.forEach((b, pi) => { const shut = pi >= G.np; if(b.block.visible && !shut){ const p = b.g.position; puff(p.x, p.y + .4, p.z, '#B9B0A0', 12, .1, 1.4, .7); sfx('boom'); } b.block.visible = shut; });
     // range ring of the tower you tapped
@@ -1140,7 +1201,7 @@ function start(el, host){
     c.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if(a === 'exit') exit(); else if(a === 'retry') retry(); else if(a === 'next'){ host.onNext && host.onNext(api); } });
     $('.d3end').classList.add('on');
     say([won ? 'c|¡Ganaste la ronda!' : 'c|¡Ay, no! ¡Otra vez!', res.record ? 'c|¡Nuevo récord!' : null].filter(Boolean));
-    if(won){ for(let i = 0; i < 60; i++) puff((Math.random() - .5) * 14, 2 + Math.random() * 2, (Math.random() - .5) * 10, ['#FF5E7A', '#FFD23F', '#4FA8FF', '#7DD483', '#B57BFF'][i % 5], 1, .09, 2, 1.4); }
+    if(won){ for(let i = 0; i < 24; i++) setTimeout(() => alive && burst(i % 3 ? 'confetti' : 'sparkle', (Math.random() - .5) * 18, 2 + Math.random() * 2, (Math.random() - .5) * 12, 1.6 + Math.random(), 1.4, { drift: [(Math.random() - .5) * 2, 2, (Math.random() - .5) * 2] }), i * 60); }
   }
   function retry(){ G.retry(); speed = 1; ended = false; $('.d3end').classList.remove('on'); roundStart(); }
   function exit(){ stop(); host.onExit && host.onExit(); }
@@ -1150,7 +1211,8 @@ function start(el, host){
     raf = 0; if(!alive) return;
     if(!root.isConnected || !root.getClientRects().length){ raf = requestAnimationFrame(frame); return; }   // hidden: wait
     const dt = Math.min(.05, (ts - (last || ts)) / 1000); last = ts;
-    for(let i = 0; i < speed; i++) G.step(dt);
+    const gdt = slowmo > 0 ? dt * .3 : dt; slowmo = Math.max(0, slowmo - dt);      // a moment of slow motion when the bear goes down
+    for(let i = 0; i < speed; i++) G.step(gdt);
     syncAndAnimate(dt);
     renderer.render(scene, camera); hud();
     raf = requestAnimationFrame(frame);
