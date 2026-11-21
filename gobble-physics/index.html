@@ -79,6 +79,7 @@
   .sw{width:38px;height:38px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px #e3e8e1,0 3px 4px rgba(29,43,50,.16);cursor:pointer;transition:transform .17s}
   .sw.on{box-shadow:0 0 0 3px #304a59,0 3px 6px rgba(29,43,50,.23);transform:scale(1.09)}
   .opts{display:flex;gap:8px}
+  .pmul input{width:100%;accent-color:#e2584d;height:26px;margin:0}.pmt{display:flex;justify-content:space-between;font-size:11px;font-weight:800;color:#7b8d96;padding:0 4px}
   .maps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.maps .opt{font-size:13px;padding:9px 4px}
   .opt{flex:1;border:3px solid #e3eae6;background:#fff;border-radius:14px;padding:10px 6px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;line-height:1.2;color:#354d57;box-shadow:0 3px 0 rgba(48,72,77,.09)}
   .opt small{display:block;font-weight:600;font-size:11px;color:#6a7b82;margin-top:3px}
@@ -157,6 +158,8 @@
       <button class="opt" data-v="180">3 min</button>
       <button class="opt" data-v="300">5 min</button>
     </div>
+    <label class="lbl">Points boost <b id="pmulV" style="color:#e2584d;margin-left:4px">1×</b></label>
+    <div class="pmul"><input type="range" id="pmul" min="0" max="5" step="1" value="0"><div class="pmt"><span>1×</span><span>1.5×</span><span>2×</span><span>3×</span><span>4×</span><span>5×</span></div></div>
     <button class="go" id="play" disabled>Loading…</button>
     <div class="how">📱 Drag your finger anywhere to steer<br>🖱️ Point with the mouse · ⌨️ or use arrow keys / WASD</div>
     <div class="how" id="best"></div>
@@ -3612,7 +3615,7 @@ function endGame(){
   state='over';clearBanners();resetStar();const rk=rank(),pos=rk.indexOf(player)+1;
   const medal=['🥇','🥈','🥉'];
   $('place').textContent=pos===1?'🏆 You WON!':pos<=3?medal[pos-1]+' You got #'+pos+'!':'You got #'+pos+'!';
-  let best=0;try{best=+localStorage.getItem('gobblePhysBest')||0;if(player.score>best)localStorage.setItem('gobblePhysBest',player.score);}catch(e){}
+  let best=0;try{best=+localStorage.getItem('gobblePhysBest')||0;if(PMUL!==1)best=1e9;else if(player.score>best)localStorage.setItem('gobblePhysBest',player.score);}catch(e){}
   const rt=Math.round(raceT),rts=Math.floor(rt/60)+':'+String(rt%60).padStart(2,'0');
   $('overSub').textContent=winBy==='score'?(rk[0]===player?'You reached '+goal+' pts in '+rts+'!':esc(rk[0].name)+' reached '+goal+' first ('+rts+') · you had '+player.score):player.score>best&&best>0?'⭐ New best score: '+player.score+'!':'Your score: '+player.score+' pts';
   $('results').innerHTML=rk.map((h,i)=>`<div class="${h===player?'me':''}"><span>${medal[i]||(i+1)+'.'} <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${h.color}"></span> ${esc(h.name)}</span><span>${h.score}</span></div>`).join('');
@@ -3642,7 +3645,7 @@ function think(b){
     if(!(b.starT>0)&&((h.r>b.r*1.15&&d<h.r+230)||(h.starT>0&&d<h.r+420))){fx-=dx/d*(h.r+230-d);fy-=dy/d*(h.r+230-d);}
     else if(b.r>h.r*1.15&&!(h.starT>0)&&d<340&&!(mode==='easy'&&h===player)){const s=(30+h.r)/(d+40);if(s>bestS){bestS=s;bestT=h;}}}
   if(fx||fy){const m=Math.hypot(fx,fy);b.dx=fx/m;b.dy=fy/m;b.target=null;return;}
-  if(STAR&&STAR.age>5){const d=Math.hypot(STAR.x-b.x,STAR.y-b.y);if(d<1300&&Math.random()<(mode==='easy'?.6:.9)){b.target={x:STAR.x,y:STAR.y};return;}}
+  if(STAR&&STAR.age>(mode==='easy'?5:0)){const d=Math.hypot(STAR.x-b.x,STAR.y-b.y);if(d<1300&&Math.random()<(mode==='easy'?.6:.9)){b.target={x:STAR.x,y:STAR.y};return;}}
   if(bestT&&Math.random()<(mode==='easy'?.6:.85)){b.target=bestT;return;}
   // head for the richest nearby patch of food it can actually swallow (value-weighted centroid of a grid cell)
   const lim=b.rTo*.9,cs=Math.max(44,b.r*1.7),cells=new Map(),b5=BIG5(),b11=BIG11(),b15=BIG15(),b20=BIG20(),b8=BIG8(),b13=BIG13(),b21=BIG21(),b16=BIG16();
@@ -3771,7 +3774,7 @@ function deactivate(o){__dbg.deact++;const t=o.body.translation(),q=o.body.rotat
   else{o.pose={x:t.x,y:Math.max(t.y,.5),z:t.z,q:{x:q.x,y:q.y,z:q.z,w:q.w}};}
   setInst(o);}
 const BIG16=()=>.92*lvR(15),BIG21=()=>.92*lvR(20),BIG8=()=>.92*lvR(7),BIG13=()=>.92*lvR(12),BIG5=()=>.92*lvR(4),BIG11=()=>.92*lvR(10),BIG15=()=>.92*lvR(14),BIG20=()=>.92*lvR(19);   // too big for a level-10 / level-14 hole => level 11+ / 15+ item
-function creditEat(o,h){__dbg.eat++;const pv=o.pts+(o.r>=BIG5()?1:0)+(o.r>=BIG11()?1:0)+(o.r>=BIG15()?1:0)+(o.r>=BIG20()?4:0)+(o.r>=BIG8()?1:0)+(o.r>=BIG13()?2:0)+(o.r>=BIG5()?1:0)+(o.r>=BIG21()?5:0)+(o.r>=BIG16()?1:0);h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
+function creditEat(o,h){__dbg.eat++;const pv=Math.round(PMUL*(o.pts+(o.r>=BIG5()?1:0)+(o.r>=BIG11()?1:0)+(o.r>=BIG15()?1:0)+(o.r>=BIG20()?4:0)+(o.r>=BIG8()?1:0)+(o.r>=BIG13()?2:0)+(o.r>=BIG5()?1:0)+(o.r>=BIG21()?5:0)+(o.r>=BIG16()?1:0)));h.score+=pv;h.chomp=Math.min(1,h.chomp+(o.r>h.r*.25?1:.45));grow(h,pv);
   if(h===player){sfx(o.r);if(!pend.pts)pend.t=.4;pend.pts+=pv;if(o.r>30){buzz(25);shake=Math.min(8,o.r*.07);}}}
 function nearestHole(o){let best=null,bd=1e9;for(const h of holes){if(!h.alive)continue;const d=Math.hypot(h.x-o.x,h.y-o.y)-h.r;if(d<bd){bd=d;best=h;}}return[best,bd];}
 function stepPhysics(dt){
@@ -4095,6 +4098,9 @@ optGroup('modes',v=>mode=v);
 optGroup('maps',v=>{cityId=v;city=CITIES[v];try{localStorage.setItem('gobbleMap',v);}catch(e){}newTown();});
 $('maps').querySelectorAll('.opt').forEach(b=>b.classList.toggle('on',b.dataset.v===cityId));optGroup('lens',v=>{roundLen=timeLen=+v;});optGroup('goals',v=>goal=+v);
 optGroup('wins',v=>{winBy=v;const sc=v==='score';$('goals').style.display=sc?'':'none';$('lens').style.display=sc?'none':'';$('lensLbl').textContent=sc?'Target score':'Round length';roundLen=sc?1200:timeLen;});
+const PMULS=[1,1.5,2,3,4,5];let PMUL=1;
+function setPmul(i){PMUL=PMULS[i]||1;$('pmul').value=i;$('pmulV').textContent=PMUL+'×'+(PMUL>1?' faster':'');try{localStorage.setItem('gobblePmul',i);}catch(e){}}
+$('pmul').oninput=e=>setPmul(+e.target.value);try{setPmul(+localStorage.getItem('gobblePmul')||0);}catch(e){setPmul(0);}
 function showBest(){try{const b=+localStorage.getItem('gobblePhysBest');if(b)$('best').textContent='⭐ Best score: '+b;}catch(e){}}
 try{const n=localStorage.getItem('gobbleName');if(n)$('name').value=n;}catch(e){}showBest();
 $('play').onclick=()=>{initAudio();try{localStorage.setItem('gobbleName',$('name').value);}catch(e){}newGame();};
