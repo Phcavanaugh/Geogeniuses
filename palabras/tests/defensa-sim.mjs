@@ -37,6 +37,14 @@ function think(g, kind, rand){
       if(b.farm !== undefined){ if(g.coins < cost) return; const farms = g.towers.filter(t => t.i === i).length; if(g.r < g.lastRound - 12 && farms < (smart ? 3 : 1) && g.towers.length >= 6 && g.lives === g.maxLives) opts.push({ cost, v: smart ? .8 : 1.5, go: () => { const s = sp[Math.floor(rand() * sp.length)]; s && g.place(s[0], s[1], i); } }); return; }
       const fake = { i, a: 0, b: 0 }, rng = g.stat(fake).range; let best = null;
       for(const [x, y] of (smart ? sp : sp.filter(() => rand() < .25))){ const c = coverage(g, x, y, rng); if(!best || c > best.c) best = { x, y, c }; }
+      // owls: one (two for the smart robot) once hidden critters are near
+      // owls go where they can see the trail next to the most other towers
+      if(b.sees){ const owls = g.towers.filter(t => t.i === i), want = smart ? g.np + 1 : g.np;   // about one per open trail
+        if(g.r >= g.A.hidden - 1 && owls.length < want){ let bo = null;
+          for(const [x, y] of sp){ if(owls.some(o => Math.hypot(o.x - x, o.y - y) < rng * 1.5)) continue;
+            const n = g.towers.filter(t => R.TOWERS[t.i].range && Math.hypot(t.x - x, t.y - y) <= rng).length, c = n * 3 + coverage(g, x, y, rng) * .2; if(!bo || c > bo.c) bo = { x, y, c }; }
+          if(bo) opts.push({ cost, v: 99, go: () => g.place(bo.x, bo.y, i) }); }
+        return; }
       if(best) opts.push({ cost, v: power(g, fake) * best.c / cost * 100 * (b.id === 'pulpo' && g.towers.some(t => t.i === i) ? .3 : 1), go: () => g.place(best.x, best.y, i) });
     });
     for(const t of g.towers) for(const o of g.upOptions(t)){
@@ -53,6 +61,11 @@ function think(g, kind, rand){
     // (upgrades the robot can't afford were never added)
     if(!smart) opts.forEach(o => o.v *= .5 + rand());
     opts.sort((a, b) => b.v - a.v);
+    // the smart robot saves for a top upgrade (it comes with a power) when nothing got through last round
+    if(smart && !g.leakedLast && g.r >= 12){
+      const top = g.towers.filter(t => R.TOWERS[t.i].range).flatMap(t => g.upOptions(t).filter(o => o.step === 3 && !o.locked).map(o => ({ t, o }))).sort((a, b) => a.o.cost - b.o.cost)[0];
+      if(top){ if(g.coins >= top.o.cost){ g.upgrade(top.t, top.o.path); continue; } if(top.o.cost - g.coins < 400) return; }
+    }
     // the smart robot holds back a little cash early on; the kid spends everything
     opts[0].go();
   }
@@ -64,7 +77,9 @@ function play(age, map, kind, seed){
   while(true){
     think(g, kind, rand);
     g.go();
-    let t = 0; while(g.phase === 'wave' && t < 600){ g.step(1 / 30); t += 1 / 30; }
+    let t = 0; while(g.phase === 'wave' && t < 600){ g.step(1 / 30); t += 1 / 30;
+      // press a ready power button when there's a crowd (like a kid would)
+      if(Math.round(t * 30) % 30 === 0 && (g.foes.length > 6 || g.foes.some(f => f.boss))) for(const p of g.powers()) if(p.ready) g.usePower(p.id); }
     g.leakedLast = g.lives < (g.prevLives ?? g.lives); g.prevLives = g.lives;
     if(g.phase === 'lost'){ if(retries-- > 0){ g.retry(); g.prevLives = g.lives; continue; } return { round: g.r, won: false, lives: 0 }; }
     if(g.phase === 'won') return { round: g.r, won: true, lives: g.lives };
