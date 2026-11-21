@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE } from './defensa-rules.js?v=34';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE } from './defensa-rules.js?v=35';
 
 // ====================================================================================
 // materials
@@ -1033,8 +1033,11 @@ function start(el, host){
   // while a tower (or the fence) is picked: the green / red layer, and the footprint under your finger or mouse
   let aim = null;                          // where the pointer is: { cx, cy, touch }
   const LIFT = 70;                         // on touch screens the footprint sits above your finger, so you can see it
+  // the board point under a screen point. Cheap: meet a flat plane, then the plane at the land's height there (twice)
+  const flatP = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), meet = new THREE.Vector3();
   function pointAt(cx, cy){ const r = canvas.getBoundingClientRect(); ray.setFromCamera({ x: (cx - r.left) / r.width * 2 - 1, y: -(cy - r.top) / r.height * 2 + 1 }, camera);
-    const lh = ray.intersectObject(stuff.land, false)[0]; return lh ? [Math.round((lh.point.x + COLS / 2) * 20) / 20, Math.round((lh.point.z + ROWS / 2) * 20) / 20] : null; }
+    let h = 0; for(let k = 0; k < 3; k++){ flatP.constant = -h; if(!ray.ray.intersectPlane(flatP, meet)) return null; h = hAt(meet.x + COLS / 2, meet.z + ROWS / 2); }
+    return [Math.round((meet.x + COLS / 2) * 20) / 20, Math.round((meet.z + ROWS / 2) * 20) / 20]; }
   function placing(){
     const on = (sel === 'wall' || sel >= 0) && (G.phase === 'build' || G.phase === 'wave'), O = stuff.okMap, gh = stuff.ghost;
     O.mesh.visible = on && sel !== 'wall';
