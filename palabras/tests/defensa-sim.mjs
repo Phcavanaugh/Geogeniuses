@@ -1,40 +1,81 @@
-// Balance check for ¡Defensa!: robot players try rounds 1–N at each age.
-//   node palabras/tests/defensa-sim.mjs [rounds]
-// Each cell: W/L + food left, for three robots: good (walls + upgrades) / ok (mixes towers) / little kid (one kind, no walls).
-import { Game, TOWERS, WALL, COLS, ROWS } from '../defensa-rules.js';
-const N = +process.argv[2] || 20;
-function play(r, age, skill){
-  const g = new Game(r, age), pts = [];
-  for(const T of g.paths) for(const s of T.seg) for(let u = 0; u <= 1; u += .1) pts.push([s.x1 + (s.x2 - s.x1)*u, s.y1 + (s.y2 - s.y1)*u]);
-  const cells = []; for(let y = .5; y < ROWS; y += .25) for(let x = .5; x < COLS; x += .25) cells.push([x, y]);
-  const score = (cx, cy, range) => pts.filter(([x, y]) => Math.hypot(x - cx, y - cy) <= range).length;
-  const rot = skill === 0 ? [0] : [3,0,1,2,0,1,3,0].filter(i => g.un[i]); let n = 0;
-  const rank = t => t.i === 3 ? 3 : t.i === 0 ? 2 : 1;
-  // the good robot puts a fence on each trail where the most towers can reach it
-  function fence(){
-    for(let p = 0; p < g.paths.length; p++){ if(g.walls.some(w => w.p === p) || g.coins < WALL.cost) continue;
-      const T = g.paths[p]; let best = null, bs = -1;
-      for(let d = 1.05; d < T.len - 1.25; d += .25){ const [x, y] = g.posAt(p, d), s = g.towers.filter(t => Math.hypot(t.x - x, t.y - y) <= g.stat(t).range).length; if(s > bs){ bs = s; best = [x, y]; } }
-      if(best && bs > 0) g.placeWall(best[0], best[1]); }
-    for(const w of g.walls) if(w.hp < w.max * .5 && w.lvl < 3 && g.coins >= g.upCost(w)) g.upgrade(w);
-  }
-  function spend(){
-    for(let k = 0; k < 40; k++){
-      if(skill === 2 && g.towers.length >= 2 && n % 2 === 1){
-        const t = g.towers.filter(t => t.lvl < 3).sort((a, b) => a.lvl - b.lvl || rank(b) - rank(a))[0];
-        if(t && g.coins >= g.upCost(t)){ g.upgrade(t); n++; continue; } }
-      const i = rot[n % rot.length]; if(g.coins < TOWERS[i].cost) break;
-      let best = null, bs = -1; for(const [x, y] of cells){ if(!g.canBuild(x, y)) continue; const s = score(x, y, TOWERS[i].range); if(s > bs){ bs = s; best = [x, y]; } }
-      if(!best || !g.place(best[0], best[1], i)) break; n++;
-      if(skill === 2 && g.towers.length === 3) fence();
-    }
-    if(skill === 2) fence();
-  }
-  spend(); g.go(); let t = 0, k = 0;
-  while(g.phase === 'wave' && t < 900){ g.step(1/30); t += 1/30; if(++k % 30 === 0) spend(); }
-  return (g.phase === 'won' ? 'W' : 'L') + g.lives;
+// Balance robots for ¡Defensa!: play whole games (towers and coins carry over between rounds) and report how far
+// each robot gets. Run: node palabras/tests/defensa-sim.mjs [games per age]
+// "smart" spends well; "kid" makes so-so choices and saves less. Good balance: smart wins most islands at every
+// age; kid gets a good way in (and wins at 4–5).
+import * as R from '../defensa-rules.js';
+
+const N = +process.argv[2] || 4;
+
+function coverage(g, x, y, range, self = null){
+  // how much open trail is in range (board units), counting the last part of each trail a bit more
+  // (open trails, plus a trail that opens within the next few rounds: you can see it coming)
+  let c = 0; const n = R.pathsFor(g.r + 3, g.age);
+  g.map.allPaths.slice(0, n).forEach((P, k) => { const w = k < g.np ? 1 : .6;
+    for(let i = 0; i < P.length - 1; i++){ const [ax, ay] = P[i], [bx, by] = P[i+1], l = Math.hypot(bx - ax, by - ay);
+      for(let u = 0; u < l; u += .25){ const px = ax + (bx - ax) * u / l, py = ay + (by - ay) * u / l; if(Math.hypot(px - x, py - y) > range) continue;
+        // spots nothing guards yet are worth more (so new trails get covered)
+        const guards = g.towers.reduce((n, t) => n + (t !== self && R.TOWERS[t.i].range && Math.hypot(t.x - px, t.y - py) <= g.stat(t).range ? 1 : 0), 0);
+        c += .25 * w * (1 + i / P.length * .5) / (1 + guards * .7); } } });
+  return c;
 }
-for(const age of [4, 7, 10]){
-  const row = []; for(let r = 1; r <= N; r++) row.push(`${r}:${play(r, age, 2)} ${play(r, age, 1)} ${play(r, age, 0)}`);
-  console.log(`AGE ${age}\n  ` + row.join(' | '));
+function spots(g){
+  const out = [];
+  for(let x = .6; x < R.COLS - .5; x += .55) for(let y = .6; y < R.ROWS - .5; y += .55) if(g.canBuild(x, y)) out.push([x, y]);
+  return out;
+}
+const power = (g, t) => { const b = R.TOWERS[t.i]; if(b.farm !== undefined && !b.range) return 0; const s = g.stat(t);
+  let p = s.pierce * Math.max(s.dmg, b.id === 'pulpo' ? .6 : 0) * s.shots / s.cd; if(s.dot) p += s.dot * 2; if(s.blast) p *= 1.4; return p; };
+
+function think(g, kind, rand){
+  const smart = kind === 'smart';
+  let guard = 0;
+  while(guard++ < 40){
+    const opts = [];
+    const sp = spots(g);
+    R.TOWERS.forEach((b, i) => {
+      if(!g.un[i] || g.coins < g.price(b.cost)) return; const cost = g.price(b.cost);
+      if(b.farm !== undefined){ if(g.coins < cost) return; const farms = g.towers.filter(t => t.i === i).length; if(g.r < g.lastRound - 12 && farms < (smart ? 3 : 1) && g.towers.length >= 6 && g.lives === g.maxLives) opts.push({ cost, v: smart ? .8 : 1.5, go: () => { const s = sp[Math.floor(rand() * sp.length)]; s && g.place(s[0], s[1], i); } }); return; }
+      const fake = { i, a: 0, b: 0 }, rng = g.stat(fake).range; let best = null;
+      for(const [x, y] of (smart ? sp : sp.filter(() => rand() < .25))){ const c = coverage(g, x, y, rng); if(!best || c > best.c) best = { x, y, c }; }
+      if(best) opts.push({ cost, v: power(g, fake) * best.c / cost * 100 * (b.id === 'pulpo' && g.towers.some(t => t.i === i) ? .3 : 1), go: () => g.place(best.x, best.y, i) });
+    });
+    for(const t of g.towers) for(const o of g.upOptions(t)){
+      if(o.done || o.locked || g.coins < o.cost) continue;
+      if(R.TOWERS[t.i].farm !== undefined){ opts.push({ v: 1.2, go: () => g.upgrade(t, o.path) }); continue; }
+      const before = power(g, t), after = (o.path ? t.b++ : t.a++, power(g, t)); o.path ? t.b-- : t.a--;
+      const c = coverage(g, t.x, t.y, g.stat(t).range, t) * 1.5;
+      opts.push({ cost: o.cost, v: (after - before) * c / o.cost * 100 * (smart ? 1 : .7), go: () => g.upgrade(t, o.path) });
+    }
+    if(g.r >= 6 && g.walls.length < (smart ? 2 : 1) && g.coins >= g.price(R.WALL.cost)){
+      const T = g.paths[0], [x, y] = g.posAt(0, T.len - 2.5); opts.push({ v: .8, go: () => g.placeWall(x, y) });
+    }
+    if(!opts.length) return;
+    // (upgrades the robot can't afford were never added)
+    if(!smart) opts.forEach(o => o.v *= .5 + rand());
+    opts.sort((a, b) => b.v - a.v);
+    // the smart robot holds back a little cash early on; the kid spends everything
+    opts[0].go();
+  }
+}
+
+function play(age, map, kind, seed){
+  const rand = R.rng(seed), g = new R.Game(age, map);
+  let r0 = 0, retries = 3;          // like pressing "¡Otra vez!" (back to the start of the round) up to 3 times
+  while(true){
+    think(g, kind, rand);
+    g.go();
+    let t = 0; while(g.phase === 'wave' && t < 600){ g.step(1 / 30); t += 1 / 30; }
+    g.leakedLast = g.lives < (g.prevLives ?? g.lives); g.prevLives = g.lives;
+    if(g.phase === 'lost'){ if(retries-- > 0){ g.retry(); g.prevLives = g.lives; continue; } return { round: g.r, won: false, lives: 0 }; }
+    if(g.phase === 'won') return { round: g.r, won: true, lives: g.lives };
+    g.nextRound();
+    if(++r0 > 200) return { round: g.r, won: false, stuck: true };
+  }
+}
+
+for(const age of [4, 7, 10]) for(const kind of ['smart', 'kid']){
+  const res = [];
+  for(let i = 0; i < N; i++) res.push(play(age, i % 3, kind, 1000 + i * 17 + age));
+  const wins = res.filter(r => r.won).length;
+  console.log(`age ${String(age).padStart(2)} ${kind.padEnd(5)}  won ${wins}/${N}  rounds reached: ${res.map(r => r.won ? `✓${r.lives}` : r.round).join(' ')}  (win at ${R.AGES[age].rounds})`);
 }

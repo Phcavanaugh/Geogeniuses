@@ -187,7 +187,7 @@ function levelEnd(pass){
   setOverPet(petPanel(Lv, grew, newHat));
   $('nextLvl').style.display = pass && next ? '' : 'none';
   $('tdOverBtn').style.display = pass && window.TD && TD.available() ? '' : 'none';
-  if(window.TD) $('tdOverBtn').textContent = `🏰 ¡A defender! · Ronda ${TD.state.round}`;
+  if(window.TD) $('tdOverBtn').textContent = `🏰 ¡A defender! · Ronda ${TD.round()}`;
   $('again').textContent = pass ? '🔄 Otra vez' : '🔄 ¡Inténtalo otra vez!';
   $('over').classList.add('on');
   const line = pass ? [worldDone ? 'c|¡Mundo completado!' : 'c|¡Nivel superado!'] : ['c|¡Inténtalo otra vez!'];

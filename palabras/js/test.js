@@ -26,7 +26,7 @@ if (TEST) (() => {
     <button data-a="pet">⬆️ Pet: next level</button>
     <button data-a="evolve">🌟 Pet: next evolution</button>
     <b>¡Defensa!</b>
-    <div class="row"><input id="tstRound" type="number" min="1" max="99" value="1"><button data-a="round">🏰 Play round</button></div>
+    <div class="row"><input id="tstRound" type="number" min="1" max="99" value="40"><button data-a="round">🏰 Unlock rounds up to</button></div>
     <b>Fox homework (10 años)</b>
     <button data-a="fox">🦊 Unlock every fox chapter</button>
     <b>Test save</b>
@@ -50,7 +50,7 @@ if (TEST) (() => {
     evolve(){ const M = L3(); if (!M) return done('3D pet still loading'); const now = petStage();
       while (petStage() === now && petLevel().level < 30) { const L = petLevel(); pet.xp += L.need - L.into; }
       store.set('pet', pet); renderHomePet(); done(`${petName()} is now ${M.STAGES[petStage()].name}`); },
-    round(){ const r = Math.max(1, Math.min(99, +$('tstRound').value || 1)); TD.state.round = r; TD.state.earned = Math.max(TD.state.earned, r); TD._t.save(); TD.badge(); box.classList.remove('open'); TD.open(); },
+    round(){ const r = Math.max(1, Math.min(99, +$('tstRound').value || 1)); TD.state.earned = r; TD._t.save(); TD.badge(); box.classList.remove('open'); TD.open(); },
     fox(){ const u = myUnits()[0]; if (!u) return done('The fox unit is in 10 años'); S.unit = u; S.tprog = null; const z = ZJ(); z.open = zLevels().length - 1; saveTP(); done('Every fox chapter unlocked'); },
     reset(){ if (!confirm('Start the test save over?')) return; Object.keys(localStorage).filter(k => k.startsWith('hpT')).forEach(k => localStorage.removeItem(k)); location.reload(); },
     exit(){ location.href = location.pathname; },
