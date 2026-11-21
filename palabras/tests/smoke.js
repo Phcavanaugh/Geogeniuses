@@ -43,16 +43,18 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
     await p.click('.shopitem[data-id="penguin"] .buy'); await p.click('.shopitem[data-id="penguin"] .buy'); await p.waitForTimeout(400);
     log.push(`${age} bought penguin -> ${await p.evaluate(() => pet.species)}`);
     await p.click('.shoptabs button[data-tab="skins"]'); await p.waitForTimeout(400);
-    // ¡Defensa! tower defense: open a round, build, play it to the end
+    // ¡Defensa! 3D tower defense: open a round, build a tower and a fence, play it to the end
     await p.evaluate(() => { goHome(); S.from = 'map'; renderMap(); show('map'); }); await p.waitForTimeout(300);
-    await p.click('#tdMapBtn'); await p.waitForTimeout(600); log.push(`${age} defensa -> ${await onView()}`);
-    await p.click('#tdTowers button[data-i="0"]');
-    const box = await p.locator('#tdCanvas').boundingBox(), T = box.width / 9;
-    for (let r = 0; r < 13; r += 2) for (let c = 0; c < 9; c += 3) await p.mouse.click(box.x + (c + .5) * T, box.y + (r + .5) * T);
-    await p.click('#tdGo'); await p.waitForTimeout(1500);
-    const tdEnd = await p.evaluate(() => { const X = TD._t; for (let i = 0; i < 30 * 600 && X.G && X.G.phase === 'wave'; i++) X.update(1 / 30); return X.G && X.G.phase; });
-    await p.waitForTimeout(500); log.push(`${age} defensa round -> ${tdEnd ? 'played to the end' : '?'}, towers:${await p.evaluate(() => TD._t.G.towers.length)}`);
-    await p.click('#tdEndB [data-a="map"]'); await p.waitForTimeout(400); log.push(`${age} back -> ${await onView()}`);
+    await p.click('#tdMapBtn'); await p.waitForFunction(() => TD._t.G, null, { timeout: 15000 }); await p.waitForTimeout(800);
+    log.push(`${age} defensa -> ${await onView()} trails:${await p.evaluate(() => TD._t.G.np)}`);
+    await p.click('.d3tw[data-i="0"]');
+    const box = await p.locator('.d3stage canvas').boundingBox();
+    for (const [fx, fy] of [[.3, .35], [.7, .45], [.35, .65], [.65, .7]]) await p.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+    const built = await p.evaluate(() => { const g = TD._t.G, T = g.paths[0], [x, y] = g.posAt(0, T.len * .5); g.coins += 100; const w = g.placeWall(x, y); return g.towers.length + ' towers, wall:' + !!w; });
+    await p.click('.d3go'); await p.waitForTimeout(1500);
+    await p.evaluate(() => TD._t.api.step(240)); await p.waitForTimeout(1200);
+    log.push(`${age} defensa round -> ${built}, ${await p.evaluate(() => TD._t.G.phase)}, ${await p.evaluate(() => TD._t.G.points)} pts`);
+    await p.click('.d3end [data-a="exit"]'); await p.waitForTimeout(500); log.push(`${age} back -> ${await onView()}`);
     // settings + album
     for (const v of ['settings', 'album']) { await p.evaluate(v => { const b = document.querySelector(`[data-go="${v}"], #${v}Btn`); if (b) b.click(); else show(v); }, v); await p.waitForTimeout(300); log.push(`${age} ${v} -> ${await onView()}`); }
     // fox homework unit (10 only)

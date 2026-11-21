@@ -14,7 +14,7 @@
 <title>¡Hola, Palabras!</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/palabras.css?v=27">
+<link rel="stylesheet" href="css/palabras.css?v=28">
 </head>
 <body>
 <header>
@@ -350,19 +350,7 @@
     <div class="shopgrid" id="shopGrid"></div>
   </section>
 
-  <section class="view" id="defensa">
-    <div class="topbar">
-      <button class="iconbtn" id="tdExit" aria-label="Salir">🗺️</button>
-      <div class="title" id="tdTitle">🏰 ¡Defensa!</div>
-      <div style="width:46px"></div>
-    </div>
-    <div class="tdhud"><span>❤️ <b id="tdLives">10</b></span><span>🪙 <b id="tdCoins">0</b></span><span id="tdLeft"></span></div>
-    <div class="tdstage"><canvas id="tdCanvas"></canvas><div class="tdmenu" id="tdMenu"></div>
-      <div class="tdend" id="tdEnd"><div class="tdcard"><div class="e" id="tdEndE"></div><div class="t" id="tdEndT"></div><div class="s" id="tdEndS"></div><div class="b" id="tdEndB"></div></div></div>
-    </div>
-    <div class="tdtip" id="tdTip"></div>
-    <div class="tdbar"><div class="tdtowers" id="tdTowers"></div><button class="tdgo" id="tdGo">▶ ¡Empieza!</button></div>
-  </section>
+  <section class="view" id="defensa"><div id="tdHost"></div></section>   <!-- ¡Defensa! 3D fills the screen: defensa3d.js -->
 
   <section class="view" id="album">
     <div class="topbar">
@@ -446,21 +434,22 @@
 </div>
 
 <!-- Game code, in load order. Each file can use what the files above it define. -->
-<script src="js/words.js?v=27"></script>
-<script src="js/riddles.js?v=27"></script>
-<script src="js/content7.js?v=27"></script>
-<script src="js/units.js?v=27"></script>
-<script src="js/core.js?v=27"></script>
-<script src="js/pet.js?v=27"></script>
-<script src="js/home.js?v=27"></script>
-<script src="js/tarea.js?v=27"></script>
-<script src="js/run.js?v=27"></script>
-<script src="js/word-games.js?v=27"></script>
-<script src="js/arcade.js?v=27"></script>
-<script src="js/defensa.js?v=27"></script>
-<script src="js/app.js?v=27"></script>
-<script src="js/test.js?v=27"></script>
-<script type="module" src="monster3d.js?v=27"></script>
-<script type="module" src="lolo3d.js?v=27"></script>
+<script src="js/words.js?v=28"></script>
+<script src="js/riddles.js?v=28"></script>
+<script src="js/content7.js?v=28"></script>
+<script src="js/units.js?v=28"></script>
+<script src="js/core.js?v=28"></script>
+<script src="js/pet.js?v=28"></script>
+<script src="js/home.js?v=28"></script>
+<script src="js/tarea.js?v=28"></script>
+<script src="js/run.js?v=28"></script>
+<script src="js/word-games.js?v=28"></script>
+<script src="js/arcade.js?v=28"></script>
+<script src="js/defensa.js?v=28"></script>
+<script src="js/app.js?v=28"></script>
+<script src="js/test.js?v=28"></script>
+<script type="module" src="monster3d.js?v=28"></script>
+<script type="module" src="lolo3d.js?v=28"></script>
+<script type="module" src="defensa3d.js?v=28"></script>
 </body>
 </html>

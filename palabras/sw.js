@@ -1,8 +1,8 @@
 // ¡Hola, Palabras! offline support.
 // The page itself: network first (so updates show up), cached copy when offline.
 // Dora's sound packs and fonts: cache first (they never change for a given version).
-const VERSION = 'palabras-v27';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3', './css/palabras.css?v=27', './js/words.js?v=27', './js/riddles.js?v=27', './js/content7.js?v=27', './js/units.js?v=27', './js/core.js?v=27', './js/pet.js?v=27', './js/home.js?v=27', './js/tarea.js?v=27', './js/run.js?v=27', './js/word-games.js?v=27', './js/arcade.js?v=27', './js/defensa.js?v=27', './js/app.js?v=27', './js/test.js?v=27', './monster3d.js?v=27', './lolo3d.js?v=27', './lib/three.module.min.js'];
+const VERSION = 'palabras-v28';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3', './css/palabras.css?v=28', './js/words.js?v=28', './js/riddles.js?v=28', './js/content7.js?v=28', './js/units.js?v=28', './js/core.js?v=28', './js/pet.js?v=28', './js/home.js?v=28', './js/tarea.js?v=28', './js/run.js?v=28', './js/word-games.js?v=28', './js/arcade.js?v=28', './js/defensa.js?v=28', './js/app.js?v=28', './js/test.js?v=28', './monster3d.js?v=28', './lolo3d.js?v=28', './defensa3d.js?v=28', './defensa-rules.js?v=28', './defensa.html', './audio/defensa.json', './audio/defensa.mp3', './lib/three.module.min.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));

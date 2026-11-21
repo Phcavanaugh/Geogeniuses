@@ -1,6 +1,6 @@
 // Lolo the axolotl in 3D. Lolo evolves through six stages as the pet levels up,
 // and every prize (bow, cap, sunglasses, crown…) is a real 3D model.
-// window.Lolo3D = { ok, STAGES, stageOf(level), snapshot(px,opts), live(el,px,opts), poke(), evolve(from,to) }
+// window.Lolo3D = { ok, STAGES, stageOf(level), snapshot(px,opts), model(opts), live(el,px,opts), poke(), evolve(from,to) }
 import * as THREE from './lib/three.module.min.js';
 
 const STAGES = [
@@ -320,6 +320,8 @@ function loop(ms){
 window.Lolo3D = {
   ok: true, STAGES, stageOf, SKINS: Object.keys(SKINS),
   snapshot(px, o){ return snapshot(Math.round(px*2), o); },
+  // a fresh 3D model of the pet (for other scenes, like ¡Defensa!): o = { species, skin, stage, hat }
+  model(o){ const sp = BUILD[o.species] ? o.species : 'axolotl'; return BUILD[sp](o.stage || 0, o.hat || '', o.skin).root; },
   live(el, px, o){
     if(!live){ live = makeView(false);
       live.flash = new THREE.Mesh(new THREE.SphereGeometry(1.2, 24, 16), new THREE.MeshBasicMaterial({ color:'#FFF6C8', transparent:true, opacity:0, depthWrite:false })); live.scene.add(live.flash);
