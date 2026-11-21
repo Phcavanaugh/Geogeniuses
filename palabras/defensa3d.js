@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES } from './defensa-rules.js?v=33';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE } from './defensa-rules.js?v=34';
 
 // ====================================================================================
 // materials
@@ -676,6 +676,17 @@ function start(el, host){
     };
     landMat.customProgramCacheKey = () => 'land-' + G.map.id;
     const land = new THREE.Mesh(geo, landMat); land.receiveShadow = true; world.add(land); stuff.land = land;
+    // where you can build: a see-through green / red layer draped on the land, shown while a tower is picked
+    { const K = 8, cw = Math.round(LW * K), ch = Math.round(LH * K), cv = document.createElement('canvas'); cv.width = cw; cv.height = ch;
+      const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.minFilter = THREE.LinearFilter;
+      const ok = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+      ok.renderOrder = 3; ok.visible = false; world.add(ok);
+      // which spots are blocked by things that never move (trails, the bowl, trees, the edge): worked out once
+      const x0 = COLS / 2 - LW / 2, y0 = ROWS / 2 - LH / 2, fixed = new Uint8Array(cw * ch), saveTowers = G.towers; G.towers = [];
+      for(let j = 0; j < ch; j++) for(let i = 0; i < cw; i++){ const x = x0 + (i + .5) / K, y = y0 + (j + .5) / K;
+        fixed[j * cw + i] = x < 0 || x > COLS || y < 0 || y > ROWS ? 0 : G.whyNot(x, y) ? 2 : 1; }
+      G.towers = saveTowers;
+      stuff.okMap = { mesh: ok, tex: t, cv, K, cw, ch, x0, y0, fixed, key: '' }; }
     // water
     const water = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: th.water, roughness: .15, metalness: .05, transparent: true, opacity: .8 }));
     water.rotation.x = -Math.PI / 2; water.position.y = WATER; water.receiveShadow = true; world.add(water); stuff.water = water;
@@ -742,6 +753,15 @@ function start(el, host){
       if(host.pet && window.Lolo3D && window.Lolo3D.model){ try{ pet = window.Lolo3D.model(host.pet); pet.scale.setScalar(.36); pet.position.set(1.15, .4, .7); pet.traverse(o => { if(o.isMesh) o.castShadow = true; }); home.add(pet); }catch(e){ pet = null; } }
       stuff.home = home; stuff.pet = pet; stuff.bowl = bw; }
     // range ring, and a flash for "can't build here"
+    // the footprint that follows your finger while placing: green = fine here, red = not here
+    { const g = new THREE.Group(), mat = c => new THREE.MeshBasicMaterial({ color: c, transparent: true, depthTest: false, depthWrite: false, side: THREE.DoubleSide });
+      const foot = new THREE.Mesh(new THREE.CircleGeometry(1, 40), mat('#3DDC6A')); foot.material.opacity = .55;
+      const edge = new THREE.Mesh(new THREE.RingGeometry(.86, 1, 40), mat('#FFFFFF')); edge.material.opacity = .9;
+      const reach = new THREE.Mesh(new THREE.RingGeometry(.975, 1, 72), mat('#3DDC6A')); reach.material.opacity = .9;
+      const area = new THREE.Mesh(new THREE.CircleGeometry(1, 72), mat('#3DDC6A')); area.material.opacity = .12;
+      const bar = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .22), mat('#3DDC6A')); bar.material.opacity = .75;
+      for(const o of [foot, edge, reach, area, bar]){ o.rotation.x = -Math.PI / 2; o.renderOrder = 6; g.add(o); }
+      g.visible = false; world.add(g); stuff.ghost = { g, foot, edge, reach, area, bar }; }
     stuff.ring = new THREE.Mesh(new THREE.RingGeometry(.96, 1, 64), basic('#7B5CFF', { transparent: true, opacity: .85, side: THREE.DoubleSide, depthTest: false })); stuff.ring.rotation.x = -Math.PI / 2; stuff.ring.visible = false; stuff.ring.renderOrder = 6; world.add(stuff.ring);
     stuff.disc = new THREE.Mesh(new THREE.CircleGeometry(1, 64), basic('#7B5CFF', { transparent: true, opacity: .13, depthTest: false })); stuff.disc.rotation.x = -Math.PI / 2; stuff.disc.visible = false; stuff.disc.renderOrder = 5; world.add(stuff.disc);
     fit();
@@ -1003,12 +1023,42 @@ function start(el, host){
     if(shake > 0){ shake = Math.max(0, shake - dt * .9); placeCam(); if(shake > 0){ const a = shake * .5; camera.position.x += (Math.random() - .5) * a; camera.position.y += (Math.random() - .5) * a; camera.position.z += (Math.random() - .5) * a; camera.updateMatrixWorld(); } }
     // a trail just opened: the rocks in its burrow go poof
     stuff.burrows.forEach((b, pi) => { const shut = pi >= G.np; if(b.block.visible && !shut){ const p = b.g.position; puff(p.x, p.y + .4, p.z, '#B9B0A0', 12, .1, 1.4, .7); sfx('boom'); } b.block.visible = shut; });
+    placing();
     // range ring of the tower you tapped
     const ringOn = !!menuFor && !menuFor.wall && !!TOWERS[menuFor.i].range;
     stuff.ring.visible = stuff.disc.visible = ringOn;
     if(ringOn){ const rg = G.stat(menuFor).range, h = hAt(menuFor.x, menuFor.y) + .05; stuff.ring.position.set(wx(menuFor.x), h, wz(menuFor.y)); stuff.ring.scale.setScalar(rg); stuff.disc.position.set(wx(menuFor.x), h, wz(menuFor.y)); stuff.disc.scale.setScalar(rg); }
   }
   let hurt = 0;
+  // while a tower (or the fence) is picked: the green / red layer, and the footprint under your finger or mouse
+  let aim = null;                          // where the pointer is: { cx, cy, touch }
+  const LIFT = 70;                         // on touch screens the footprint sits above your finger, so you can see it
+  function pointAt(cx, cy){ const r = canvas.getBoundingClientRect(); ray.setFromCamera({ x: (cx - r.left) / r.width * 2 - 1, y: -(cy - r.top) / r.height * 2 + 1 }, camera);
+    const lh = ray.intersectObject(stuff.land, false)[0]; return lh ? [Math.round((lh.point.x + COLS / 2) * 20) / 20, Math.round((lh.point.z + ROWS / 2) * 20) / 20] : null; }
+  function placing(){
+    const on = (sel === 'wall' || sel >= 0) && (G.phase === 'build' || G.phase === 'wave'), O = stuff.okMap, gh = stuff.ghost;
+    O.mesh.visible = on && sel !== 'wall';
+    if(O.mesh.visible){ const key = G.towers.map(t => t.id).join(); if(key !== O.key){ O.key = key; paintOk(); } }
+    const pt = on && aim ? pointAt(aim.cx, aim.cy - (aim.touch ? LIFT : 0)) : null;
+    gh.g.visible = !!pt; if(!pt) return;
+    const [x, y] = pt, C = good => good ? '#3DDC6A' : '#FF4D4D';
+    if(sel === 'wall'){ const sp = G.wallSpot(x, y), good = !sp.why && G.coins >= cost('wall');
+      gh.foot.visible = gh.edge.visible = gh.reach.visible = gh.area.visible = false; gh.bar.visible = true; gh.bar.material.color.set(C(good));
+      const px = sp.why ? x : sp.x, py = sp.why ? y : sp.y; gh.g.position.set(wx(px), hAt(px, py) + .06, wz(py)); gh.bar.rotation.set(-Math.PI / 2, 0, sp.why ? 0 : sp.dir + Math.PI / 2); return; }
+    const good = G.canBuild(x, y) && G.coins >= cost(sel), b = TOWERS[sel], rg = b.range ? G.stat({ i: sel, a: 0, b: 0 }).range : 0, fr = .45;
+    gh.bar.visible = false; gh.foot.visible = gh.edge.visible = true; gh.reach.visible = gh.area.visible = rg > 0;
+    for(const o of [gh.foot, gh.reach, gh.area]) o.material.color.set(C(good));
+    gh.foot.scale.setScalar(fr); gh.edge.scale.setScalar(fr); gh.reach.scale.setScalar(rg || 1); gh.area.scale.setScalar(rg || 1);
+    gh.g.position.set(wx(x), hAt(x, y) + .06, wz(y));
+  }
+  function paintOk(){
+    const O = stuff.okMap, cx = O.cv.getContext('2d'), img = cx.createImageData(O.cw, O.ch), d = img.data, near = bu(SIZE) * .9, T = G.towers;
+    for(let j = 0; j < O.ch; j++) for(let i = 0; i < O.cw; i++){ const k = j * O.cw + i, f = O.fixed[k]; if(!f) continue;
+      let bad = f === 2;
+      if(!bad){ const x = O.x0 + (i + .5) / O.K, y = O.y0 + (j + .5) / O.K; for(const t of T) if(Math.abs(t.x - x) < near && Math.abs(t.y - y) < near && Math.hypot(t.x - x, t.y - y) < near){ bad = true; break; } }
+      d.set(bad ? [255, 70, 70, 92] : [70, 225, 105, 100], k * 4); }
+    cx.putImageData(img, 0, 0); O.tex.needsUpdate = true;
+  }
 
   // ---------- HUD and controls ----------
   const pill = v => $(`[data-v="${v}"]`);
@@ -1106,13 +1156,17 @@ function start(el, host){
     if(intro < 1){ intro = 1; placeCam(); root.classList.remove('intro'); return; }   // tap skips the opening shot
     canvas.setPointerCapture && canvas.setPointerCapture(e.pointerId);
     ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY, x0: e.clientX, y0: e.clientY });
+    if(sel === 'wall' || sel >= 0) aim = { cx: e.clientX, cy: e.clientY, touch: e.pointerType !== 'mouse' };
     if(ptrs.size === 1) drag = { moved: false };
-    else if(drag) drag.moved = true;                    // two fingers: never a tap
+    else if(drag){ drag.moved = true; drag.place = false; }      // two fingers: never a tap (zooming)
   });
   canvas.addEventListener('pointermove', e => {
-    const p = ptrs.get(e.pointerId); if(!p || !drag) return;
+    const p = ptrs.get(e.pointerId);
+    if(e.pointerType === 'mouse' && !p) aim = { cx: e.clientX, cy: e.clientY, touch: false };   // mouse hover shows the footprint
+    if(!p || !drag) return;
     if(ptrs.size === 1){
       if(!drag.moved && Math.hypot(e.clientX - p.x0, e.clientY - p.y0) < 9) return;
+      if(sel === 'wall' || sel >= 0){ drag.moved = true; drag.place = true; aim = { cx: e.clientX, cy: e.clientY, touch: e.pointerType !== 'mouse' }; return; }   // placing: slide the footprint
       drag.moved = true; if(view.zoom <= 1.001){ p.x = e.clientX; p.y = e.clientY; return; }
       const a = groundAt(p.x, p.y), b = groundAt(e.clientX, e.clientY);
       if(a && b){ view.px -= b.x - a.x; view.pz -= b.z - a.z; clampView(); placeCam(); }
@@ -1127,7 +1181,9 @@ function start(el, host){
     }
   });
   const up = e => { const p = ptrs.get(e.pointerId); ptrs.delete(e.pointerId);
-    if(p && drag && !drag.moved && ptrs.size === 0 && e.type === 'pointerup') tap(e.clientX, e.clientY);
+    if(p && drag && drag.place && ptrs.size === 0 && e.type === 'pointerup' && aim) build(aim.cx, aim.cy - (aim.touch ? LIFT : 0));   // let go of the footprint: build there
+    else if(p && drag && !drag.moved && ptrs.size === 0 && e.type === 'pointerup') tap(e.clientX, e.clientY);
+    if(e.pointerType !== 'mouse' && !ptrs.size) aim = null;
     if(!ptrs.size) drag = null; };
   canvas.addEventListener('pointerup', up); canvas.addEventListener('pointercancel', up);
   canvas.addEventListener('wheel', e => { e.preventDefault(); if(intro < 1) return; const before = groundAt(e.clientX, e.clientY);
@@ -1144,6 +1200,11 @@ function start(el, host){
     const x = Math.round((lh.point.x + COLS / 2) * 20) / 20, y = Math.round((lh.point.z + ROWS / 2) * 20) / 20;
     t = G.towerAt(x, y) || (sel !== 'wall' && G.wallAt(x, y)); if(t){ sel = -1; showMenu(t); hudKey = ''; return; }
     if(menuFor){ hideMenu(); hudKey = ''; return; }       // first tap just closes the menu
+    placeAt(x, y);
+  }
+  // let go of the footprint after sliding it: build where it is
+  function build(cx, cy){ if(!G || (G.phase !== 'build' && G.phase !== 'wave')) return; const pt = pointAt(cx, cy); if(pt) placeAt(pt[0], pt[1]); else hudKey = ''; }
+  function placeAt(x, y){
     if(sel === 'wall'){
       const sp = G.wallSpot(x, y);
       if(sp.why){ noHere(x, y); tip({ offpath: 'La cerca va en un camino abierto. 🛤️', ends: 'Muy cerca de la cueva o de la comida.', wall: 'Ya hay una cerca muy cerca.' }[sp.why]); }
