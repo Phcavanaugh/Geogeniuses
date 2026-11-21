@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES } from './defensa-rules.js?v=32';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES } from './defensa-rules.js?v=33';
 
 // ====================================================================================
 // materials
@@ -254,7 +254,7 @@ function tex(name){
 // When a picture exists in art/defensa/fx/<name>.png, list its name in FX_ART and it's used;
 // until then a simple drawing stands in.
 // ====================================================================================
-const FX_ART = new Set([]);
+const FX_ART = new Set(['pop']);
 const fxTex = {};
 function fxDraw(name){
   const S = 128, cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d'), O = '#1E5560';
