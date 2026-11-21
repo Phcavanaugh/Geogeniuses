@@ -4,7 +4,7 @@
 //   host = { age, round, pet:{species,skin,stage}|null, petName, say(keys), test,
 //            onEnd(won, round, points) → { prize, next, record }, onNext(round, api), onExit() }
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, prizeFor, distToPaths } from './defensa-rules.js?v=28';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, prizeFor, distToPaths } from './defensa-rules.js?v=29';
 
 // ====================================================================================
 // materials
@@ -12,7 +12,7 @@ import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, prizeFo
 const GRAD = (() => { const t = new THREE.DataTexture(new Uint8Array([105, 185, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
 const MATS = {};
 const toon = (c, o = {}) => { const k = c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshToonMaterial({ color: c, gradientMap: GRAD, ...o })); };
-const flat = (c, o = {}) => { const k = 'f' + c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshToonMaterial({ color: c, gradientMap: GRAD, flatShading: true, ...o })); };
+const flat = (c, o = {}) => { const k = 'f' + c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshToonMaterial({ color: c, gradientMap: GRAD, ...o })); };
 const basic = (c, o = {}) => { const k = 'b' + c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshBasicMaterial({ color: c, ...o })); };
 const INK = new THREE.MeshBasicMaterial({ color: '#2B2B3A', side: THREE.BackSide });
 
@@ -223,10 +223,18 @@ const CRITTERS = {
 // scenery
 // ====================================================================================
 const THEMES = {
-  jardin: { sky:['#86CDF7','#E4F5FF'], fog:'#CBE8F8', water:'#3BA7C6', deep:'#2B7491', g1:'#7CC452', g2:'#5DA63E', g3:'#A3D86C', path:'#DDB97F', path2:'#C9A168', edge:'#8F7048', sand:'#EAD49E', tuft:['#55A63A','#68BA46','#7CC853','#4C9634','#8DD25E'], flowers:true, hemi:'#B9DDA0', shore:'reeds' },
-  playa:  { sky:['#62C4F0','#DDF6FF'], fog:'#C2EDFA', water:'#29BAD6', deep:'#1B87AB', g1:'#F3DEA6', g2:'#E9CF91', g3:'#9FCB64', path:'#C9A06A', path2:'#B9905B', edge:'#9A7448', sand:'#F7E8BC', tuft:['#8EBF52','#A1CC60','#B4D66E'], dune:true, hemi:'#FFF0CC', shore:'palm' },
-  nieve:  { sky:['#A3C3E6','#EDF4FD'], fog:'#D7E5F4', water:'#3A7EA8', deep:'#28597F', g1:'#F6FAFF', g2:'#DCE7F5', g3:'#FFFFFF', path:'#BCCBE0', path2:'#A9BBD4', edge:'#8A9DBB', sand:'#D2DFEF', tuft:['#FFFFFF','#EEF4FC'], snow:true, hemi:'#E6EFFC', shore:'ice' },
+  jardin: { tex:{ rep:.36, trailSat:.38, trailTint:[1.62,1.38,1.06], sandTint:[1.05,1.02,.95] }, sky:['#86CDF7','#E4F5FF'], fog:'#CBE8F8', water:'#3BA7C6', deep:'#2B7491', g1:'#7CC452', g2:'#5DA63E', g3:'#A3D86C', path:'#DDB97F', path2:'#C9A168', edge:'#8F7048', sand:'#EAD49E', tuft:['#55A63A','#68BA46','#7CC853','#4C9634','#8DD25E'], flowers:true, hemi:'#B9DDA0', shore:'reeds' },
+  playa:  { tex:{ rep:.36, trailSat:.3, trailTint:[1.62,1.42,1.12], sandTint:[1.06,1.03,.96] }, sky:['#62C4F0','#DDF6FF'], fog:'#C2EDFA', water:'#29BAD6', deep:'#1B87AB', g1:'#F3DEA6', g2:'#E9CF91', g3:'#9FCB64', path:'#C9A06A', path2:'#B9905B', edge:'#9A7448', sand:'#F7E8BC', tuft:['#8EBF52','#A1CC60','#B4D66E'], dune:true, hemi:'#FFF0CC', shore:'palm' },
+  nieve:  { tex:{ rep:.36, trailSat:.5, trailTint:[1,1,1], sandTint:[1,1,1] }, sky:['#A3C3E6','#EDF4FD'], fog:'#D7E5F4', water:'#3A7EA8', deep:'#28597F', g1:'#F6FAFF', g2:'#DCE7F5', g3:'#FFFFFF', path:'#BCCBE0', path2:'#A9BBD4', edge:'#8A9DBB', sand:'#D2DFEF', tuft:['#FFFFFF','#EEF4FC'], snow:true, hemi:'#E6EFFC', shore:'ice' },
 };
+// pictures for the land (made with ChatGPT) and skies, loaded once and shared
+const ART = new URL('./art/defensa/', import.meta.url).href, texCache = {};
+let maxAniso = 4;
+function tex(name){
+  if(texCache[name]) return texCache[name];
+  const t = new THREE.TextureLoader().load(ART + name + '.jpg'); t.colorSpace = THREE.SRGBColorSpace;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = maxAniso; return texCache[name] = t;
+}
 // ---- smooth noise for the land ----
 const hash = (x, y) => { const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); };
 function noise(x, y){ const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
@@ -386,7 +394,13 @@ const CSS = `
 .d3go{background:#FF7A59;color:#fff;font-weight:900;font-size:15px;border-radius:16px;box-shadow:0 4px 0 rgba(170,60,30,.35);padding:0 8px;min-width:72px;line-height:1.1}
 .d3go.fast{background:#7B5CFF;box-shadow:0 4px 0 rgba(70,40,170,.35)}
 .d3go:disabled{visibility:hidden}
-.d3end{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(43,43,58,.35);z-index:5}
+.d3end{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(43,43,58,.35) center/cover;z-index:5}
+.d3intro{position:absolute;left:0;right:0;top:9%;display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0;transform:translateY(-14px) scale(.92);transition:opacity .45s,transform .45s;z-index:4}
+.d3.intro .d3intro{opacity:1;transform:none}
+.d3intro img{width:min(78%,380px);filter:drop-shadow(0 6px 10px rgba(43,43,58,.25))}
+.d3intro .r{margin-top:2px;background:rgba(255,255,255,.88);border-radius:999px;padding:5px 14px;font-weight:900;font-size:17px}
+.d3.intro .d3left{opacity:0}
+.d3card .logo{width:62%;margin:-6px auto 0;display:block}
 .d3end.on{display:flex}
 .d3card{background:#fff;border-radius:28px;box-shadow:0 12px 40px rgba(43,43,58,.35);padding:18px 18px 16px;width:min(84%,340px);text-align:center;animation:d3pop .4s cubic-bezier(.2,1.6,.4,1)}
 @keyframes d3pop{from{transform:scale(.6);opacity:0}}
@@ -409,7 +423,7 @@ function start(el, host){
     <div class="d3top"><button class="ib" data-a="exit" aria-label="Salir">🗺️</button><div class="tt"><b></b><small></small></div>
       <span class="d3pill" data-v="lives">🥣 0</span><span class="d3pill" data-v="coins">🪙 0</span><span class="d3pill" data-v="points">🏅 0</span></div>
     ${host.test ? '<div class="d3test"><button data-t="win">✅ Ganar la ronda</button><button data-t="x4">⏩ x4</button><button data-t="lose">💥 Perder</button></div>' : ''}
-    <div class="d3stage"><canvas></canvas><div class="d3left"></div><div class="d3menu"></div>
+    <div class="d3stage"><canvas></canvas><div class="d3intro"><img alt="¡Defensa!"><div class="r"></div></div><div class="d3left"></div><div class="d3menu"></div>
       <div class="d3banner"><div class="k">¡Cuidado!</div><img alt=""><div class="n"></div></div>
       <div class="d3end"><div class="d3card"><div class="e"></div><div class="t"></div><div class="s"></div><div class="b"></div></div></div></div>
     <div class="d3tip"></div>
@@ -420,7 +434,7 @@ function start(el, host){
 
   // ---------- three.js ----------
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance', preserveDrawingBuffer: !!host.test });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); maxAniso = Math.min(8, renderer.capabilities.getMaxAnisotropy());
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.toneMapping = THREE.NeutralToneMapping; renderer.toneMappingExposure = 1.05;
   const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, 1, .1, 200);
   const hemi = new THREE.HemisphereLight('#FFFFFF', '#88A070', 1.05); scene.add(hemi);
@@ -463,31 +477,65 @@ function start(el, host){
     hAt = (u, v) => landH(u, v, dist(u, v));
     const R = (s => () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296)(G.r * 99 + 5);
     // sky + fog
-    const cv = document.createElement('canvas'); cv.width = 4; cv.height = 256; const cx = cv.getContext('2d'), gr = cx.createLinearGradient(0, 0, 0, 256);
-    gr.addColorStop(0, th.sky[0]); gr.addColorStop(1, th.sky[1]); cx.fillStyle = gr; cx.fillRect(0, 0, 4, 256);
-    const sky = new THREE.CanvasTexture(cv); sky.colorSpace = THREE.SRGBColorSpace; scene.background = sky;
-    scene.fog = new THREE.Fog(th.fog, 26, 60); hemi.groundColor.set(th.hemi); root.style.background = th.sky[1];
-    // the land: one sculpted, painted mesh
+    scene.background = new THREE.Color(th.sky[1]); scene.fog = new THREE.Fog(th.fog, 26, 60); hemi.groundColor.set(th.hemi); root.style.background = th.sky[1];
+    const skyUrl = ART + 'sky-' + G.map.id + '.jpg', mapId = G.map.id;
+    new THREE.TextureLoader().load(skyUrl, t => {
+      if(!G || G.map.id !== mapId) return;
+      t.colorSpace = THREE.SRGBColorSpace; scene.background = t;
+      // the far-away water fades into the color at the bottom of the sky
+      try{ const cv = document.createElement('canvas'); cv.width = 8; cv.height = 8; const cx = cv.getContext('2d'); cx.drawImage(t.image, 0, t.image.height * .8, t.image.width, t.image.height * .2, 0, 0, 8, 8);
+        const d = cx.getImageData(0, 0, 8, 8).data; let r = 0, g = 0, b = 0; for(let i = 0; i < d.length; i += 4){ r += d[i]; g += d[i + 1]; b += d[i + 2]; } const n = d.length / 4;
+        scene.fog.color.setRGB(r / n / 255, g / n / 255, b / n / 255, THREE.SRGBColorSpace); }catch(e){}
+    });
+    $('.d3end').style.backgroundImage = `linear-gradient(rgba(43,43,58,.1),rgba(43,43,58,.4)), url(${skyUrl})`;
+    $('.d3intro img').src = ART + 'logo.png';
+    // the land: one sculpted mesh, painted with the grass / sand / snow / trail pictures.
+    // Per corner it stores how much of each picture to use (aW), a tint (color), and an underwater/foam color (aUnder).
     const LW = COLS + 2 * MARGIN + 6, LH = ROWS + 2 * MARGIN + 6, geo = new THREE.PlaneGeometry(LW, LH, 160, 220); geo.rotateX(-Math.PI / 2);
-    const P = geo.attributes.position, col = new Float32Array(P.count * 3), c = new THREE.Color(), tmp = new THREE.Color();
-    const K = {}; for(const k of ['g1', 'g2', 'g3', 'path', 'path2', 'edge', 'sand', 'deep']) K[k] = new THREE.Color(th[k]);
-    const white = new THREE.Color('#FFFFFF');
+    const P = geo.attributes.position, tint = new Float32Array(P.count * 3), wts = new Float32Array(P.count * 4), und = new Float32Array(P.count * 4);
+    const deep = new THREE.Color(th.deep), c = new THREE.Color();
     for(let i = 0; i < P.count; i++){
       const u = P.getX(i) + COLS / 2, v = P.getZ(i) + ROWS / 2, pd = dist(u, v), h = landH(u, v, pd); P.setY(i, h);
-      c.copy(K.g1).lerp(K.g2, smooth(.3, .75, fbm(u * .45 + 11, v * .45 + 2)));
+      // which picture: [grass, sand, trail, snow]
       const patch = smooth(.56, .7, fbm(u * .32 + 20, v * .32 + 5));
-      if(th.dune) c.lerp(K.g3, patch * .9); else c.lerp(K.g3, patch * .45);
-      c.multiplyScalar(1 + h * 1.4 + (noise(u * 3.1, v * 3.1) - .5) * .06);
-      const pm = 1 - smooth(.36, .58, pd);
-      if(pm > 0){ tmp.copy(K.path).lerp(K.path2, noise(u * 2.2, v * 2.2)); c.lerp(tmp, pm); }
-      const em = smooth(.3, .5, pd) * (1 - smooth(.5, .66, pd)); c.lerp(K.edge, em * .3);
-      c.lerp(K.sand, smooth(WATER + .24, WATER + .05, h));
-      c.lerp(K.deep, smooth(WATER - .05, WATER - .6, h));
-      c.lerp(white, (1 - smooth(0, .04, Math.abs(h - WATER - .02))) * .55);       // foam line
-      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
+      let w = th.snow ? [0, 0, 0, 1] : th.dune ? [patch * .9, 1 - patch * .9, 0, 0] : [1, 0, 0, 0];
+      const pm = 1 - smooth(.36, .58, pd), beach = smooth(WATER + .24, WATER + .05, h);
+      if(!th.snow){ w = w.map(x => x * (1 - pm)); w[2] += pm; }
+      if(!th.snow){ w = w.map(x => x * (1 - beach)); w[1] += beach; }
+      wts.set(w, i * 4);
+      // tint: hills a bit lighter, hollows darker, gentle variation; snowy trails trodden blue-gray; worn trail edges
+      let t = 1 + h * 1.3 + (fbm(u * .45 + 11, v * .45 + 2) - .5) * .16;
+      if(!th.snow && !th.dune) t *= 1 + patch * .06;
+      const em = smooth(.3, .5, pd) * (1 - smooth(.5, .66, pd)); t *= 1 - em * .12;
+      let tr = t, tg = t, tb = t;
+      if(th.snow){ const k = Math.max(pm, beach * .8); tr *= 1 - k * .32; tg *= 1 - k * .24; tb *= 1 - k * .08; }
+      tint[i * 3] = tr; tint[i * 3 + 1] = tg; tint[i * 3 + 2] = tb;
+      // underwater: fade to deep water color; a thin white foam line at the water's edge
+      const uw = smooth(WATER - .05, WATER - .6, h), foam = (1 - smooth(0, .04, Math.abs(h - WATER - .02))) * .55;
+      if(foam > uw){ und.set([1, 1, 1, foam], i * 4); } else und.set([deep.r, deep.g, deep.b, uw], i * 4);
     }
-    geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.computeVertexNormals();
-    const land = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, metalness: 0 })); land.receiveShadow = true; world.add(land); stuff.land = land;
+    geo.setAttribute('color', new THREE.BufferAttribute(tint, 3)); geo.setAttribute('aW', new THREE.BufferAttribute(wts, 4)); geo.setAttribute('aUnder', new THREE.BufferAttribute(und, 4));
+    geo.computeVertexNormals();
+    const landMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: .95, metalness: 0 });
+    const TT = th.tex;
+    landMat.onBeforeCompile = sh => {
+      Object.assign(sh.uniforms, { tGrass: { value: tex('grass') }, tSand: { value: tex('sand') }, tTrail: { value: tex('trail') }, tSnow: { value: tex('snow') },
+        uTrailSat: { value: TT.trailSat }, uTrailTint: { value: new THREE.Vector3(...TT.trailTint) }, uSandTint: { value: new THREE.Vector3(...TT.sandTint) }, uRep: { value: TT.rep } });
+      sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec4 aW; attribute vec4 aUnder; varying vec4 vW; varying vec4 vUnder; varying vec2 vXZ;')
+        .replace('#include <begin_vertex>', '#include <begin_vertex>\nvW = aW; vUnder = aUnder; vXZ = position.xz;');
+      sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform sampler2D tGrass, tSand, tTrail, tSnow; uniform float uTrailSat, uRep; uniform vec3 uTrailTint, uSandTint; varying vec4 vW; varying vec4 vUnder; varying vec2 vXZ;')
+        .replace('#include <map_fragment>', `
+          vec2 tuv = vXZ * uRep;
+          vec3 cG = texture2D(tGrass, tuv).rgb, cS = texture2D(tSand, tuv * 1.1).rgb * uSandTint, cW = texture2D(tSnow, tuv * .8).rgb;
+          vec3 cT = texture2D(tTrail, tuv * 1.3).rgb; float lT = dot(cT, vec3(.299, .587, .114)); cT = mix(vec3(lT), cT, uTrailSat) * uTrailTint;
+          // break up the repeating pattern a little with a second, larger sample
+          vec3 cG2 = texture2D(tGrass, tuv * .37 + .21).rgb; cG = mix(cG, cG2, .35);
+          float ws = max(vW.x + vW.y + vW.z + vW.w, .0001);
+          diffuseColor.rgb = (cG * vW.x + cS * vW.y + cT * vW.z + cW * vW.w) / ws;`)
+        .replace('#include <color_fragment>', '#include <color_fragment>\n diffuseColor.rgb = mix(diffuseColor.rgb, vUnder.rgb, vUnder.a);');
+    };
+    landMat.customProgramCacheKey = () => 'land-' + G.map.id;
+    const land = new THREE.Mesh(geo, landMat); land.receiveShadow = true; world.add(land); stuff.land = land;
     // water
     const water = new THREE.Mesh(new THREE.PlaneGeometry(140, 140), new THREE.MeshStandardMaterial({ color: th.water, roughness: .15, metalness: .05, transparent: true, opacity: .8 }));
     water.rotation.x = -Math.PI / 2; water.position.y = WATER; water.receiveShadow = true; world.add(water); stuff.water = water;
@@ -563,7 +611,19 @@ function start(el, host){
     camera.position.copy(target).addScaledVector(dir, hi); camera.lookAt(target); camera.clearViewOffset(); camera.updateMatrixWorld();
     // center the island vertically in the space we have
     let lo2 = 9, hi2 = -9; for(const p of corners){ const q = p.clone().project(camera); lo2 = Math.min(lo2, q.y); hi2 = Math.max(hi2, q.y); }
-    const mid = (lo2 + hi2) / 2 + .04; camera.setViewOffset(w, h, 0, Math.round(-mid * h / 2), w, h);
+    const mid = (lo2 + hi2) / 2 + .04;
+    cam = { target, dist: hi, w, h, off: Math.round(-mid * h / 2) };
+    placeCam();
+  }
+  // the opening shot: start low (sky and island from the side), swoop up into the play view
+  let cam = null, intro = 1;
+  function placeCam(){
+    if(!cam) return;
+    const t = Math.min(1, intro), e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const elev = .17 + (.86 - .17) * e, yaw = .7 * (1 - e), d = cam.dist * (1.5 - .5 * e);
+    camera.position.set(cam.target.x + Math.sin(yaw) * Math.cos(elev) * d, cam.target.y + Math.sin(elev) * d, cam.target.z + Math.cos(yaw) * Math.cos(elev) * d);
+    camera.lookAt(cam.target.x, cam.target.y + (1 - e) * 1.2, cam.target.z);
+    camera.setViewOffset(cam.w, cam.h, 0, Math.round(cam.off * e), cam.w, cam.h); camera.updateMatrixWorld();
   }
 
   // ---------- keep the 3D objects in step with the game ----------
@@ -651,6 +711,7 @@ function start(el, host){
   }
   function syncAndAnimate(dt){
     const now = performance.now() / 1000;
+    if(intro < 1){ intro = Math.min(1, intro + dt / 2.4); placeCam(); root.classList.toggle('intro', intro < .8); }
     // towers
     for(const tw of G.towers){ let e = stuff.towers.get(tw.id);
       if(e && e.lvl !== tw.lvl){ world.remove(e.g); stuff.towers.delete(tw.id); e = null; const ne = addTower(tw); ne.born = G.time - .5; ne.kick = .4; }
@@ -811,6 +872,7 @@ function start(el, host){
   function noHere(x, y){ const h = hAt(x, y), o = new THREE.Mesh(new THREE.RingGeometry(.3, .4, 32), basic('#FF5E5E', { transparent: true, opacity: .9, depthTest: false, side: THREE.DoubleSide }));
     o.rotation.x = -Math.PI / 2; o.position.set(wx(x), h + .05, wz(y)); o.renderOrder = 7; world.add(o); stuff.fx.push({ o, life: .5, max: .5, no: true }); }
   canvas.addEventListener('pointerdown', e => {
+    if(intro < 1){ intro = 1; placeCam(); root.classList.remove('intro'); return; }   // tap skips the opening shot
     if(!G || G.phase === 'won' || G.phase === 'lost') return;
     const r = canvas.getBoundingClientRect(); ray.setFromCamera({ x: (e.clientX - r.left) / r.width * 2 - 1, y: -(e.clientY - r.top) / r.height * 2 + 1 }, camera);
     // towers stick up, so test them first; then the land
@@ -838,7 +900,7 @@ function start(el, host){
     if(ended) return; ended = true;
     const res = (host.onEnd && host.onEnd(won, G.r, G.points)) || { prize: won ? prizeFor(G.r) : 0, next: won };
     const c = $('.d3card');
-    c.querySelector('.e').textContent = won ? '🏆' : '😵';
+    c.querySelector('.e').innerHTML = won ? `<img class="logo" src="${ART}logo.png" alt=""><span>🏆</span>` : '😵';
     c.querySelector('.t').textContent = won ? `¡Ganaste la ronda ${G.r}!` : '¡Ay, no!';
     c.querySelector('.s').innerHTML = `<div class="pts">🏅 ${G.points} puntos${res.record ? ' · <b>¡Nuevo récord!</b>' : ''}</div>` + (won ? `¡La comida está a salvo!${res.prize ? ` · +${res.prize} ⭐` : ''}` : `Se comieron toda la comida. ¡Inténtalo otra vez!`);
     c.querySelector('.b').innerHTML = (won ? (res.next ? `<button data-a="next">▶ Ronda ${G.r + 1}</button>` : `<div class="nx">🗺️ Gana otro nivel del mapa para jugar la ronda ${G.r + 1}.</div>`) : `<button data-a="retry">🔄 ¡Otra vez!</button>`)
@@ -865,6 +927,7 @@ function start(el, host){
     root.querySelector('.tt b').textContent = `Ronda ${r}`;
     root.querySelector('.tt small').textContent = G.map.name + (r % 5 === 0 ? ' · 🐻' : '');
     buildWorld(); bar(); hud();
+    intro = 0; placeCam(); root.classList.add('intro'); $('.d3intro .r').textContent = `Ronda ${r} · ${G.map.name}`;
     tip(newPath(r, age) ? '¡Ojo! Este mapa tiene un camino nuevo. 👀' : 'Toca un animal abajo y luego el pasto. La cerca va en el camino. ¡Protege la comida!');
     say(['c|¡Defensa!', 'c|¡Protege la comida!']);
   }

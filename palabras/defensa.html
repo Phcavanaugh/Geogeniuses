@@ -9,7 +9,9 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;height:100%;background:#EAF7FF;font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;color:#2B2B3A}
   button{font:inherit;border:0;cursor:pointer;color:inherit}
-  .menu{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:linear-gradient(#9ED8FF,#EAF7FF)}
+  .menu{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:url(art/defensa/sky-jardin.jpg) center/cover #9ED8FF}
+  .menu .logo{width:min(86%,420px);filter:drop-shadow(0 8px 12px rgba(43,43,58,.25))}
+  .menu p{background:rgba(255,255,255,.7);border-radius:12px;padding:3px 10px}
   .menu h1{font-size:40px;margin:0}
   .menu p{margin:0;color:#5C6478}
   .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
@@ -25,7 +27,7 @@
 </head>
 <body>
 <div class="menu" id="menu">
-  <h1>🏰 ¡Defensa!</h1>
+  <img class="logo" src="art/defensa/logo.png" alt="¡Defensa!">
   <p>Modo de prueba</p>
   <div class="row" id="ages"><button class="chip" data-age="4">🧸 4–5</button><button class="chip" data-age="7">🚀 7</button><button class="chip" data-age="10">🎯 10</button></div>
   <div class="round"><button id="minus">−</button>Ronda <b id="rnd">1</b><button id="plus">+</button></div>
@@ -35,8 +37,8 @@
 </div>
 <div id="game"></div>
 <script type="module">
-  import './lolo3d.js?v=28';
-  import './defensa3d.js?v=28';
+  import './lolo3d.js?v=29';
+  import './defensa3d.js?v=29';
   const PETS = { axolotl:'Lolo', penguin:'Pipo', fox:'Chispa', seal:'Nieve' };
   const st = JSON.parse(localStorage.getItem('tdtest') || '{"age":7,"round":1,"pet":"axolotl"}');
   const save = () => localStorage.setItem('tdtest', JSON.stringify(st));
