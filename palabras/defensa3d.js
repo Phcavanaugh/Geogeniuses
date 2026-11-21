@@ -4,7 +4,7 @@
 //   host = { age, round, pet:{species,skin,stage}|null, petName, say(keys), test,
 //            onEnd(won, round, points) → { prize, next, record }, onNext(round, api), onExit() }
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, prizeFor, distToPaths } from './defensa-rules.js?v=29';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, prizeFor, distToPaths } from './defensa-rules.js?v=30';
 
 // ====================================================================================
 // materials
@@ -355,77 +355,128 @@ function towerModel(i, lvl){
 // ====================================================================================
 // the game screen
 // ====================================================================================
+const FONT = new URL('./art/fonts/', import.meta.url).href;
+// game icons: emoji for now; when an icon picture exists in art/defensa/ui/, list its name in ICONS and it's used instead
+const ICONS = new Set(['bowl', 'coin', 'medal', 'map', 'play', 'fast', 'upgrade', 'sell', 'lock', 'star', 'trophy', 'retry']);   // made with ChatGPT
+const SAME = { slow: 'play', crown: 'trophy' };    // no picture of their own: borrow one
+const EMOJI = { bowl:'🥣', coin:'🪙', medal:'🏅', map:'🗺️', play:'▶️', fast:'⏩', slow:'🐢', upgrade:'⬆️', sell:'💰', lock:'🔒', star:'⭐', trophy:'🏆', retry:'🔄', crown:'👑' };
+const ic = (name, cls = '') => { const n = ICONS.has(name) ? name : SAME[name]; return n && ICONS.has(n) ? `<img class="ic ${cls}" src="${ART}ui/${n}.png" alt="">` : `<i class="ic ${cls}">${EMOJI[name]}</i>`; };
 const CSS = `
-.d3{position:fixed;inset:0;z-index:40;display:flex;flex-direction:column;background:#EAF7FF;font-family:inherit;color:#2B2B3A;user-select:none;-webkit-user-select:none;touch-action:manipulation}
-.d3top{display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top) + 8px) 10px 6px}
-.d3top .ib{width:44px;height:44px;border-radius:14px;background:#fff;box-shadow:0 4px 0 rgba(43,43,58,.12);font-size:22px;display:grid;place-items:center;flex:none}
-.d3top .tt{flex:1;line-height:1.05}
-.d3top .tt b{display:block;font-size:17px}
-.d3top .tt small{font-size:12px;color:#5C6478;white-space:nowrap}
-.d3pill{background:#fff;border-radius:14px;box-shadow:0 4px 0 rgba(43,43,58,.12);padding:6px 8px;font-weight:800;font-size:15px;white-space:nowrap}
-.d3pill.hurt{animation:d3shake .4s}
-@keyframes d3shake{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
-.d3stage{flex:1;position:relative;min-height:0}
+@font-face{font-family:'Fredoka';src:url(${FONT}fredoka-latin-600-normal.woff2) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Fredoka';src:url(${FONT}fredoka-latin-700-normal.woff2) format('woff2');font-weight:700;font-display:swap}
+.d3{--ink:#1E5560;--ink2:#2B6E78;position:fixed;inset:0;z-index:40;overflow:hidden;background:#7FD0F0;font-family:'Fredoka',ui-rounded,system-ui,sans-serif;font-weight:600;color:var(--ink);user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.d3 button{font-family:inherit;font-weight:700;color:inherit;border:0;cursor:pointer;-webkit-tap-highlight-color:transparent;transition:transform .08s,box-shadow .08s}
+.d3 .ic{font-style:normal;display:inline-grid;place-items:center;line-height:1}
+.d3 img.ic{object-fit:contain}
+.d3stage{position:absolute;inset:0}
 .d3stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
-.d3left{position:absolute;top:6px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.85);border-radius:999px;padding:4px 12px;font-weight:700;font-size:14px;pointer-events:none}
-.d3menu{position:absolute;display:none;flex-direction:column;gap:6px;background:#fff;border-radius:18px;box-shadow:0 8px 24px rgba(43,43,58,.25);padding:9px;width:178px;z-index:3}
-.d3menu.on{display:flex}
-.d3menu .nm{font-weight:800;text-align:center;font-size:15px}
-.d3menu button{border-radius:12px;padding:9px;font-weight:800;background:#FFD54A;font-size:14px}
-.d3menu button[data-a=sell]{background:#E6F7EC;color:#1E8E4E}
-.d3menu button[data-a=x]{background:#EEE;padding:4px}
-.d3menu button.poor{background:#EEE;color:#999}
-.d3menu .max{text-align:center;font-size:14px;font-weight:700}
-.d3banner{position:absolute;left:50%;top:18%;transform:translate(-50%,-20px) scale(.9);opacity:0;transition:all .35s;background:#fff;border-radius:22px;box-shadow:0 10px 30px rgba(43,43,58,.3);padding:8px 16px 10px;text-align:center;pointer-events:none;z-index:4}
-.d3banner.on{opacity:1;transform:translate(-50%,0) scale(1)}
-.d3banner .k{font-size:20px;font-weight:900;color:#E8604C}
-.d3banner img{width:96px;height:96px;display:block;margin:0 auto}
-.d3banner .n{font-weight:800;font-size:17px}
-.d3tip{min-height:20px;text-align:center;font-size:14px;color:#5C6478;margin:6px 8px 4px;line-height:1.25}
-.d3bar{display:flex;gap:5px;padding:0 10px calc(env(safe-area-inset-bottom) + 10px);align-items:stretch}
-.d3tw{flex:1;background:#fff;border-radius:16px;box-shadow:0 4px 0 rgba(43,43,58,.12);display:flex;flex-direction:column;align-items:center;padding:2px 0 5px;border:3px solid transparent;position:relative;min-width:0}
-.d3tw img{width:48px;height:48px;display:block}
-.d3tw .c{font-size:12px;font-weight:800}
-.d3tw .nm{font-size:10px;font-weight:700;color:#5C6478;white-space:nowrap}
-.d3tw.sel{border-color:#7B5CFF;transform:translateY(-4px)}
-.d3tw.poor img,.d3tw.poor .c{opacity:.4}
-.d3tw.lock img{filter:grayscale(1) brightness(1.3);opacity:.45}
-.d3tw.lock::after{content:'🔒';position:absolute;top:16px;font-size:22px}
-.d3go{background:#FF7A59;color:#fff;font-weight:900;font-size:15px;border-radius:16px;box-shadow:0 4px 0 rgba(170,60,30,.35);padding:0 8px;min-width:72px;line-height:1.1}
-.d3go.fast{background:#7B5CFF;box-shadow:0 4px 0 rgba(70,40,170,.35)}
+/* glossy chunky pieces */
+.d3 .gl{background:linear-gradient(#FFFFFF 0%,#FFFFFF 45%,#E4F2F5 100%);border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink),0 7px 14px rgba(20,60,70,.28)}
+.d3 button.gl:active,.d3 .d3tw:active .disc,.d3 .d3go:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink),0 3px 6px rgba(20,60,70,.28)}
+/* top: map button + counters */
+.d3top{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top) + 10px) 10px 0;z-index:6;pointer-events:none}
+.d3top>*{pointer-events:auto}
+.d3top .ib{width:50px;height:50px;border-radius:50%;font-size:25px;display:grid;place-items:center;flex:none}
+.d3top .ib .ic{width:34px;height:34px}
+.d3stats{margin-left:auto;display:flex;gap:4px}
+.d3pill{display:flex;align-items:center;height:38px;border-radius:999px;padding:0 11px 0 2px;margin-left:13px;font-size:19px;font-weight:700;white-space:nowrap;position:relative}
+.d3pill .ic{width:40px;height:40px;font-size:27px;margin:-8px 3px -8px -16px;filter:drop-shadow(0 2px 0 rgba(30,85,96,.35))}
+.d3pill b{font-weight:700;min-width:18px;text-align:center}
+.d3pill.hurt{animation:d3shake .45s}
+@keyframes d3shake{20%{transform:translateX(-5px) rotate(-3deg)}60%{transform:translateX(5px) rotate(3deg)}}
+.d3pill.bump{animation:d3bump .3s}
+@keyframes d3bump{40%{transform:scale(1.15)}}
+/* round name + how many critters are left */
+.d3info{position:absolute;top:calc(env(safe-area-inset-top) + 66px);left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:0;z-index:5;pointer-events:none;white-space:nowrap}
+.d3info .tt{background:linear-gradient(#FFE07A,#FFB935);border:3px solid var(--ink);border-radius:14px 0 0 14px;padding:2px 10px 3px 12px;line-height:1.05;box-shadow:0 3px 0 var(--ink);text-align:center}
+.d3info .tt b{display:block;font-size:17px;font-weight:700}
+.d3info .tt small{font-size:11px;font-weight:600;opacity:.85}
+.d3left{background:rgba(255,255,255,.95);border:3px solid var(--ink);border-left:0;border-radius:0 14px 14px 0;padding:0 12px;height:43px;display:flex;align-items:center;font-size:15px;font-weight:700;box-shadow:0 3px 0 var(--ink)}
+.d3left:empty{display:none}
+.d3info:has(.d3left:empty) .tt{border-radius:14px}
+.d3test{position:absolute;top:calc(env(safe-area-inset-top) + 118px);left:0;right:0;display:flex;gap:6px;justify-content:center;z-index:5}
+.d3test button{background:rgba(30,40,50,.82);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px}
+/* bottom: the build tray */
+.d3bar{position:absolute;left:8px;right:8px;bottom:calc(env(safe-area-inset-bottom) + 10px);display:flex;gap:2px;align-items:flex-end;padding:8px 6px 7px 8px;border-radius:28px;z-index:6;
+  background:linear-gradient(#FFF7DE,#FFE3A6);border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink),0 10px 26px rgba(20,60,70,.35)}
+.d3tw{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;background:none;padding:0;position:relative}
+.d3tw .disc{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;overflow:hidden;background:radial-gradient(circle at 50% 30%,#FFFFFF 0%,#DDF0F4 75%,#C4E3EA 100%);border:3px solid var(--ink);box-shadow:0 3px 0 var(--ink);transition:transform .12s}
+.d3tw .disc img{width:62px;height:62px;margin-top:6px}
+.d3tw .c{margin-top:-9px;position:relative;display:flex;align-items:center;gap:1px;background:linear-gradient(#FFE07A,#FFC23A);border:2px solid var(--ink);border-radius:999px;font-size:12px;font-weight:700;padding:0 6px 0 2px;height:20px}
+.d3tw .c .ic{width:16px;height:16px;font-size:12px}
+.d3tw .nm{font-size:10px;font-weight:600;margin-top:1px;white-space:nowrap;opacity:.9}
+.d3tw.sel .disc{transform:translateY(-6px) scale(1.06);border-color:#6A3FE0;box-shadow:0 3px 0 #6A3FE0,0 0 0 4px #FFFFFF,0 0 0 7px #8C66FF}
+.d3tw.poor .disc img{opacity:.38}
+.d3tw.poor .c{background:#E4E4E4}
+.d3tw.lock .disc img{filter:grayscale(1) brightness(1.25);opacity:.35}
+.d3tw .lk{position:absolute;top:15px;font-size:22px;width:26px;height:26px}
+.d3tw.lock .c{background:#E4E4E4;font-size:10px;padding:0 6px}
+.d3go{flex:none;width:76px;height:76px;margin:0 0 0 4px;border-radius:50%;align-self:center;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;color:#fff;font-size:13px;line-height:1;text-shadow:0 2px 0 rgba(0,0,0,.25);
+  background:radial-gradient(circle at 50% 28%,#A6F07A 0%,#4CC24F 62%,#2F9A3E 100%);border:3px solid var(--ink);box-shadow:0 5px 0 var(--ink),0 8px 16px rgba(20,60,70,.3)}
+.d3go .ic{width:30px;height:30px;font-size:24px;margin-bottom:2px}
+.d3go.fast{background:radial-gradient(circle at 50% 28%,#C9B2FF 0%,#8C66FF 62%,#6A3FE0 100%)}
+.d3go.slow{background:radial-gradient(circle at 50% 28%,#FFE07A 0%,#FFB935 62%,#F08F1A 100%)}
 .d3go:disabled{visibility:hidden}
-.d3end{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(43,43,58,.35) center/cover;z-index:5}
-.d3intro{position:absolute;left:0;right:0;top:9%;display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0;transform:translateY(-14px) scale(.92);transition:opacity .45s,transform .45s;z-index:4}
-.d3.intro .d3intro{opacity:1;transform:none}
-.d3intro img{width:min(78%,380px);filter:drop-shadow(0 6px 10px rgba(43,43,58,.25))}
-.d3intro .r{margin-top:2px;background:rgba(255,255,255,.88);border-radius:999px;padding:5px 14px;font-weight:900;font-size:17px}
-.d3.intro .d3left{opacity:0}
-.d3card .logo{width:62%;margin:-6px auto 0;display:block}
+/* Dora's tips, as a speech bubble above the tray */
+.d3tip{position:absolute;left:16px;right:16px;bottom:calc(env(safe-area-inset-bottom) + 118px);z-index:6;pointer-events:none;background:#FFFFFF;border:3px solid var(--ink);border-radius:18px;padding:7px 12px;font-size:14px;font-weight:600;line-height:1.25;text-align:center;box-shadow:0 4px 0 var(--ink);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s}
+.d3tip.on{opacity:1;transform:none}
+.d3tip::after{content:'';position:absolute;bottom:-12px;left:34px;border:9px solid transparent;border-top-color:var(--ink)}
+.d3tip b{font-weight:700}
+/* tower / wall menu */
+.d3menu{position:absolute;display:none;flex-direction:column;gap:7px;border-radius:22px;padding:10px;width:184px;z-index:7;background:linear-gradient(#FFF7DE,#FFE7B5)}
+.d3menu.on{display:flex}
+.d3menu .nm{font-weight:700;text-align:center;font-size:16px}
+.d3menu button{border-radius:14px;padding:8px 6px;font-size:15px;display:flex;align-items:center;justify-content:center;gap:5px}
+.d3menu button .ic{width:22px;height:22px;font-size:17px}
+.d3 .d3menu button[data-a=up]{background:linear-gradient(#A6F07A,#4CC24F);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
+.d3 .d3menu button[data-a=sell]{background:linear-gradient(#FFE07A,#FFC23A)}
+.d3 .d3menu button[data-a=x]{background:#FFFFFF;padding:3px}
+.d3 .d3menu button.poor{background:#E4E4E4;color:#9AA;text-shadow:none}
+.d3menu .max{text-align:center;font-size:14px;font-weight:700}
+/* "¡Cuidado!" card */
+.d3banner{position:absolute;left:50%;top:22%;transform:translate(-50%,-20px) scale(.9);opacity:0;transition:all .35s;border-radius:24px;padding:8px 18px 10px;text-align:center;pointer-events:none;z-index:7;background:linear-gradient(#FFFFFF,#FFF0D6)}
+.d3banner.on{opacity:1;transform:translate(-50%,0) scale(1)}
+.d3banner .k{font-size:22px;font-weight:700;color:#E8503C}
+.d3banner img{width:96px;height:96px;display:block;margin:0 auto}
+.d3banner .n{font-weight:700;font-size:18px}
+/* end of round */
+.d3end{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(43,43,58,.35) center/cover;z-index:8}
 .d3end.on{display:flex}
-.d3card{background:#fff;border-radius:28px;box-shadow:0 12px 40px rgba(43,43,58,.35);padding:18px 18px 16px;width:min(84%,340px);text-align:center;animation:d3pop .4s cubic-bezier(.2,1.6,.4,1)}
+.d3card{border-radius:32px;padding:16px 18px 18px;width:min(86%,340px);text-align:center;animation:d3pop .45s cubic-bezier(.2,1.6,.4,1);background:linear-gradient(#FFFDF4,#FFEFC7)}
 @keyframes d3pop{from{transform:scale(.6);opacity:0}}
-.d3card .e{font-size:60px;line-height:1}
-.d3card .t{font-size:25px;font-weight:900;margin:6px 0 2px}
-.d3card .s{color:#5C6478;margin-bottom:14px}
-.d3card .pts{font-size:22px;font-weight:900;color:#7B4FE0;margin-bottom:4px}
-.d3card .b{display:flex;gap:8px;flex-wrap:wrap}
-.d3card button{flex:1;min-width:110px;height:56px;border-radius:18px;font-size:19px;font-weight:900;background:#7DD483;box-shadow:0 4px 0 rgba(43,43,58,.15)}
-.d3card button.alt{background:#fff;flex:0 0 64px;min-width:64px;font-size:24px}
-.d3card .nx{width:100%;font-size:14px;color:#5C6478;margin-bottom:4px}
-.d3test{display:flex;gap:6px;justify-content:center;padding:0 10px 6px}
-.d3test button{background:#2B2B3A;color:#fff;border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700}
+.d3card .e{font-size:56px;line-height:1}
+.d3card .e .ic{width:64px;height:64px;font-size:54px}
+.d3card .logo{width:64%;margin:-4px auto 2px;display:block}
+.d3card .t{font-size:26px;font-weight:700;margin:4px 0 2px}
+.d3card .s{color:var(--ink2);margin-bottom:14px;font-size:15px}
+.d3card .pts{display:flex;align-items:center;justify-content:center;gap:4px;font-size:24px;font-weight:700;color:#6A3FE0;margin-bottom:4px}
+.d3card .pts .ic{width:32px;height:32px;font-size:26px}
+.d3card .rec .ic{width:18px;height:18px;vertical-align:-3px}
+.d3card .rec{display:inline-block;background:linear-gradient(#FFE07A,#FFB935);border:2px solid var(--ink);border-radius:999px;padding:0 10px;font-size:14px;color:var(--ink);margin:0 0 6px}
+.d3card .b{display:flex;gap:8px}
+.d3 .d3card button{flex:1;height:58px;border-radius:20px;font-size:20px;display:flex;align-items:center;justify-content:center;gap:6px;color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.25);background:linear-gradient(#A6F07A,#4CC24F)}
+.d3 .d3card button .ic{width:28px;height:28px;font-size:22px}
+.d3 .d3card button.alt{flex:0 0 64px;background:linear-gradient(#FFFFFF,#E4F2F5);color:var(--ink);text-shadow:none}
+.d3card .nx{width:100%;font-size:14px;color:var(--ink2);margin-bottom:4px;align-self:center}
+/* opening shot */
+.d3intro{position:absolute;left:0;right:0;top:15%;display:flex;flex-direction:column;align-items:center;pointer-events:none;opacity:0;transform:translateY(-14px) scale(.92);transition:opacity .45s,transform .45s;z-index:4}
+.d3.intro .d3intro{opacity:1;transform:none}
+.d3intro img{width:min(80%,390px);filter:drop-shadow(0 6px 10px rgba(20,60,70,.3))}
+.d3intro .r{margin-top:2px;border-radius:999px;padding:4px 16px;font-weight:700;font-size:18px}
+.d3.intro .d3info,.d3.intro .d3tip{opacity:0}
 `;
 
 function start(el, host){
   if(!document.getElementById('d3css')){ const s = document.createElement('style'); s.id = 'd3css'; s.textContent = CSS; document.head.appendChild(s); }
   const age = host.age || 7;
   el.innerHTML = `<div class="d3">
-    <div class="d3top"><button class="ib" data-a="exit" aria-label="Salir">🗺️</button><div class="tt"><b></b><small></small></div>
-      <span class="d3pill" data-v="lives">🥣 0</span><span class="d3pill" data-v="coins">🪙 0</span><span class="d3pill" data-v="points">🏅 0</span></div>
-    ${host.test ? '<div class="d3test"><button data-t="win">✅ Ganar la ronda</button><button data-t="x4">⏩ x4</button><button data-t="lose">💥 Perder</button></div>' : ''}
-    <div class="d3stage"><canvas></canvas><div class="d3intro"><img alt="¡Defensa!"><div class="r"></div></div><div class="d3left"></div><div class="d3menu"></div>
-      <div class="d3banner"><div class="k">¡Cuidado!</div><img alt=""><div class="n"></div></div>
-      <div class="d3end"><div class="d3card"><div class="e"></div><div class="t"></div><div class="s"></div><div class="b"></div></div></div></div>
+    <div class="d3stage"><canvas></canvas><div class="d3intro"><img alt="¡Defensa!"><div class="r gl"></div></div><div class="d3menu gl"></div>
+      <div class="d3banner gl"><div class="k">¡Cuidado!</div><img alt=""><div class="n"></div></div>
+      <div class="d3end"><div class="d3card gl"><div class="e"></div><div class="t"></div><div class="s"></div><div class="b"></div></div></div></div>
+    <div class="d3top"><button class="ib gl" data-a="exit" aria-label="Salir">${ic('map')}</button>
+      <div class="d3stats"><span class="d3pill gl" data-v="lives">${ic('bowl')}<b>0</b></span><span class="d3pill gl" data-v="coins">${ic('coin')}<b>0</b></span><span class="d3pill gl" data-v="points">${ic('medal')}<b>0</b></span></div></div>
+    <div class="d3info"><div class="tt"><b></b><small></small></div><div class="d3left"></div></div>
+    ${host.test ? '<div class="d3test"><button data-t="win">✅ Ganar</button><button data-t="x4">⏩ x4</button><button data-t="lose">💥 Perder</button></div>' : ''}
     <div class="d3tip"></div>
     <div class="d3bar"></div></div>`;
   const $ = s => el.querySelector(s);
@@ -600,18 +651,20 @@ function start(el, host){
 
   // camera: look down at the island at an angle; fit the whole board in the canvas
   function fit(){
-    const w = stage.clientWidth || 360, h = stage.clientHeight || 600;
+    const w = stage.clientWidth || 360, h = stage.clientHeight || 600, rr = stage.getBoundingClientRect();
+    const topPx = Math.max(60, ($('.d3info').getBoundingClientRect().bottom || 110) - rr.top + 4), botPx = Math.max(60, rr.bottom - ($('.d3bar').getBoundingClientRect().top || h - 110) + 6);
+    const yTop = 1 - 2 * topPx / h, yBot = -1 + 2 * botPx / h;
     renderer.setSize(w, h, false); camera.aspect = w / h;
     camera.fov = 32; camera.updateProjectionMatrix();
     const target = new THREE.Vector3(0, 0, .2), dir = new THREE.Vector3(0, Math.sin(.86), Math.cos(.86)).normalize();
     const corners = []; for(const x of [-COLS / 2 - .1, COLS / 2 + .1]) for(const z of [-ROWS / 2 - .1, ROWS / 2 + .1]) for(const y of [0, .2]) corners.push(new THREE.Vector3(x, y, z));
     let lo = 5, hi = 80;
     for(let i = 0; i < 30; i++){ const d = (lo + hi) / 2; camera.position.copy(target).addScaledVector(dir, d); camera.lookAt(target); camera.updateMatrixWorld();
-      const ok = corners.every(p => { const q = p.clone().project(camera); return Math.abs(q.x) < .99 && q.y < .9 && q.y > -.99; }); if(ok) hi = d; else lo = d; }
+      const ok = corners.every(p => { const q = p.clone().project(camera); return Math.abs(q.x) < 1.04 && q.y < yTop && q.y > yBot; }); if(ok) hi = d; else lo = d; }
     camera.position.copy(target).addScaledVector(dir, hi); camera.lookAt(target); camera.clearViewOffset(); camera.updateMatrixWorld();
     // center the island vertically in the space we have
     let lo2 = 9, hi2 = -9; for(const p of corners){ const q = p.clone().project(camera); lo2 = Math.min(lo2, q.y); hi2 = Math.max(hi2, q.y); }
-    const mid = (lo2 + hi2) / 2 + .04;
+    const mid = (lo2 + hi2) / 2 - (yTop + yBot) / 2;
     cam = { target, dist: hi, w, h, off: Math.round(-mid * h / 2) };
     placeCam();
   }
@@ -813,19 +866,20 @@ function start(el, host){
   let hudKey = '';
   function hud(){
     const left = G.queue.length + G.foes.length, k = [G.lives, G.coins, G.points, left, G.phase, sel, speed, menuFor && menuFor.lvl, menuFor && menuFor.wall && Math.ceil(menuFor.hp)].join('|'); if(k === hudKey) return; hudKey = k;
-    pill('lives').textContent = '🥣 ' + G.lives; pill('coins').textContent = '🪙 ' + G.coins; pill('points').textContent = '🏅 ' + G.points;
-    $('.d3left').textContent = G.phase === 'build' ? `🐾 ${G.total} bichos vienen${G.np > 1 ? ` por ${G.np} caminos` : ''}` : G.phase === 'wave' ? `🐾 Faltan ${left}` : '';
-    $('.d3left').style.display = $('.d3left').textContent ? '' : 'none';
+    const num = (v, n) => { const b = pill(v).querySelector('b'); if(b.textContent !== String(n)){ if(b.textContent && v !== 'lives'){ pill(v).classList.remove('bump'); void pill(v).offsetWidth; pill(v).classList.add('bump'); } b.textContent = n; } };
+    num('lives', G.lives); num('coins', G.coins); num('points', G.points);
+    $('.d3left').textContent = G.phase === 'build' ? `🐾 ${G.total}${G.np > 1 ? ` · ${G.np} caminos` : ''}` : G.phase === 'wave' ? `🐾 Faltan ${left}` : '';
     el.querySelectorAll('.d3tw').forEach(b => { const i = b.dataset.i, w = i === 'wall'; b.classList.toggle('sel', (w ? 'wall' : +i) === sel); b.classList.toggle('poor', w ? G.coins < WALL.cost : G.un[+i] && G.coins < TOWERS[+i].cost); });
     const go = $('.d3go'); go.disabled = G.phase === 'won' || G.phase === 'lost';
-    go.innerHTML = G.phase === 'build' ? '▶<br>¡Empieza!' : speed > 1 ? '🐢<br>Normal' : '⏩<br>Rápido';
-    go.classList.toggle('fast', speed > 1);
+    go.innerHTML = G.phase === 'build' ? `${ic('play')}¡Empieza!` : speed > 1 ? `${ic('slow')}Normal` : `${ic('fast')}Rápido`;
+    go.classList.toggle('fast', G.phase === 'wave' && speed === 1); go.classList.toggle('slow', G.phase === 'wave' && speed > 1);
     if(menuFor) showMenu(menuFor);
   }
-  const tip = h => { $('.d3tip').innerHTML = h; };
+  let tipT = 0;
+  const tip = h => { const t = $('.d3tip'); clearTimeout(tipT); if(!h){ t.classList.remove('on'); return; } t.innerHTML = h; t.classList.add('on'); tipT = setTimeout(() => t.classList.remove('on'), 5200); };
   function bar(){
-    $('.d3bar').innerHTML = TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><img alt="${b.name}" src="${thumb('t' + b.id, () => towerModel(i, 1).g)}"><span class="nm">${b.name}</span><span class="c">${G.un[i] ? '🪙' + b.cost : 'Ronda ' + G.A.unlock[i]}</span></button>`).join('')
-      + `<button class="d3tw" data-i="wall"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(1))}"><span class="nm">${WALL.name}</span><span class="c">🪙${WALL.cost}</span></button>`
+    $('.d3bar').innerHTML = TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><span class="disc"><img alt="${b.name}" src="${thumb('t' + b.id, () => towerModel(i, 1).g)}"></span>${G.un[i] ? '' : ic('lock', 'lk')}<span class="c">${G.un[i] ? ic('coin') + b.cost : 'Ronda ' + G.A.unlock[i]}</span><span class="nm">${(n => n[0].toUpperCase() + n.slice(1))(b.name.replace(/^(El|La) /, ''))}</span></button>`).join('')
+      + `<button class="d3tw" data-i="wall"><span class="disc"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(1))}"></span><span class="c">${ic('coin')}${WALL.cost}</span><span class="nm">Cerca</span></button>`
       + `<button class="d3go"></button>`;
     el.querySelectorAll('.d3tw').forEach(btn => btn.onclick = () => {
       if(btn.dataset.i === 'wall'){ hideMenu(); sel = sel === 'wall' ? -1 : 'wall'; if(sel === 'wall'){ tip(`<b>${WALL.name}</b>: ${WALL.tip} Toca el camino.`); say([WALL.word]); } else tip(''); hudKey = ''; return; }
@@ -854,12 +908,12 @@ function start(el, host){
     menuFor = t; const name = t.wall ? WALL.names[t.lvl - 1] : TOWERS[t.i].name;
     menu.innerHTML = `<div class="nm">${name}${t.lvl > 1 ? ' ' + '⭐'.repeat(t.lvl - 1) : ''}</div>`
       + (t.wall ? `<div class="max">💪 ${Math.ceil(t.hp)} / ${t.max}</div>` : '')
-      + (t.lvl < 3 ? `<button data-a="up" class="${G.coins < G.upCost(t) ? 'poor' : ''}">⬆️ ${t.wall ? WALL.names[t.lvl] : 'Mejorar'} · 🪙${G.upCost(t)}</button>` : `<div class="max">👑 ¡El más fuerte!</div>`)
-      + `<button data-a="sell">💰 Vender · +${G.sellValue(t)}</button><button data-a="x">✖</button>`;
+      + (t.lvl < 3 ? `<button data-a="up" class="gl ${G.coins < G.upCost(t) ? 'poor' : ''}">${ic('upgrade')}${t.wall ? WALL.names[t.lvl] : 'Mejorar'} · ${ic('coin')}${G.upCost(t)}</button>` : `<div class="max">${ic('crown')} ¡El más fuerte!</div>`)
+      + `<button data-a="sell" class="gl">${ic('sell')}Vender · +${G.sellValue(t)}</button><button data-a="x" class="gl">✖</button>`;
     tmpV.set(wx(t.x), hAt(t.x, t.y) + 1.1, wz(t.y)).project(camera);
     const w = stage.clientWidth, h = stage.clientHeight, x = (tmpV.x + 1) / 2 * w, y = (1 - tmpV.y) / 2 * h;
-    menu.style.left = Math.min(Math.max(x - 89, 6), w - 184) + 'px';
-    menu.style.top = (y > h * .45 ? Math.max(6, y - 170) : Math.min(h - 150, y + 40)) + 'px';
+    menu.style.left = Math.min(Math.max(x - 92, 6), w - 196) + 'px';
+    menu.style.top = (y > h * .45 ? Math.max(120, y - 190) : Math.min(h - 290, y + 40)) + 'px';
     menu.classList.add('on');
     menu.querySelectorAll('button').forEach(x2 => x2.onclick = e => { e.stopPropagation(); const a = x2.dataset.a;
       if(a === 'up'){ if(G.upgrade(t)) say(['c|¡Más fuerte!']); else { tip('🪙 ¡No tienes monedas!'); say(['c|¡No tienes monedas!']); } }
@@ -900,11 +954,11 @@ function start(el, host){
     if(ended) return; ended = true;
     const res = (host.onEnd && host.onEnd(won, G.r, G.points)) || { prize: won ? prizeFor(G.r) : 0, next: won };
     const c = $('.d3card');
-    c.querySelector('.e').innerHTML = won ? `<img class="logo" src="${ART}logo.png" alt=""><span>🏆</span>` : '😵';
+    c.querySelector('.e').innerHTML = won ? `<img class="logo" src="${ART}logo.png" alt="">${ic('trophy')}` : '😵';
     c.querySelector('.t').textContent = won ? `¡Ganaste la ronda ${G.r}!` : '¡Ay, no!';
-    c.querySelector('.s').innerHTML = `<div class="pts">🏅 ${G.points} puntos${res.record ? ' · <b>¡Nuevo récord!</b>' : ''}</div>` + (won ? `¡La comida está a salvo!${res.prize ? ` · +${res.prize} ⭐` : ''}` : `Se comieron toda la comida. ¡Inténtalo otra vez!`);
-    c.querySelector('.b').innerHTML = (won ? (res.next ? `<button data-a="next">▶ Ronda ${G.r + 1}</button>` : `<div class="nx">🗺️ Gana otro nivel del mapa para jugar la ronda ${G.r + 1}.</div>`) : `<button data-a="retry">🔄 ¡Otra vez!</button>`)
-      + `<button class="alt" data-a="exit">🗺️</button>`;
+    c.querySelector('.s').innerHTML = `<div class="pts">${ic('medal')}${G.points} puntos</div>${res.record ? `<div class="rec">${ic('star')} ¡Nuevo récord!</div><br>` : ''}` + (won ? `¡La comida está a salvo!${res.prize ? ` · +${res.prize} ⭐` : ''}` : `Se comieron toda la comida. ¡Inténtalo otra vez!`);
+    c.querySelector('.b').innerHTML = (won ? (res.next ? `<button data-a="next" class="gl">${ic('play')}Ronda ${G.r + 1}</button>` : `<div class="nx">Gana otro nivel del mapa para jugar la ronda ${G.r + 1}.</div>`) : `<button data-a="retry" class="gl">${ic('retry')}¡Otra vez!</button>`)
+      + `<button class="alt gl" data-a="exit">${ic('map')}</button>`;
     c.querySelectorAll('button').forEach(b => b.onclick = () => { const a = b.dataset.a; if(a === 'exit') exit(); else if(a === 'retry') newRound(G.r); else if(a === 'next'){ host.onNext ? host.onNext(G.r + 1, api) : newRound(G.r + 1); } });
     $('.d3end').classList.add('on');
     say([won ? 'c|¡Ganaste la ronda!' : 'c|¡Ay, no! ¡Otra vez!', res.record ? 'c|¡Nuevo récord!' : null].filter(Boolean));
@@ -924,9 +978,10 @@ function start(el, host){
   }
   function newRound(r){
     G = new Game(r, age); sel = -1; speed = 1; ended = false; hudKey = ''; hideMenu(); $('.d3end').classList.remove('on');
-    root.querySelector('.tt b').textContent = `Ronda ${r}`;
+    root.querySelector('.tt b').textContent = `Ronda ${r}`;   // shown in the center badge
     root.querySelector('.tt small').textContent = G.map.name + (r % 5 === 0 ? ' · 🐻' : '');
-    buildWorld(); bar(); hud();
+    buildWorld(); bar(); hud(); fit();
+    if(document.fonts) document.fonts.ready.then(() => { if(alive) fit(); });
     intro = 0; placeCam(); root.classList.add('intro'); $('.d3intro .r').textContent = `Ronda ${r} · ${G.map.name}`;
     tip(newPath(r, age) ? '¡Ojo! Este mapa tiene un camino nuevo. 👀' : 'Toca un animal abajo y luego el pasto. La cerca va en el camino. ¡Protege la comida!');
     say(['c|¡Defensa!', 'c|¡Protege la comida!']);
