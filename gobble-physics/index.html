@@ -3058,6 +3058,44 @@ function personStep(o,dt){
   if(s>.5){o.fy=(o.fy??o.yaw)+wrapA(Math.atan2(-o.vy,o.vx)-(o.fy??o.yaw))*Math.min(1,dt*10);}
   return true;}
 
+/* ================= boats pass UNDER bridges: a world-space mask of road decks over water; boat pixels inside it are hidden ================= */
+const BRG_N=1024,BRG_U={value:null},BRG_DATA=new Uint8Array(BRG_N*BRG_N);
+let fasMesh=null;
+function buildBridgeMask(){BRG_DATA.fill(0);const FAS=[];
+  if(CITYGEO&&RG&&RG.edges.length){const E=RG.edges,Nn=RG.nodes,s=BRG_N/W;
+    const wet=(x,y)=>{const m=maskAt(x,y);return m===0||m===2;};
+    const mark=(x,y)=>{const i=Math.floor(x*s),j=Math.floor(y*s);if(i<0||j<0||i>=BRG_N||j>=BRG_N)return;BRG_DATA[j*BRG_N+i]=255;};
+    for(const e of E){const A=Nn[e.a],nx=-e.uy,ny=e.ux,hw=e.w/2+SW;
+      let any=false;for(let t=0;t<=e.len&&!any;t+=6)for(const q of[-hw,0,hw])if(wet(A.x+e.ux*t+nx*q,A.y+e.uy*t+ny*q)){any=true;break;}
+      if(!any)continue;
+      for(const sd of[-1,1]){const q=sd*(hw+.2);let prev=null;for(let t=0;t<=e.len+.01;t+=2){const x=A.x+e.ux*t+nx*q,y=A.y+e.uy*t+ny*q,w=wet(x,y);
+        if(w&&prev)FAS.push([prev[0],prev[1],x,y,sd*nx,sd*ny]);prev=w?[x,y]:null;}}
+      for(let t=-2;t<=e.len+2;t+=1.2)for(let q=-hw-1;q<=hw+1;q+=1.2){const x=A.x+e.ux*t+nx*q,y=A.y+e.uy*t+ny*q;if(wet(x,y))mark(x,y);}}
+    for(const N of Nn){let r=0;for(const i of N.e)r=Math.max(r,E[i].w/2+SW);if(!N.e.length)continue;
+      let any=false;for(let a=0;a<8&&!any;a++)any=wet(N.x+Math.cos(a*.785)*r*.9,N.y+Math.sin(a*.785)*r*.9)||wet(N.x,N.y);if(!any)continue;
+      for(let a=-r;a<=r;a+=1.2)for(let b=-r;b<=r;b+=1.2)if(a*a+b*b<=r*r&&wet(N.x+a,N.y+b))mark(N.x+a,N.y+b);}
+    // grow by one texel so no slivers of hull peek through at the deck edge
+    const cp=BRG_DATA.slice();for(let j=1;j<BRG_N-1;j++)for(let i=1;i<BRG_N-1;i++){const k=j*BRG_N+i;if(!cp[k]&&(cp[k-1]||cp[k+1]||cp[k-BRG_N]||cp[k+BRG_N]))BRG_DATA[k]=255;}
+    for(const o of objs)if(o.k==='towerbridge'){const c=Math.cos(o.yaw||0),sn=Math.sin(o.yaw||0);
+      for(let a=-o.t.w/2;a<=o.t.w/2;a+=1.2)for(let b=-o.t.d/2;b<=o.t.d/2;b+=1.2){const x=o.x+a*c+b*sn,y=o.y-a*sn+b*c;if(wet(x,y))mark(x,y);}}}
+  if(fasMesh){scene.remove(fasMesh);fasMesh.geometry.dispose();fasMesh=null;}
+  if(FAS.length){const P=[],Nr=[],C=[],cl=new THREE.Color();
+    const quad=(x1,y1,x2,y2,ya,yb,ox,oy,c)=>{cl.set(c);const v=[[x1,ya,y1],[x2,ya,y2],[x2,yb,y2],[x1,ya,y1],[x2,yb,y2],[x1,yb,y1]];for(const p of v){P.push(...p);Nr.push(ox,0,oy);C.push(cl.r,cl.g,cl.b);}};
+    for(const[x1,y1,x2,y2,ox,oy]of FAS){quad(x1,y1,x2,y2,.35,-4.5,ox,oy,'#59646e');quad(x1+ox*.3,y1+oy*.3,x2+ox*.3,y2+oy*.3,.6,-.6,ox,oy,'#8a96a0');}
+    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(P,3));g.setAttribute('normal',new THREE.Float32BufferAttribute(Nr,3));g.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
+    fasMesh=new THREE.Mesh(g,new THREE.MeshStandardMaterial({vertexColors:true,roughness:.7,metalness:.2,side:THREE.DoubleSide}));fasMesh.receiveShadow=true;scene.add(fasMesh);}
+  if(!BRG_U.value){BRG_U.value=new THREE.DataTexture(BRG_DATA,BRG_N,BRG_N,THREE.RedFormat,THREE.UnsignedByteType);BRG_U.value.magFilter=BRG_U.value.minFilter=THREE.NearestFilter;}
+  BRG_U.value.needsUpdate=true;}
+function boatShader(sh){sh.uniforms.uBrg=BRG_U;
+  sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vBW;')
+    .replace('#include <project_vertex>','#include <project_vertex>\n{vec4 bw=vec4(transformed,1.);\n#ifdef USE_INSTANCING\nbw=instanceMatrix*bw;\n#endif\nvBW=(modelMatrix*bw).xyz;}');
+  sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>\nvarying vec3 vBW;uniform sampler2D uBrg;`)
+    .replace('void main() {',`void main() {\nif(vBW.y<90.&&texture2D(uBrg,vBW.xz/${W.toFixed(1)}).r>.5)discard;`);}
+let BOAT_MAT=null,BOAT_DEPTH=null;
+function boatMat(){if(BOAT_MAT)return BOAT_MAT;if(!BRG_U.value)buildBridgeMask();
+  BOAT_MAT=OBJ_MAT.clone();BOAT_MAT.onBeforeCompile=sh=>{patchLook(sh,true);boatShader(sh);};BOAT_MAT.customProgramCacheKey=()=>'boat';
+  BOAT_DEPTH=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking});BOAT_DEPTH.onBeforeCompile=boatShader;BOAT_DEPTH.customProgramCacheKey=()=>'boatdepth';return BOAT_MAT;}
+
 const geoCache=new Map();
 function getGeo(k,v){const key=k+'|'+v;let g=geoCache.get(key);if(!g){const p=new Parts();p.g0=VEHICLES.has(k)?.45:0;BUILD[k](p,v);g=p.build();if(T[k].sc)g.scale(T[k].sc,T[k].sc,T[k].sc);geoCache.set(key,g);}return g;}
 const OBJ_MAT=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.86,metalness:0,envMapIntensity:.32});
@@ -3101,7 +3139,7 @@ SWAY_MAT.onBeforeCompile=sh=>{patchLook(sh,true);sh.uniforms.uT=SWAY_U;sh.vertex
   transformed.x+=sin(uT*1.6+ip.x*.013+ip.z*.009)*sw*1.5+sin(uT*4.1+ip.z*.05)*sw*.25;
   transformed.z+=cos(uT*1.25+ip.x*.011-ip.z*.012)*sw*1.1;`);};
 SWAY_MAT.customProgramCacheKey=()=>'sway';
-const MAT_FOR=k=>k==='person'?personMat():k==='bean'?beanMat():k==='tree'||k==='sakura'||k==='bush'?SWAY_MAT:OBJ_MAT;
+const MAT_FOR=k=>k==='person'?personMat():BOAT_K.has(k)?boatMat():k==='bean'?beanMat():k==='tree'||k==='sakura'||k==='bush'?SWAY_MAT:OBJ_MAT;
 
 /* ---------- instancing ---------- */
 let imeshes=[];
@@ -3115,7 +3153,7 @@ function buildInstances(){
   for(const[key,list]of groups){const[k,v]=key.split('|');
     const cap=list.length+Math.max(4,Math.ceil(list.length*.6));          // spare slots for things that spawn later
     const im=new THREE.InstancedMesh(getGeo(k,+v),MAT_FOR(k),cap);im.v=+v;im.cap=cap;im.slots=list.slice();im.count=list.length;
-    im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;if(k==='person')personMesh(im);
+    im.castShadow=true;im.receiveShadow=true;im.frustumCulled=false;if(k==='person')personMesh(im);if(BOAT_K.has(k)){boatMat();im.customDepthMaterial=BOAT_DEPTH;}
     list.forEach((o,i)=>{o.im=im;o.ii=i;setInst(o);});
     im.instanceMatrix.needsUpdate=true;scene.add(im);imeshes.push(im);
     let arr=meshByKind.get(k);if(!arr)meshByKind.set(k,arr=[]);arr.push(im);}
@@ -3549,7 +3587,7 @@ const skyDome=new THREE.Mesh(new THREE.SphereGeometry(1,32,16),new THREE.ShaderM
   vertexShader:'varying vec3 vP;void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}',
   fragmentShader:'varying vec3 vP;void main(){float y=normalize(vP).y;vec3 c=mix(vec3(.80,.87,.91),vec3(.42,.63,.86),smoothstep(.0,.55,y));gl_FragColor=vec4(c,1.);\n#include <colorspace_fragment>\n}'}));
 skyDome.renderOrder=-10;skyDome.frustumCulled=false;scene.add(skyDome);
-function newTown(){genTown();stackifyRows();recordSpots();outer.material.color.set(CITYGEO?CITYGEO.outer||'#5fb6df':'#83c98a');paintGround();buildRoadMesh();buildInstances();startCount=objs.length;startCars=objs.filter(o=>o.moving).length;spawnClk=bldClk=carClk=1;}
+function newTown(){genTown();stackifyRows();recordSpots();outer.material.color.set(CITYGEO?CITYGEO.outer||'#5fb6df':'#83c98a');paintGround();buildRoadMesh();buildBridgeMask();buildInstances();startCount=objs.length;startCars=objs.filter(o=>o.moving).length;spawnClk=bldClk=carClk=1;}
 function newGame(){
   clearBanners();for(const h of holes)disposeHole(h);clearPopups();pend={pts:0,t:0};tilting.clear();ghosted.clear();for(const g of ghostPool)g.visible=false;
   newTown();holes=[];unlocked=new Set();shake=0;
