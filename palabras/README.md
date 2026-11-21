@@ -17,11 +17,13 @@ No build step: GitHub Pages serves these files as-is.
 | `js/tarea.js` | Homework unit screens |
 | `js/run.js` | Flashcards and the shared game run (hearts, score) |
 | `js/word-games.js`, `js/arcade.js` | The mini-games |
-| `js/defensa.js` | Connects ¡Defensa! to Palabras: next round, map button, stars, best scores |
+| `js/defensa.js` | Connects ¡Defensa! to Palabras: the saved island, rounds unlocked by map levels (3 each), stars, best scores |
 | `js/app.js` | Settings, install, offline |
 | `js/test.js` | Test mode: open with `?test` for a separate save and a 🧪 panel of shortcuts |
 | `lolo3d.js`, `monster3d.js` | 3D pets and Ñamñam (three.js in `lib/`) |
-| `defensa3d.js`, `defensa-rules.js` | ¡Defensa!, the 3D tower defense game (graphics / rules). Balance check: `node palabras/tests/defensa-sim.mjs` |
+| `defensa3d.js`, `defensa-rules.js` | ¡Defensa!, the 3D tower defense game (graphics / rules). Rules use Bloons TD 6's scale (ranges, speeds, round toughness). Balance check: `node palabras/tests/defensa-sim.mjs` |
+| `art/defensa/` | ¡Defensa! pictures (swap a file to change it) and `models/` (drop in a .glb and list it in `models.json` to replace a tower or critter) |
+| `lib/` | three.js, plus its glTF loader (only loaded when `models.json` lists a model) |
 | `defensa.html` | ¡Defensa! on its own, for testing: geogeniuses.win/palabras/defensa.html |
 | `sw.js` | Offline support |
 | `audio/` | Dora's voice packs, made by `tools/voice/` |

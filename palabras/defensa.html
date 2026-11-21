@@ -23,6 +23,8 @@
   .play{background:#FF7A59;color:#fff;font-weight:900;font-size:24px;border-radius:22px;padding:16px 40px;box-shadow:0 5px 0 rgba(170,60,30,.35)}
   .note{font-size:13px;max-width:320px}
   .pets .chip{font-size:24px;padding:8px 12px}
+  #cont{background:#4CC24F;box-shadow:0 5px 0 rgba(30,110,40,.35)}
+  #cont[hidden]{display:none}
 </style>
 </head>
 <body>
@@ -30,30 +32,30 @@
   <img class="logo" src="art/defensa/logo.png" alt="¡Defensa!">
   <p>Modo de prueba</p>
   <div class="row" id="ages"><button class="chip" data-age="4">🧸 4–5</button><button class="chip" data-age="7">🚀 7</button><button class="chip" data-age="10">🎯 10</button></div>
-  <div class="round"><button id="minus">−</button>Ronda <b id="rnd">1</b><button id="plus">+</button></div>
+  <div class="row" id="maps"><button class="chip" data-m="0">🌳 Jardín</button><button class="chip" data-m="1">🏖️ Playa</button><button class="chip" data-m="2">❄️ Nieve</button></div>
   <div class="row pets" id="pets"><button class="chip" data-p="axolotl">🦎</button><button class="chip" data-p="penguin">🐧</button><button class="chip" data-p="fox">🦊</button><button class="chip" data-p="seal">🦭</button></div>
-  <button class="play" id="play">▶ ¡Jugar!</button>
-  <p class="note">Test version of the tower defense game. Nothing here is saved to the kids' Palabras game. The black buttons at the top of the game are test shortcuts.</p>
+  <div class="row"><button class="play" id="cont">▶ Seguir</button><button class="play" id="play">✨ Nueva partida</button></div>
+
+  <p class="note">Test version of the tower defense game. Each age + island keeps its own saved game here (not the kids' Palabras game). Every round is open. The black buttons in the game are test shortcuts.</p>
 </div>
 <div id="game"></div>
 <script type="module">
-  import './lolo3d.js?v=30';
-  import './defensa3d.js?v=30';
+  import './lolo3d.js?v=31';
+  import './defensa3d.js?v=31';
   const PETS = { axolotl:'Lolo', penguin:'Pipo', fox:'Chispa', seal:'Nieve' };
-  const st = JSON.parse(localStorage.getItem('tdtest') || '{"age":7,"round":1,"pet":"axolotl"}');
-  const save = () => localStorage.setItem('tdtest', JSON.stringify(st));
-  const $ = id => document.getElementById(id);
+  const st = Object.assign({ age: 7, map: 0, pet: 'axolotl', saves: {} }, JSON.parse(localStorage.getItem('tdtest2') || '{}'));
+  const save = () => localStorage.setItem('tdtest2', JSON.stringify(st));
+  const $ = id => document.getElementById(id), key = () => st.age + '-' + st.map;
   function paint(){
     document.querySelectorAll('#ages .chip').forEach(b => b.classList.toggle('on', +b.dataset.age === st.age));
+    document.querySelectorAll('#maps .chip').forEach(b => b.classList.toggle('on', +b.dataset.m === st.map));
     document.querySelectorAll('#pets .chip').forEach(b => b.classList.toggle('on', b.dataset.p === st.pet));
-    $('rnd').textContent = st.round;
+    const sv = st.saves[key()]; $('cont').hidden = !sv; if(sv) $('cont').textContent = `▶ Seguir · Ronda ${sv.r}`;
   }
   document.querySelectorAll('#ages .chip').forEach(b => b.onclick = () => { st.age = +b.dataset.age; save(); paint(); });
+  document.querySelectorAll('#maps .chip').forEach(b => b.onclick = () => { st.map = +b.dataset.m; save(); paint(); });
   document.querySelectorAll('#pets .chip').forEach(b => b.onclick = () => { st.pet = b.dataset.p; save(); paint(); });
-  $('minus').onclick = () => { st.round = Math.max(1, st.round - 1); save(); paint(); };
-  $('plus').onclick = () => { st.round = Math.min(60, st.round + 1); save(); paint(); };
   paint();
-
   // Dora's voice: the ¡Defensa! clip pack
   let clips = null, audio = new Audio();
   fetch('audio/defensa.json').then(r => r.json()).then(async idx => { const bin = await (await fetch('audio/defensa.mp3')).arrayBuffer(); clips = { idx, bin }; }).catch(() => {});
@@ -62,19 +64,24 @@
     const parts = keys.map(k => { const [o, n] = clips.idx[k]; return new Uint8Array(clips.bin, o, n); });
     audio.src = URL.createObjectURL(new Blob(parts, { type: 'audio/mpeg' })); audio.play().catch(() => {});
   }
-  function play(){
+  function play(fresh){
     $('menu').style.display = 'none';
     audio.play().catch(() => {});
+    const k = key();
     const host = {
-      age: st.age, round: st.round, test: true, petName: PETS[st.pet], pet: { species: st.pet, skin: 'clasico', stage: 2 }, say,
-      onEnd(won, r, points){ st.best = st.best || {}; const k = st.age + '-' + r, record = points > (st.best[k] || 0); if(record) st.best[k] = points; if(won) st.round = r + 1; save(); return { prize: 0, next: true, record }; },
-      onNext(r, api){ api.newRound(r); },
+      age: st.age, map: st.map, saved: fresh ? null : st.saves[k] || null, test: true, petName: PETS[st.pet], pet: { species: st.pet, skin: 'clasico', stage: 2 }, say,
+      canPlay: () => true,
+      onSave(d){ st.saves[k] = d; save(); },
+      onRound(){ return {}; },
+      onEnd(won, r, points){ st.best = st.best || {}; const record = points > (st.best[k] || 0); if(record) st.best[k] = points; if(won) delete st.saves[k]; save(); return { prize: 0, record, next: won ? '¡Otra vez!' : null }; },
+      onNext(api){ api.startGame(st.map, null); },
       onExit(){ $('menu').style.display = ''; paint(); },
     };
     window.game = Defensa3D.start($('game'), host);
   }
-  $('play').onclick = play;
-  if(location.hash === '#play') play();
+  $('play').onclick = () => play(true);
+  $('cont').onclick = () => play(false);
+  if(location.hash === '#play') play(true);
 </script>
 </body>
 </html>

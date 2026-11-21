@@ -43,7 +43,7 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
     await p.click('.shopitem[data-id="penguin"] .buy'); await p.click('.shopitem[data-id="penguin"] .buy'); await p.waitForTimeout(400);
     log.push(`${age} bought penguin -> ${await p.evaluate(() => pet.species)}`);
     await p.click('.shoptabs button[data-tab="skins"]'); await p.waitForTimeout(400);
-    // ¡Defensa! 3D tower defense: open a round, build a tower and a fence, play it to the end
+    // ¡Defensa! 3D tower defense: open the island, build a tower and a fence, play a round to the end
     await p.evaluate(() => { goHome(); S.from = 'map'; renderMap(); show('map'); }); await p.waitForTimeout(300);
     await p.click('#tdMapBtn'); await p.waitForFunction(() => TD._t.G, null, { timeout: 15000 }); await p.waitForTimeout(800);
     log.push(`${age} defensa -> ${await onView()} trails:${await p.evaluate(() => TD._t.G.np)}`);
@@ -53,8 +53,9 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
     const built = await p.evaluate(() => { const g = TD._t.G, T = g.paths[0], [x, y] = g.posAt(0, T.len * .5); g.coins += 100; const w = g.placeWall(x, y); return g.towers.length + ' towers, wall:' + !!w; });
     await p.click('.d3go'); await p.waitForTimeout(1500);
     await p.evaluate(() => TD._t.api.step(240)); await p.waitForTimeout(1200);
-    log.push(`${age} defensa round -> ${built}, ${await p.evaluate(() => TD._t.G.phase)}, ${await p.evaluate(() => TD._t.G.points)} pts`);
-    await p.click('.d3end [data-a="exit"]'); await p.waitForTimeout(500); log.push(`${age} back -> ${await onView()}`);
+    await p.waitForTimeout(1500);   // the "round done" card, then the next round is ready (towers stay; the game is saved)
+    log.push(`${age} defensa round -> ${built}, now round ${await p.evaluate(() => TD._t.G.r + ' ' + TD._t.G.phase)}, ${await p.evaluate(() => TD._t.G.points)} pts, saved at round ${await p.evaluate(() => TD.state.game && TD.state.game.r)}`);
+    await p.click('.d3top [data-a="exit"]'); await p.waitForTimeout(500); log.push(`${age} back -> ${await onView()}`);
     // settings + album
     for (const v of ['settings', 'album']) { await p.evaluate(v => { const b = document.querySelector(`[data-go="${v}"], #${v}Btn`); if (b) b.click(); else show(v); }, v); await p.waitForTimeout(300); log.push(`${age} ${v} -> ${await onView()}`); }
     // fox homework unit (10 only)
