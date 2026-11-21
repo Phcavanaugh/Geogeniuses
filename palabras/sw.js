@@ -1,8 +1,8 @@
 // ¡Hola, Palabras! offline support.
 // The page itself: network first (so updates show up), cached copy when offline.
 // Dora's sound packs and fonts: cache first (they never change for a given version).
-const VERSION = 'palabras-v28';
-const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3', './css/palabras.css?v=28', './js/words.js?v=28', './js/riddles.js?v=28', './js/content7.js?v=28', './js/units.js?v=28', './js/core.js?v=28', './js/pet.js?v=28', './js/home.js?v=28', './js/tarea.js?v=28', './js/run.js?v=28', './js/word-games.js?v=28', './js/arcade.js?v=28', './js/defensa.js?v=28', './js/app.js?v=28', './js/test.js?v=28', './monster3d.js?v=28', './lolo3d.js?v=28', './defensa3d.js?v=28', './defensa-rules.js?v=28', './defensa.html', './audio/defensa.json', './audio/defensa.mp3', './lib/three.module.min.js'];
+const VERSION = 'palabras-v29';
+const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './apple-touch-icon.png', './audio/common.json', './audio/common.mp3', './css/palabras.css?v=29', './js/words.js?v=29', './js/riddles.js?v=29', './js/content7.js?v=29', './js/units.js?v=29', './js/core.js?v=29', './js/pet.js?v=29', './js/home.js?v=29', './js/tarea.js?v=29', './js/run.js?v=29', './js/word-games.js?v=29', './js/arcade.js?v=29', './js/defensa.js?v=29', './js/app.js?v=29', './js/test.js?v=29', './monster3d.js?v=29', './lolo3d.js?v=29', './defensa3d.js?v=29', './defensa-rules.js?v=29', './defensa.html', './art/defensa/grass.jpg', './art/defensa/sand.jpg', './art/defensa/snow.jpg', './art/defensa/trail.jpg', './art/defensa/sky-jardin.jpg', './art/defensa/sky-playa.jpg', './art/defensa/sky-nieve.jpg', './art/defensa/logo.png', './audio/defensa.json', './audio/defensa.mp3', './lib/three.module.min.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(CORE.map(u => new Request(u, { cache: 'reload' })))).then(() => self.skipWaiting()));
