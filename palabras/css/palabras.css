@@ -427,38 +427,6 @@
   .tdbtn:not(.ready){filter:grayscale(.7);opacity:.75}
   .tdbtn.ready::after{content:'';position:absolute;top:-3px;right:-3px;width:12px;height:12px;border-radius:50%;background:#FF5E5E;border:2px solid #fff}
   .over .tdover{background:linear-gradient(135deg,#C9F0B5,#8FD7A8);font-size:22px;width:100%}
-  .tdhud{display:flex;gap:8px;justify-content:center;margin-bottom:8px;font-size:17px}
-  .tdhud>span{background:var(--card);box-shadow:var(--shadow);border-radius:14px;padding:5px 12px}
-  .tdstage{position:relative;display:flex;justify-content:center;touch-action:manipulation;user-select:none;-webkit-user-select:none}
-  .tdstage canvas{border-radius:18px;box-shadow:var(--shadow);display:block}
-  .tdmenu{position:absolute;display:none;flex-direction:column;gap:6px;background:var(--card);border-radius:16px;box-shadow:var(--shadow);padding:8px;width:170px;z-index:3}
-  .tdmenu.on{display:flex}
-  .tdmenu .nm{font-weight:700;text-align:center}
-  .tdmenu button{border-radius:11px;padding:8px;font-weight:700;background:#FFD54A;font-size:14px}
-  .tdmenu button[data-a=sell]{background:#E6F7EC;color:#1E8E4E}
-  .tdmenu button[data-a=x]{background:#EEE;padding:4px}
-  .tdmenu button.poor{background:#EEE;color:#999}
-  .tdmenu .max{text-align:center;font-size:14px}
-  .tdtip{min-height:22px;text-align:center;font-size:14px;color:var(--muted);margin:8px 4px 6px}
-  .tdbar{display:flex;gap:8px;align-items:stretch}
-  .tdtowers{display:flex;gap:6px;flex:1}
-  .tdtowers button{flex:1;background:var(--card);border-radius:14px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;padding:5px 0;border:3px solid transparent}
-  .tdtowers button .p{font-size:28px;line-height:1.1}
-  .tdtowers button small{font-size:11px;font-weight:700}
-  .tdtowers button.sel{border-color:#7B5CFF;transform:translateY(-3px)}
-  .tdtowers button.poor{opacity:.45}
-  .tdtowers button.lock{opacity:.5}
-  .tdgo{background:#FF7A59;color:#fff;font-weight:700;font-size:16px;border-radius:14px;box-shadow:var(--shadow);padding:0 12px;min-width:92px}
-  .tdgo.fast{background:#7B5CFF}
-  .tdend{position:absolute;inset:0;display:none;align-items:center;justify-content:center;background:rgba(43,43,58,.35);border-radius:18px}
-  .tdend.on{display:flex}
-  .tdcard{background:var(--card);border-radius:26px;box-shadow:var(--shadow);padding:18px;width:82%;text-align:center}
-  .tdcard .e{font-size:58px}
-  .tdcard .t{font-size:24px;font-weight:700;margin:4px 0}
-  .tdcard .s{color:var(--muted);margin-bottom:12px}
-  .tdcard .b{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
-  .tdcard .b .again{font-size:22px;flex:1}
-  .tdnext{font-size:14px;color:var(--muted);width:100%;margin-bottom:6px}
   .mapbar .shopbtn,.mapbar .freebtn{display:flex;flex-direction:column;align-items:center;line-height:1;padding:4px 9px;font-size:20px}
   .mapbar .shopbtn small,.mapbar .freebtn small{font-size:10px;font-weight:700;margin-top:2px}
   @media (max-width:350px){ .mapbar .tot{font-size:15px;padding-left:8px;padding-right:8px} .mapbar .tdbtn,.mapbar .shopbtn,.mapbar .freebtn{padding:4px 6px} .mapbtns{gap:4px} }

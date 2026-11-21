@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>¡Defensa! · prueba</title>
+<meta name="theme-color" content="#EAF7FF">
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:#EAF7FF;font-family:ui-rounded,"SF Pro Rounded",system-ui,-apple-system,"Segoe UI",sans-serif;color:#2B2B3A}
+  button{font:inherit;border:0;cursor:pointer;color:inherit}
+  .menu{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;background:linear-gradient(#9ED8FF,#EAF7FF)}
+  .menu h1{font-size:40px;margin:0}
+  .menu p{margin:0;color:#5C6478}
+  .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .chip{background:#fff;border-radius:16px;padding:12px 16px;font-weight:800;font-size:17px;box-shadow:0 4px 0 rgba(43,43,58,.12)}
+  .chip.on{background:#2B2B3A;color:#fff}
+  .round{display:flex;align-items:center;gap:10px;background:#fff;border-radius:18px;padding:8px 10px;box-shadow:0 4px 0 rgba(43,43,58,.12);font-weight:800;font-size:18px}
+  .round button{width:44px;height:44px;border-radius:12px;background:#F1EEFF;font-size:22px;font-weight:900}
+  .round b{min-width:40px;font-size:26px}
+  .play{background:#FF7A59;color:#fff;font-weight:900;font-size:24px;border-radius:22px;padding:16px 40px;box-shadow:0 5px 0 rgba(170,60,30,.35)}
+  .note{font-size:13px;max-width:320px}
+  .pets .chip{font-size:24px;padding:8px 12px}
+</style>
+</head>
+<body>
+<div class="menu" id="menu">
+  <h1>🏰 ¡Defensa!</h1>
+  <p>Modo de prueba</p>
+  <div class="row" id="ages"><button class="chip" data-age="4">🧸 4–5</button><button class="chip" data-age="7">🚀 7</button><button class="chip" data-age="10">🎯 10</button></div>
+  <div class="round"><button id="minus">−</button>Ronda <b id="rnd">1</b><button id="plus">+</button></div>
+  <div class="row pets" id="pets"><button class="chip" data-p="axolotl">🦎</button><button class="chip" data-p="penguin">🐧</button><button class="chip" data-p="fox">🦊</button><button class="chip" data-p="seal">🦭</button></div>
+  <button class="play" id="play">▶ ¡Jugar!</button>
+  <p class="note">Test version of the tower defense game. Nothing here is saved to the kids' Palabras game. The black buttons at the top of the game are test shortcuts.</p>
+</div>
+<div id="game"></div>
+<script type="module">
+  import './lolo3d.js?v=28';
+  import './defensa3d.js?v=28';
+  const PETS = { axolotl:'Lolo', penguin:'Pipo', fox:'Chispa', seal:'Nieve' };
+  const st = JSON.parse(localStorage.getItem('tdtest') || '{"age":7,"round":1,"pet":"axolotl"}');
+  const save = () => localStorage.setItem('tdtest', JSON.stringify(st));
+  const $ = id => document.getElementById(id);
+  function paint(){
+    document.querySelectorAll('#ages .chip').forEach(b => b.classList.toggle('on', +b.dataset.age === st.age));
+    document.querySelectorAll('#pets .chip').forEach(b => b.classList.toggle('on', b.dataset.p === st.pet));
+    $('rnd').textContent = st.round;
+  }
+  document.querySelectorAll('#ages .chip').forEach(b => b.onclick = () => { st.age = +b.dataset.age; save(); paint(); });
+  document.querySelectorAll('#pets .chip').forEach(b => b.onclick = () => { st.pet = b.dataset.p; save(); paint(); });
+  $('minus').onclick = () => { st.round = Math.max(1, st.round - 1); save(); paint(); };
+  $('plus').onclick = () => { st.round = Math.min(60, st.round + 1); save(); paint(); };
+  paint();
+
+  // Dora's voice: the ¡Defensa! clip pack
+  let clips = null, audio = new Audio();
+  fetch('audio/defensa.json').then(r => r.json()).then(async idx => { const bin = await (await fetch('audio/defensa.mp3')).arrayBuffer(); clips = { idx, bin }; }).catch(() => {});
+  function say(keys){
+    keys = keys.filter(k => k && clips && clips.idx[k]); if(!keys.length) return;
+    const parts = keys.map(k => { const [o, n] = clips.idx[k]; return new Uint8Array(clips.bin, o, n); });
+    audio.src = URL.createObjectURL(new Blob(parts, { type: 'audio/mpeg' })); audio.play().catch(() => {});
+  }
+  function play(){
+    $('menu').style.display = 'none';
+    audio.play().catch(() => {});
+    const host = {
+      age: st.age, round: st.round, test: true, petName: PETS[st.pet], pet: { species: st.pet, skin: 'clasico', stage: 2 }, say,
+      onEnd(won, r, points){ st.best = st.best || {}; const k = st.age + '-' + r, record = points > (st.best[k] || 0); if(record) st.best[k] = points; if(won) st.round = r + 1; save(); return { prize: 0, next: true, record }; },
+      onNext(r, api){ api.newRound(r); },
+      onExit(){ $('menu').style.display = ''; paint(); },
+    };
+    window.game = Defensa3D.start($('game'), host);
+  }
+  $('play').onclick = play;
+  if(location.hash === '#play') play();
+</script>
+</body>
+</html>
