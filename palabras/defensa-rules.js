@@ -53,8 +53,21 @@ export const TOWERS = [
   { id:'huerto', name:'El huerto', word:'c|¡El huerto!', cost:700, range:0, farm:80, tip:'Un manzano: da monedas al final de cada ronda.',
     paths:[ { name:'Más manzanas',    steps:[ { cost:300, name:'Más manzanas', farm:40 }, { cost:600, name:'Muchas manzanas', farm:60 }, { cost:1500, name:'Manzanas de oro', farm:160 } ] },
             { name:'Abejas felices',  steps:[ { cost:400, name:'Flores', farm:30 }, { cost:700, name:'Colmena', farm:70 }, { cost:1400, name:'Miel', farm:140 } ] } ] },
+  { id:'buho', name:'El búho', word:'w|🦉', cost:250, range:46, cd:1.2, pierce:1, dmg:1, speed:280, sees:true, tip:'Ve a los bichos escondidos, y los otros animales también.',
+    paths:[ { name:'Ojos grandes',    steps:[ { cost:150, name:'Ve más lejos', range:8 }, { cost:300, name:'Ve muy lejos', range:8 }, { cost:1000, name:'Ojos mágicos', buff:.8 } ] },
+            { name:'Plumas',          steps:[ { cost:200, name:'Plumas rápidas', cd:.75 }, { cost:350, name:'Plumas fuertes', dmg:1 }, { cost:1100, name:'Tormenta de plumas', shots:3, cd:.8 } ] } ] },
 ];
-export const SIZE = 12;                                   // how wide a tower is, in BU (like Bloons' basic tower)
+export const SIZE = 12;
+
+// one-tap powers: a tower at the top of either path (step 3) gets one. cd = seconds (of a round) before it can be used again.
+export const POWERS = {
+  gato:   { name:'¡Lluvia de estambre!', cd:40, tip:'Todos los gatos lanzan muy rápido un ratito.' },
+  abeja:  { name:'¡Enjambre!',           cd:45, tip:'Las abejas pican a todos los bichos.' },
+  pulpo:  { name:'¡Mar de tinta!',       cd:45, tip:'Todos los bichos van muy lentos.' },
+  dragon: { name:'¡Volcán!',             cd:50, tip:'Fuego enorme alrededor de cada dragón dorado.' },
+  huerto: { name:'¡Cosecha!',            cd:60, tip:'¡Monedas ahora mismo!' },
+  buho:   { name:'¡Todos a la vista!',   cd:45, tip:'Todos ven a los escondidos un ratito.' },
+};                                   // how wide a tower is, in BU (like Bloons' basic tower)
 
 // la cerca: goes on a trail; critters stop and chew through it (bats fly over). HP is in bites.
 export const WALL = { id:'cerca', name:'La cerca', word:'c|¡La cerca!', cost:120, hp:[30, 70, 150], names:['La cerca', 'El muro', 'El muro de ladrillo'], up:[150, 350],
@@ -63,6 +76,7 @@ export const WALL = { id:'cerca', name:'La cerca', word:'c|¡La cerca!', cost:12
 // ---------- critters ----------
 // hp = layers (each hit takes one; each pays a coin). speed in BU per second (Bloons' red balloon = 25).
 // shell: bees can't hurt it (until they learn "Rompe conchas"). fly: goes over walls; ink can't slow it.
+// Any critter can also come hidden (from round AGES.hidden): towers can only aim at it near an owl (el búho).
 // kids: what comes out when it's knocked out. Leaking eats as many bites as it has hp left (a bear: at most 50).
 export const FOES = {
   hormiga:    { name:'la hormiga',    word:'w|🐜', hp:1,   speed:25,  pts:10,  size:.62, from:1 },
@@ -72,6 +86,7 @@ export const FOES = {
   mapache:    { name:'el mapache',    word:'w|🦝', hp:10,  speed:40,  pts:50,  size:.8,  from:15 },
   cocodrilo:  { name:'el cocodrilo',  word:'w|🐊', hp:18,  speed:30,  pts:80,  size:.86, from:22, kids:['raton','raton'] },
   oso:        { name:'el oso',        word:'w|🐻', hp:160, speed:12,  pts:300, size:1.15, boss:true, kids:['mapache','mapache','mapache'] },   // every 10th round
+  elefante:   { name:'el elefante',   word:'w|🐘', hp:320, speed:8,   pts:800, size:1.5,  boss:true, big:true, kids:['oso'] },               // the last round
 };
 export const rbeOf = k => FOES[k].hp + (FOES[k].kids || []).reduce((s, c) => s + rbeOf(c), 0);
 
@@ -84,11 +99,12 @@ export const roundRBE = r => Math.round(r <= 60 ? Math.max(BTD_RBE[r - 1], smoot
 export const roundDur = r => Math.max(12, Math.min(45, smooth3(BTD_DUR, Math.min(59, r - 1))));
 
 // gentler for the little ones. lives = bites of food; rounds = how many rounds to win the island;
-// paths = the rounds where the 1st–4th trails open; rbe = share of Bloons' toughness; pay = coins per hit; price = cost multiplier.
+// paths = the rounds where the 1st–4th trails open; rbe = share of Bloons' toughness; pay = coins per hit; price = cost multiplier;
+// unlock = the round each tower (in TOWERS order) becomes available; hidden = first round with hidden critters; bossHp = boss toughness.
 export const AGES = {
-   4:{ lives:150, rounds:30, rbe:.2,  pay:3.5, speed:.85, price:.85, boss:25, cash:750, paths:[1,14,24,99], unlock:[1,2,4,8,6] },
-   7:{ lives:120, rounds:40, rbe:.25, pay:3.2, speed:.95, price:.95, boss:30, cash:650, paths:[1,12,22,32], unlock:[1,3,6,10,8] },
-  10:{ lives:120, rounds:40, rbe:.25, pay:3.2, speed:1,   price:1,   boss:30, cash:650, paths:[1,10,18,28], unlock:[1,4,8,12,10] },
+   4:{ lives:150, rounds:30, rbe:.2,  pay:3.5, speed:.85, price:.85, boss:25, cash:750, paths:[1,14,24,99], unlock:[1,2,4,8,6,15], hidden:16, bossHp:.55 },
+   7:{ lives:120, rounds:40, rbe:.25, pay:3.2, speed:.95, price:.95, boss:30, cash:650, paths:[1,12,22,32], unlock:[1,3,6,10,8,13], hidden:14, bossHp:.7 },
+  10:{ lives:120, rounds:40, rbe:.25, pay:3.2, speed:1,   price:1,   boss:30, cash:650, paths:[1,10,18,28], unlock:[1,4,8,12,10,14], hidden:15, bossHp:.8 },
 };
 
 export const rng = seed => { let s = (seed >>> 0) || 1; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; };
@@ -151,7 +167,7 @@ export function makeWave(r, age){
   const A = AGES[age], R = rng(r * 7919 + age), np = pathsFor(r, age), budget = Math.max(6, roundRBE(r) * A.rbe * Math.pow(Math.min(1, 20 / r), .35));   // later rounds ramp up a bit more gently than Bloons
   const types = Object.entries(FOES).filter(([, f]) => !f.boss && f.from <= r).map(([k]) => k);
   const q = []; let left = budget;
-  if(isBossRound(r, age)){ q.push({ k:'oso', p:0, boss:true }); left -= rbeOf('oso') * .4; }
+  if(isBossRound(r, age)){ const k = r === A.rounds ? 'elefante' : 'oso'; q.push({ k, p:0, boss:true }); left -= rbeOf(k) * (k === 'oso' ? .4 : .25); }
   // mostly the newest critters a round can have, with some smaller ones mixed in
   while(left > 0){
     const w = types.map((k, i) => (i + 1) * (i + 1) * (rbeOf(k) <= left ? 1 : .02));
@@ -171,9 +187,13 @@ export function makeWave(r, age){
   const dur = roundDur(r), out = [];
   bunches.forEach((g, n) => { const t0 = bunches.length > 1 ? n * dur / bunches.length : 0;
     g.forEach((s, i) => out.push({ ...s, t: t0 + i * .3 / (FOES[s.k].speed / 25) })); });   // close together, a few steps apart
+  // hidden critters: a few at first, more later (never the bosses)
+  const share = r < A.hidden ? 0 : Math.min(.25, .1 + (r - A.hidden) * .01);
+  for(const s of out) if(!s.boss && R() < share) s.h = true;
   return out.sort((a, b) => a.t - b.t);
 }
-export function newFoes(r, age = 7){ const n = Object.entries(FOES).filter(([, f]) => !f.boss && f.from === r && r > 1).map(([k]) => k); if(r === (AGES[age] || AGES[7]).boss) n.push('oso'); return n; }
+export const firstHidden = (r, age = 7) => r === (AGES[age] || AGES[7]).hidden;
+export function newFoes(r, age = 7){ const n = Object.entries(FOES).filter(([, f]) => !f.boss && f.from === r && r > 1).map(([k]) => k); if(r === (AGES[age] || AGES[7]).boss) n.push('oso'); if(r === (AGES[age] || AGES[7]).rounds) n.push('elefante'); return n; }
 
 // ---------- the game ----------
 let uid = 0;
@@ -214,7 +234,7 @@ export class Game {
     this.bowl = this.map.bowl;
     for(const w of this.walls){ const [x, y, dir] = this.posAt(w.p, w.d); Object.assign(w, { x, y, dir, max: WALL.hp[w.lvl - 1], hp: WALL.hp[w.lvl - 1] }); }   // walls are fixed up between rounds
     this.queue = makeWave(r, this.age); this.total = this.queue.length; this.clock = 0;
-    this.phase = 'build'; this.foes = []; this.shots = [];
+    this.phase = 'build'; this.foes = []; this.shots = []; this.revealT = 0; this.yarnT = 0;
     if(newPath(r, this.age) && !this.gifted?.includes(r)){ this.coins += TRAIL_GIFT; (this.gifted = this.gifted || []).push(r); this.fx.push({ t:'gift', n:TRAIL_GIFT }); }   // coins to guard a new trail
     this.snapshot = this.save();             // "¡Otra vez!" goes back to here
   }
@@ -250,9 +270,9 @@ export class Game {
   }
   // a tower's current numbers, with its upgrades applied (ranges in board units)
   stat(t){
-    const b = TOWERS[t.i], s = { range: b.range, cd: b.cd, pierce: b.pierce, dmg: b.dmg, shots: 1, slow: b.slow || 0, slowT: b.slowT || 0, dot: 0, shell: false, blast: b.blast || 0, farm: b.farm || 0 };
+    const b = TOWERS[t.i], s = { range: b.range, cd: b.cd, pierce: b.pierce, dmg: b.dmg, shots: 1, slow: b.slow || 0, slowT: b.slowT || 0, dot: 0, shell: false, blast: b.blast || 0, farm: b.farm || 0, buff: 1 };
     const apply = st => { for(const [k, v] of Object.entries(st)){
-      if(k === 'cd') s.cd *= v; else if(k === 'slowTo') s.slow = v; else if(k === 'shots') s.shots = v; else if(k === 'shell') s.shell = true;
+      if(k === 'cd') s.cd *= v; else if(k === 'buff') s.buff = v; else if(k === 'slowTo') s.slow = v; else if(k === 'shots') s.shots = v; else if(k === 'shell') s.shell = true;
       else if(k in s && typeof v === 'number') s[k] += v; } };
     b.paths.forEach((p, pi) => { const n = pi === 0 ? t.a : t.b; for(let k = 0; k < n; k++) apply(p.steps[k]); });
     return { ...s, range: bu(s.range), blast: bu(s.blast) };
@@ -287,12 +307,35 @@ export class Game {
     this.fx.push({ t:'up', x:t.x, y:t.y, tower:t }); return true;
   }
   setTarget(t, mode){ t.target = mode; }
+  // ----- one-tap powers -----
+  hasPower(t){ return !t.wall && (t.a >= 3 || t.b >= 3) && !!POWERS[TOWERS[t.i].id]; }
+  // one button per kind of tower: [{ id, ready, left (0–1 of the wait still to go), tower }]
+  powers(){
+    const by = {};
+    for(const t of this.towers) if(this.hasPower(t)){ const id = TOWERS[t.i].id, o = by[id] || (by[id] = { id, ready: false, left: 1, tower: null });
+      const left = Math.max(0, t.cool || 0) / POWERS[id].cd; if(left <= 0 && !o.ready){ o.ready = true; o.tower = t; o.left = 0; } else if(!o.ready && left < o.left){ o.left = left; o.tower = t; } }
+    return Object.values(by);
+  }
+  usePower(id){
+    if(this.phase !== 'wave') return false;
+    const t = this.towers.find(t => this.hasPower(t) && TOWERS[t.i].id === id && !(t.cool > 0)); if(!t) return false;
+    t.cool = POWERS[id].cd; const s = this.stat(t), alive = () => this.foes.filter(f => f.alive);
+    if(id === 'gato') this.yarnT = 6;
+    else if(id === 'abeja'){ for(const f of alive()){ this.hit(f, 2, null); this.fx.push({ t:'hit', x:f.x, y:f.y, kind:'abeja' }); } }
+    else if(id === 'pulpo'){ for(const f of alive()) if(!f.fly){ f.slowT = 6; f.slowF = .3; f.dot = Math.max(f.dot, 1); f.dotT = 6; this.fx.push({ t:'ink', x:f.x, y:f.y }); } }
+    else if(id === 'dragon'){ for(const d of this.towers.filter(d => this.hasPower(d) && TOWERS[d.i].id === 'dragon')){ const r = this.stat(d).range * 1.6;
+        this.fx.push({ t:'boom', x:d.x, y:d.y, r }); for(const f of alive()) if(Math.hypot(f.x - d.x, f.y - d.y) <= r) this.hit(f, 15, null); } }
+    else if(id === 'huerto'){ const n = 150 + 50 * this.towers.filter(h => TOWERS[h.i].id === 'huerto').length; this.coins += n; this.fx.push({ t:'farm', x:t.x, y:t.y, n }); }
+    else if(id === 'buho') this.revealT = 12;
+    this.fx.push({ t:'power', id, x:t.x, y:t.y }); return true;
+  }
   sell(t){ this.coins += this.sellValue(t); if(t.wall) this.walls = this.walls.filter(x => x !== t); else this.towers = this.towers.filter(x => x !== t); this.fx.push({ t:'sell', x:t.x, y:t.y, tower:t }); }
   go(){ if(this.phase === 'build'){ this.phase = 'wave'; this.clock = 0; } }
-  spawn(k, p, d = 0, from = null){
+  spawn(k, p, d = 0, from = null, hidden = false){
     const f = FOES[k], [x, y, dir] = this.posAt(p, d);
-    const foe = { id: nid(), k, p, hp: f.hp, max: f.hp, spd: bu(f.speed) * this.A.speed, d, pts: f.pts, size: f.size, fly: !!f.fly, shell: !!f.shell, boss: !!f.boss,
-      slowT: 0, slowF: 1, dot: 0, dotT: 0, alive: true, x, y, dir, hitAt: -9, atWall: null, rbe: rbeOf(k), kid: !!from };
+    const hp = f.boss ? Math.round(f.hp * (this.A.bossHp || 1)) : f.hp;
+    const foe = { id: nid(), k, p, hp, max: hp, spd: bu(f.speed) * this.A.speed, d, pts: f.pts, size: f.size, fly: !!f.fly, shell: !!f.shell, boss: !!f.boss,
+      slowT: 0, slowF: 1, dot: 0, dotT: 0, alive: true, x, y, dir, hitAt: -9, atWall: null, rbe: rbeOf(k), kid: !!from, hidden: hidden || !!(from && from.hidden), seen: false };
     this.foes.push(foe); if(from) this.fx.push({ t:'kids', x, y, from }); return foe;
   }
   hit(f, dmg, by){
@@ -302,11 +345,11 @@ export class Game {
     this.frac = (this.frac || 0) + d * this.A.pay; const c = Math.floor(this.frac); this.frac -= c; this.coins += c;   // coins for each hit
     if(f.hp > 0 && f.max > 1) this.fx.push({ t:'layer', x:f.x, y:f.y });       // a layer pops off
     if(f.hp <= 0){ f.alive = false; this.points += f.pts; this.fx.push({ t:'die', x:f.x, y:f.y, pts:f.pts, foe:f });
-      for(const [n, kk] of (FOES[f.k].kids || []).entries()) this.spawn(kk, f.p, Math.max(0, f.d - n * .25), f); }
+      for(const [n, kk] of (FOES[f.k].kids || []).entries()) this.spawn(kk, f.p, Math.max(0, f.d - n * .25), f, f.hidden); }
   }
   // critters in range of a tower, in the order the tower wants them
   targets(t, s){
-    const list = this.foes.filter(f => f.alive && Math.hypot(f.x - t.x, f.y - t.y) <= s.range);
+    const list = this.foes.filter(f => f.alive && (!f.hidden || f.seen) && Math.hypot(f.x - t.x, f.y - t.y) <= s.range);
     if(t.target === 'strong') list.sort((a, b) => b.hp - a.hp || this.left(a) - this.left(b));
     else if(t.target === 'close') list.sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y));
     else list.sort((a, b) => this.left(a) - this.left(b));
@@ -317,7 +360,7 @@ export class Game {
     this.time += dt;
     if(this.phase !== 'wave') return;
     this.clock += dt;
-    while(this.queue.length && this.queue[0].t <= this.clock){ const s = this.queue.shift(); this.spawn(s.k, s.p); }
+    while(this.queue.length && this.queue[0].t <= this.clock){ const s = this.queue.shift(); this.spawn(s.k, s.p, 0, null, s.h); }
     for(const f of this.foes){ if(!f.alive) continue;
       f.slowT -= dt;
       if(f.dot > 0 && f.dotT > 0){ f.dotT -= dt; f.dotAcc = (f.dotAcc || 0) + f.dot * dt; while(f.dotAcc >= 1 && f.alive){ f.dotAcc -= 1; this.hit(f, 1, null); } }
@@ -326,15 +369,23 @@ export class Game {
       // a wall in the way? stop and chew on it (one bite a second; the bear chews five)
       if(!f.fly) for(const w of this.walls) if(!w.broken && w.p === f.p && f.d < w.d){ const gap = w.d - .3 - f.d; if(gap < .02){ f.atWall = w; w.hp -= (f.boss ? 5 : 1) * dt; w.chewAt = this.time; mult = 0; } else mult = Math.min(mult, gap / (f.spd * dt + 1e-6)); }
       f.d += Math.min(f.spd * mult * dt, f.spd * dt);
-      if(f.d >= this.paths[f.p].len){ f.alive = false; f.leaked = true; this.lives = Math.max(0, this.lives - Math.min(f.boss ? 50 : 1e9, Math.max(1, Math.ceil(f.hp)))); this.fx.push({ t:'leak', foe:f }); continue; }
+      if(f.d >= this.paths[f.p].len){ f.alive = false; f.leaked = true; this.lives = Math.max(0, this.lives - Math.min(f.boss ? (FOES[f.k].big ? 80 : 50) : 1e9, Math.max(1, Math.ceil(f.hp)))); this.fx.push({ t:'leak', foe:f }); continue; }
       const [x, y, dir] = this.posAt(f.p, f.d); f.x = x; f.y = y; f.dir = dir;
     }
     for(const w of this.walls) if(w.hp <= 0 && !w.broken){ w.broken = true; this.fx.push({ t:'wallbreak', x:w.x, y:w.y, wall:w }); }
+    // owls: which hidden critters can be seen, and which towers get the "Ojos mágicos" boost
+    const owls = this.towers.filter(t => TOWERS[t.i].sees).map(t => ({ t, s: this.stat(t) }));
+    // once an owl spots a hidden critter, it stays spotted ("¡Te vi!")
+    for(const f of this.foes) if(f.hidden && !f.seen && (this.revealT > 0 || owls.some(o => Math.hypot(o.t.x - f.x, o.t.y - f.y) <= o.s.range))){ f.seen = true; this.fx.push({ t:'seen', x:f.x, y:f.y, foe:f }); }
+    for(const t of this.towers){ t.buff = 1; for(const o of owls) if(o.s.buff < 1 && o.t !== t && Math.hypot(o.t.x - t.x, o.t.y - t.y) <= o.s.range) t.buff = Math.min(t.buff, o.s.buff); }
+    if(this.revealT > 0) this.revealT -= dt;
+    if(this.yarnT > 0) this.yarnT -= dt;
+    for(const t of this.towers) if(t.cool > 0) t.cool -= dt;
     // towers
     for(const t of this.towers){ const b = TOWERS[t.i]; if(b.farm !== undefined && !b.range) continue;
       t.cd -= dt; if(t.cd > 0) continue;
       const s = this.stat(t), list = this.targets(t, s); if(!list.length) continue;
-      t.cd = s.cd; t.aim = Math.atan2(list[0].x - t.x, list[0].y - t.y); t.shotAt = this.time;
+      t.cd = s.cd * t.buff * (this.yarnT > 0 && b.id === 'gato' ? .35 : 1); t.aim = Math.atan2(list[0].x - t.x, list[0].y - t.y); t.shotAt = this.time;
       for(let n = 0; n < s.shots; n++){ const f = list[n % list.length];
         this.shots.push({ id: nid(), x: t.x, y: t.y, f, tx: f.x, ty: f.y, s, b, tower: t, sp: bu(b.speed), born: this.time, left: s.pierce }); }
     }

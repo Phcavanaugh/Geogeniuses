@@ -14,6 +14,7 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
     const p = await ctx.newPage();
     p.on('pageerror', e => errors.push(`[age ${age}] ${e.message}`));
     p.on('console', m => { if (m.type() === 'error' && !/Failed to load resource|speech|NotAllowed/i.test(m.text())) errors.push(`[age ${age}] console: ${m.text()}`); });
+    await p.addInitScript(() => { window.TD_LOW = 1; });   // the tower defense draws with low graphics here (test machines have no graphics chip)
     await p.goto(BASE); await p.waitForTimeout(2500);
     const onView = () => p.evaluate(() => (document.querySelector('.view.on') || {}).id);
     // tap a few visible buttons inside the current game
@@ -55,7 +56,7 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
     await p.evaluate(() => TD._t.api.step(240)); await p.waitForTimeout(1200);
     await p.waitForTimeout(1500);   // the "round done" card, then the next round is ready (towers stay; the game is saved)
     log.push(`${age} defensa round -> ${built}, now round ${await p.evaluate(() => TD._t.G.r + ' ' + TD._t.G.phase)}, ${await p.evaluate(() => TD._t.G.points)} pts, saved at round ${await p.evaluate(() => TD.state.game && TD.state.game.r)}`);
-    await p.click('.d3top [data-a="exit"]'); await p.waitForTimeout(500); log.push(`${age} back -> ${await onView()}`);
+    await p.evaluate(() => document.querySelector('.d3top [data-a="exit"]').click()); await p.waitForTimeout(500); log.push(`${age} back -> ${await onView()}`);   // (a script click: this machine draws 3D slowly)
     // settings + album
     for (const v of ['settings', 'album']) { await p.evaluate(v => { const b = document.querySelector(`[data-go="${v}"], #${v}Btn`); if (b) b.click(); else show(v); }, v); await p.waitForTimeout(300); log.push(`${age} ${v} -> ${await onView()}`); }
     // fox homework unit (10 only)
