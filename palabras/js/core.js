@@ -104,6 +104,12 @@ const wordHTML = w => `<span class="art">${w[0]}</span> ${w[1]}`;
 //  w|🐶 "el perro."  d|🐶 "¿Dónde está el perro?"  b|🐶 "¡Busca el perro!"  q|🐶 "¡Quiero el perro!"
 //  c|<text> common phrase,  r|N streak,  p|N points,  j|N moves
 const VOICE = { on: store.get('recVoice', true), clips:{}, loading:{}, tok:0, unlocked:false, status:'', loadedGroups:0 };
+// Drawn sticker art for word pictures: art/words/<name>.png. Any word not listed here keeps its emoji.
+// To add art: drop the PNG in art/words/ and add its emoji → file name here.
+const ART = { '🐶':'perro', '🐱':'gato', '🐮':'vaca', '🐷':'cerdo', '🐴':'caballo', '🐑':'oveja' };
+const ART_V = 1;
+function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
+function setPic(el, e){ el.innerHTML = picHTML(e); }
 const WORD = {}; Object.values(VOCAB).forEach(c=>c.words.forEach(w=>WORD[w[2]]=w));
 for(const e in EXTRA_WORDS){ const [a,w,en]=EXTRA_WORDS[e]; WORD[e]=[a,w,e,en]; }
 // One normal <audio> element plays everything: unlike Web Audio it still plays when an iPhone is on silent.
@@ -234,7 +240,7 @@ function record(w, ok){
   const first = ok && st.r===0;
   if(ok){ st.r++; st.s++; } else { st.w++; st.s=0; }
   store.set('stats', stats);
-  if(first) toast(`<b>${w[2]}</b> ¡Nueva estampa!`);
+  if(first) toast(`<b>${picHTML(w[2])}</b> ¡Nueva estampa!`);
 }
 const found = w => (stats[w[2]]||{}).r>0;
 

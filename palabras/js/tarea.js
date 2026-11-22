@@ -273,7 +273,7 @@ function openPalabras(){ S.vi2=0; renderVocab(); show('tpalabras'); }
 function renderVocab(){
   const u=S.unit, w=u.vocab[S.vi2];
   $('vCount').textContent=`${S.vi2+1} / ${u.vocab.length} · tap the card to see the English`;
-  $('vPic').textContent=w[2]; $('vWord').textContent=w[0]; $('vEn').textContent='';
+  setPic($('vPic'),w[2]); $('vWord').textContent=w[0]; $('vEn').textContent='';
   talk(['z|v'+S.vi2]);
 }
 $('vCard').onclick=()=>{ $('vEn').textContent = $('vEn').textContent ? '' : S.unit.vocab[S.vi2][1]; };

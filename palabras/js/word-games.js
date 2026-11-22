@@ -11,7 +11,7 @@ function dondeRound(){
   $('dq').innerHTML=`¿Dónde ${esta(target)} ${wordHTML(target)}?`;
   const box=$('choices'); box.innerHTML=''; box.className='choices n'+opts.length;
   opts.forEach(w=>{
-    const b=document.createElement('button'); b.className='choice'; b.innerHTML=`<span class="pic">${w[2]}</span>`; b.setAttribute('aria-label',w[3]); b._w=w;
+    const b=document.createElement('button'); b.className='choice'; b.innerHTML=`<span class="pic">${picHTML(w[2])}</span>`; b.setAttribute('aria-label',w[3]); b._w=w;
     b.onclick=()=>dondePick(b,w);
     box.appendChild(b);
   });
@@ -62,7 +62,7 @@ function escribeRound(){
   const target=pickTarget(VOCAB[S.cat].words);
   S.target=target; S.locked=false; S.typed=[]; S.hints=0;
   $('kgo').classList.remove('ready');
-  const pic=$('spic'); pic.textContent=target[2]; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
+  const pic=$('spic'); setPic(pic,target[2]); pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
   $('sfix').textContent=''; $('sfix').classList.remove('warn2');
   renderSlots();
   S.ask=()=>talk(['w|'+S.target[2]]); autoAsk();
@@ -166,7 +166,7 @@ function ellaRound(){
   const words=elWords(S.cat);
   const target=pickTarget(words);
   S.target=target; S.locked=false;
-  const pic=$('epic'); pic.textContent=target[2]; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
+  const pic=$('epic'); setPic(pic,target[2]); pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
   $('eword').textContent=target[1];
   const box=$('ebtns'); box.className='elbtns';
   box.querySelectorAll('button').forEach(b=>b.className=b.textContent);
@@ -345,7 +345,7 @@ function adivinaRound(){
   const box=$('achoices'); box.innerHTML=''; box.className='achoices n'+opts.length;
   opts.forEach(w=>{
     const b=document.createElement('button'); b.className='achoice'; b._w=w;
-    b.innerHTML=`<span class="pic">${w[2]}</span><span class="lab">${w[1]}</span>`;
+    b.innerHTML=`<span class="pic">${picHTML(w[2])}</span><span class="lab">${w[1]}</span>`;
     b.onclick=()=>adivinaPick(b,w);
     box.appendChild(b);
   });
@@ -379,7 +379,7 @@ function queesRound(){
   const n=Math.min(4, START.pick[LV()]+Math.floor(S.correct/2), words.length);
   const opts=shuffle([target,...distractors(words,target,n-1)]);
   S.target=target; S.locked=false;
-  const pic=$('qpic'); pic.textContent=target[2]; pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
+  const pic=$('qpic'); setPic(pic,target[2]); pic.classList.remove('pop'); void pic.offsetWidth; pic.classList.add('pop');
   const box=$('wordopts'); box.innerHTML=''; box.className='wordopts';
   opts.forEach(w=>{
     const row=document.createElement('div'); row.className='wopt'; row._w=w;

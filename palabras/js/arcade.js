@@ -25,7 +25,7 @@ function spawnBubble(){
     S.sinceTarget = (w===S.target) ? 0 : S.sinceTarget+1;
   }
   const size = W<420 ? 88 : 100;
-  const el=document.createElement('div'); el.className='bub'; el.textContent=w[2];
+  const el=document.createElement('div'); el.className='bub'; el.innerHTML=picHTML(w[2]);
   el.style.width=el.style.height=size+'px'; el.style.fontSize=(size*0.54)+'px';
   // avoid stacking right on top of the newest bubble
   let x, tries=0; do { x=Math.random()*(W-size); tries++; } while(tries<6 && S.bubs.some(b=>!b.dead && b.y>H-size*1.3 && Math.abs(b.x-x)<size));
@@ -131,7 +131,7 @@ function feedRound(){
   $('fq').innerHTML=`¡Quiero ${wordHTML(target)}!`;
   const tray=$('tray'); tray.innerHTML=''; tray.className='tray n'+opts.length;
   opts.forEach(w=>{
-    const b=document.createElement('div'); b.className='food'; b.innerHTML=`<span class="pic">${w[2]}</span>`; b._w=w;
+    const b=document.createElement('div'); b.className='food'; b.innerHTML=`<span class="pic">${picHTML(w[2])}</span>`; b._w=w;
     b.addEventListener('pointerdown',e=>dragStart(e,b));
     tray.appendChild(b);
   });
@@ -143,7 +143,7 @@ function dragStart(e,b){
   const sx=e.clientX, sy=e.clientY; let moved=false, ghost=null;
   const overMonster=(x,y)=>{ const m=$('monster'); if(!m) return false; const r=m.getBoundingClientRect(); return x>r.left-30&&x<r.right+30&&y>r.top-30&&y<r.bottom+30; };
   const move=ev=>{
-    if(!moved && Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){ moved=true; ghost=document.createElement('div'); ghost.className='ghost'; ghost.textContent=b._w[2]; document.body.appendChild(ghost); b.classList.add('dragging'); }
+    if(!moved && Math.hypot(ev.clientX-sx,ev.clientY-sy)>10){ moved=true; ghost=document.createElement('div'); ghost.className='ghost'; ghost.innerHTML=picHTML(b._w[2]); document.body.appendChild(ghost); b.classList.add('dragging'); }
     if(ghost){ ghost.style.left=ev.clientX+'px'; ghost.style.top=ev.clientY+'px'; monsterHover(overMonster(ev.clientX,ev.clientY)); }
   };
   const up=ev=>{
@@ -185,7 +185,7 @@ function startMemory(){
   const grid=$('mgrid'); grid.innerHTML='';
   shuffle([...picks,...picks]).forEach(w=>{
     const c=document.createElement('button'); c.className='mcard'; c._w=w;
-    c.innerHTML=`<span class="b">❓</span><span class="f">${w[2]}</span>`;
+    c.innerHTML=`<span class="b">❓</span><span class="f">${picHTML(w[2])}</span>`;
     c.onclick=()=>memFlip(c);
     grid.appendChild(c);
   });
@@ -231,7 +231,7 @@ function renderAlbum(){
     const g=s.querySelector('.agrid');
     c.words.forEach(w=>{
       const t=document.createElement('button'); const has=found(w);
-      t.className='stk'+(has?'':' locked'); t.innerHTML=`<span>${w[2]}</span>`;
+      t.className='stk'+(has?'':' locked'); t.innerHTML=`<span>${picHTML(w[2])}</span>`;
       t.onclick=()=>{ t.classList.remove('wig'); void t.offsetWidth; t.classList.add('wig'); talk([has?'w|'+w[2]:'c|¿Qué será?']); };
       g.appendChild(t);
     });
