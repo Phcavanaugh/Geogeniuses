@@ -13,6 +13,7 @@ window.TD = (() => {
   const save = () => store.set('defensa', st);
   let api = null;
 
+  if(st.game && st.game.v !== 3) st.game = null;      // saved on the old maps: start a fresh island
   const round = () => st.game ? st.game.r : 1;
   function available(){ return round() <= st.earned; }
   function earn(){ st.earned = Math.max(st.earned, round() - 1) + ROUNDS_PER_LEVEL; save(); badge(); }

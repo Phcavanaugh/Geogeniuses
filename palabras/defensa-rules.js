@@ -271,6 +271,7 @@ export const firstHidden = r => r === FIRST_HIDDEN;
 export function newFoes(r){ return Object.keys(FIRST).filter(k => FIRST[k] === r && r > 1); }
 
 // ---------- the game ----------
+const SAVE_V = 3;                    // bump when saved games no longer fit (v3: the one-trail Bloons maps)
 let uid = 0;
 const nid = () => ++uid;
 export class Game {
@@ -283,13 +284,13 @@ export class Game {
     this.r = A.start; this.lives = A.lives; this.maxLives = A.lives; this.coins = A.cash; this.points = 0;
     this.towers = []; this.walls = []; this.foes = []; this.shots = [];
     this.fx = []; this.time = 0;
-    if(saved) this.load(saved);
+    if(saved && saved.v === SAVE_V) this.load(saved);      // a game saved on the old maps starts fresh
     this.startRound();
   }
   price(c){ return Math.round(c * this.A.price / 5) * 5; }
   // ----- saving: everything needed to come back to this island later -----
   save(){
-    return { v:2, age:this.age, map:this.mapIndex, r:this.r,  lives:this.lives, coins:this.coins, points:this.points,
+    return { v:SAVE_V, age:this.age, map:this.mapIndex, r:this.r,  lives:this.lives, coins:this.coins, points:this.points,
       towers:this.towers.map(t => ({ i:t.i, x:t.x, y:t.y, a:t.a, b:t.b, spent:t.spent, target:t.target })),
       walls:this.walls.map(w => ({ p:w.p, d:w.d, lvl:w.lvl, spent:w.spent })) };
   }
