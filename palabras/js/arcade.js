@@ -131,7 +131,7 @@ function feedRound(){
   $('fq').innerHTML=`¡Quiero ${wordHTML(target)}!`;
   const tray=$('tray'); tray.innerHTML=''; tray.className='tray n'+opts.length;
   opts.forEach(w=>{
-    const b=document.createElement('div'); b.className='food'; b.textContent=w[2]; b._w=w;
+    const b=document.createElement('div'); b.className='food'; b.innerHTML=`<span class="pic">${w[2]}</span>`; b._w=w;
     b.addEventListener('pointerdown',e=>dragStart(e,b));
     tray.appendChild(b);
   });
