@@ -1,0 +1,203 @@
+/* ====================================================================================
+   ¡Hola, Palabras! — sticker scrapbook look.
+   Loaded after palabras.css and only changes how things look (not where they sit).
+   Two kinds of things:
+     • things you TAP  = cut-paper buttons with a marker outline and a chunky shadow
+     • things you READ = stickers / paper cards held on with washi tape
+   To try a different look, swap this one file.
+   ==================================================================================== */
+@font-face{font-family:'Grandstander';src:url(../art/fonts/grandstander-latin-800-normal.woff2) format('woff2');font-weight:800;font-display:swap}
+@font-face{font-family:'Shantell Sans';src:url(../art/fonts/shantell-sans-latin-500-normal.woff2) format('woff2');font-weight:400 500;font-display:swap}
+@font-face{font-family:'Shantell Sans';src:url(../art/fonts/shantell-sans-latin-700-normal.woff2) format('woff2');font-weight:600 700;font-display:swap}
+@font-face{font-family:'Fredoka';src:url(../art/fonts/fredoka-latin-600-normal.woff2) format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'Fredoka';src:url(../art/fonts/fredoka-latin-700-normal.woff2) format('woff2');font-weight:700;font-display:swap}
+
+:root{
+  --paper:#F5EBDA; --paper2:#FFFBF2; --ink:#33263B; --muted:#7D6B74; --card:#FFFDF8; --bg:#F5EBDA;
+  --sun:#FFC23D; --coral:#F2603F; --sky:#4BA9E8; --leaf:#4CC17A; --grape:#8D6CF0; --pink:#FF8FB1; --teal:#2BB3A3;
+  --line:2.5px solid var(--ink);
+  --lift:0 4px 0 var(--ink);
+  --lift-sm:0 3px 0 var(--ink);
+  --press:0 1px 0 var(--ink);
+  --stuck:0 1px 1px rgba(70,45,20,.12), 0 6px 12px -5px rgba(70,45,20,.35);
+  --shadow:var(--stuck);
+  --hand:'Shantell Sans','Fredoka',system-ui,sans-serif;
+  --display:'Grandstander','Fredoka',system-ui,sans-serif;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .42 0 0 0 0 .3 0 0 0 0 .18 0 0 0 .10 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  --dots:radial-gradient(circle,rgba(110,80,50,.16) 1.3px,transparent 1.6px) 0 0/24px 24px;
+}
+
+/* ---------- the page: dotted scrapbook paper ---------- */
+html,body{background:var(--paper)}
+body{background:var(--grain),var(--dots),var(--paper);color:var(--ink)}
+.over,.sheet{background:rgba(51,38,59,.5)}
+.panel,.overcard{background:var(--grain),var(--dots),var(--paper2)}
+
+/* ---------- fonts: chunky titles, handwritten notes, clear words to read ---------- */
+.topbar .title,.wtitle,.asec h3,.gsec h3,.overtitle,.shopname,.petname,.albumtop .n,.panel h2,.turncard .who,.tareacard b,.tact .t b{font-family:var(--display);font-weight:800;letter-spacing:.2px}
+main .view:not(#defensa) small,.over small,.label,.petsub,.hint,.pts .lbl,.moves .lbl,.tintro,.overbest,.shopwallet,.panel p,.enlbl,.pmeta,.live,.heard,.tscore,.counter,.mode small,.cat small,.cat .prog,.achoice .lab,.flash .en,.tcard .en,.ren,.gline .en,.parent{font-family:var(--hand)}
+.label{font-size:17px;font-weight:700;color:var(--ink);display:inline-block;rotate:-1.5deg;margin-left:6px}
+.label::after{content:'';display:block;height:5px;margin-top:-3px;border-radius:4px;background:var(--sun);opacity:.7}
+
+/* ---------- header: the logo is two stickers ---------- */
+header h1{font-family:var(--display);font-weight:800;font-size:22px;line-height:1.25;display:flex;flex-direction:column;align-items:flex-start;gap:1px}
+header h1 span{color:#fff;background:var(--coral);padding:0 8px 2px;border-radius:9px;border:3px solid #fff;box-shadow:var(--stuck);rotate:-4deg;margin-left:10px;font-size:22px}
+
+/* ---------- things you tap: cut paper + marker line ---------- */
+.iconbtn,.stars,.big,.smallbtn,.tot,.pts,.moves,.streak,.shopbtn,.freebtn,.tdbtn,.done,.lnext,.tile,.key,.wopt .hear,.wopt .pick,
+.choice,.achoice,.mode,.cat,.food,.mcard,.elbtns button,.tfbtns button,.tact,.tareacard,.petcard,.shopitem,.shoptabs button,.hp,.micbtn,.node,.again,.tdover{
+  border:var(--line); box-shadow:var(--lift);
+}
+.iconbtn,.stars{border-radius:14px;height:44px}
+.iconbtn{width:44px;background:var(--card)}
+.stars{background:var(--sun);font-family:var(--display);font-weight:800;rotate:2deg}
+.iconbtn:nth-of-type(1){rotate:-2deg}.iconbtn:nth-of-type(2){rotate:1.5deg}
+main .view:not(#defensa) button:active,.over button:active,header button:active,.sheet button:active,.choice:active,.achoice:active,.cat:active,.mode:active,.tile:active,.key:active,.food:active,.mcard:active{translate:0 3px;box-shadow:var(--press)}
+.big{border-radius:20px}
+.big.say,.wopt .hear{background:var(--sun)}
+.smallbtn{border-radius:12px;font-family:var(--display);font-weight:800;font-size:15px}
+.done{background:var(--ink);color:#fff;border-color:var(--ink)}
+.again{background:var(--leaf);color:#fff;font-family:var(--display);text-shadow:0 2px 0 rgba(0,0,0,.18)}
+.lnext{background:#FFB98A;font-family:var(--display)}
+
+/* the age switch: three tabs cut from paper */
+.agesw{background:none;box-shadow:none;padding:0;gap:8px}
+.agesw button{background:var(--card);border:var(--line);box-shadow:var(--lift-sm);color:var(--ink);font-family:var(--display);font-weight:800}
+.agesw button:nth-child(1){rotate:-1.5deg}.agesw button:nth-child(3){rotate:1.5deg}
+.agesw button.on{background:var(--grape);color:#fff}
+.scrsw,.plevels{background:none;box-shadow:none}
+.scrsw button,.plevels button{border:var(--line);background:var(--card);box-shadow:var(--lift-sm);color:var(--ink)}
+.scrsw button.on{background:var(--coral);color:#fff}.plevels button.on{background:var(--ink);color:#fff}
+
+/* ---------- things you read: stickers held with washi tape ---------- */
+.flash,.tcard,.lcard,.riddle,.vcard,.albumtop,.gsec,.pline,.speech,.bigpic,.overcard,.shoptop,.world,.agrid,.row,.answer,.arena,.tray{
+  position:relative; border:4px solid #fff; box-shadow:0 0 0 1.5px rgba(51,38,59,.13),var(--stuck);
+}
+.flash,.tcard,.lcard,.riddle,.vcard,.albumtop,.gsec,.pline,.bigpic,.agrid,.row{background:var(--card)}
+.flash::before,.tcard::before,.lcard::before,.riddle::before,.vcard::before,.albumtop::before,.overcard::before,.shoptop::before,.world::before,.bigpic::before,.pline::before{
+  content:'';position:absolute;z-index:3;top:-13px;left:50%;width:84px;height:24px;translate:-50% 0;rotate:-3deg;pointer-events:none;
+  background:repeating-linear-gradient(-45deg,rgba(255,255,255,.4) 0 5px,transparent 5px 11px),var(--tape,#FFC23D);opacity:.88;
+  clip-path:polygon(0 8%,4% 0,8% 10%,12% 0,100% 0,96% 12%,100% 25%,95% 40%,100% 55%,96% 70%,100% 85%,96% 100%,0 100%,4% 85%,0 70%,4% 55%,0 40%,4% 25%);
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.12));
+}
+.riddle::before,.world:nth-child(4n+2)::before,.overcard::before{--tape:var(--pink)}
+.vcard::before,.world:nth-child(4n+3)::before,.lcard::before{--tape:var(--sky);rotate:3deg}
+.albumtop::before,.world:nth-child(4n)::before,.pline::before{--tape:var(--teal);rotate:2deg}
+.world::before{left:22%;width:70px}
+.bigpic::before{width:60px;left:78%;rotate:24deg}
+.flash{border-radius:28px;rotate:-1deg}
+.flash .tapme{top:18px}
+.tcard,.lcard{border-radius:24px}
+.speech{border-radius:20px;background:var(--card)}
+.speech::after{border-top-color:#fff}
+.bigpic{border-radius:28px;rotate:2deg}
+.overcard{border-radius:26px;overflow:visible}
+.over .overcard{max-height:92vh}
+.row{border-radius:14px;border-width:3px}
+.answer{background:rgba(255,255,255,.55);border:3px dashed rgba(51,38,59,.3);box-shadow:none}
+
+/* ---------- home: Lolo's card and the game stickers ---------- */
+.petcard{background:linear-gradient(135deg,#FFD9E5,#FFEFC9);border-radius:22px;position:relative}
+.petcard .bar,.gprog .track{background:rgba(255,255,255,.7);border:2px solid var(--ink);height:14px}
+.bar i{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.35) 0 6px,transparent 6px 12px),linear-gradient(90deg,#FF8FB1,#F2603F)}
+.gprog .track i{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.35) 0 6px,transparent 6px 12px),linear-gradient(90deg,#4CC17A,#4BA9E8)}
+.mode,.cat{border-radius:18px;font-family:var(--display);font-weight:800}
+.mode{font-size:14px}
+.mode .e,.cat .e{filter:drop-shadow(0 2px 0 rgba(255,255,255,.9)) drop-shadow(0 3px 2px rgba(51,38,59,.18))}
+.mode:nth-child(3n+1),.cat:nth-child(odd){rotate:-1.2deg}
+.mode:nth-child(3n),.cat:nth-child(even){rotate:1.2deg}
+.mode.wide,.cat.wide{rotate:-.5deg}
+.mode.sel{border-color:var(--ink);box-shadow:var(--lift),0 0 0 5px var(--sun)}
+.cat{font-size:18px}
+.tareacard{border-radius:20px;border-color:var(--ink)}
+.tact{border-radius:16px}
+
+/* ---------- journey map: pages of the scrapbook joined by a stitched path ---------- */
+.mapbar .tot{font-family:var(--display);font-weight:800;background:var(--sun);rotate:-1.5deg}
+.shopbtn,.freebtn,.tdbtn{border-radius:14px;font-family:var(--display)}
+.shopbtn{background:#FFD27A}.freebtn{background:var(--card)}.tdbtn{background:#B9EBA7}
+.mapbtns>*:nth-child(2){rotate:1.5deg}.mapbtns>*:nth-child(1){rotate:-1.5deg}
+.tdbtn.ready::after{border:2px solid var(--ink);background:var(--coral)}
+.world{overflow:visible;border-radius:22px;padding-top:16px;background-image:var(--dots)!important;background-blend-mode:multiply}
+.world:nth-child(odd){rotate:-.6deg}.world:nth-child(even){rotate:.6deg}
+.wtitle{font-size:21px}
+.wtitle small{font-family:var(--hand);color:var(--ink);background:rgba(255,255,255,.75);border-radius:10px;padding:1px 8px;border:2px solid rgba(51,38,59,.25)}
+.wpath polyline{stroke:rgba(51,38,59,.42);stroke-width:3.5px;stroke-dasharray:9 8}
+.node{background:var(--card);font-family:var(--display);font-weight:800;color:var(--ink)}
+.node.n-done{background:var(--sun)}
+.node.n-cur{background:var(--leaf);color:#fff;text-shadow:0 2px 0 rgba(0,0,0,.2);animation:nodehop 1.6s ease-in-out infinite}
+@keyframes nodehop{0%,100%{translate:0 0;box-shadow:var(--lift),0 0 0 0 rgba(76,193,122,.6)}50%{translate:0 -4px;box-shadow:0 8px 0 var(--ink),0 0 0 12px rgba(76,193,122,0)}}
+.node.n-lock{background:rgba(255,255,255,.55);border:3px dashed rgba(51,38,59,.35);box-shadow:none;color:rgba(51,38,59,.4)}
+.node .badge{border:2px solid var(--ink);box-shadow:0 2px 0 var(--ink);width:28px;height:28px;font-size:15px}
+.deco{opacity:.45;filter:grayscale(.2) drop-shadow(0 0 0 #fff) drop-shadow(0 2px 2px rgba(51,38,59,.2))}
+
+/* ---------- playing ---------- */
+.choice,.achoice{border-radius:22px;border-width:3px}
+.choice:nth-child(odd),.achoice:nth-child(odd){rotate:-1deg}.choice:nth-child(even),.achoice:nth-child(even){rotate:1deg}
+.choice.right,.choice.reveal,.achoice.right,.achoice.reveal,.wopt.right .pick,.wopt.reveal .pick,.mcard.matched,.food.reveal{background:#DDF6E3;border-color:#2E9B5A;box-shadow:0 4px 0 #2E9B5A}
+.choice.miss,.achoice.miss,.wopt.miss .pick,.food.miss{background:#FFE1DA;border-color:#D8452A;box-shadow:0 4px 0 #D8452A}
+.elbtns button,.tfbtns button{font-family:var(--display);border-width:3px}
+.elbtns button.right,.tfbtns button.right,.elbtns button.reveal,.tfbtns button.reveal{border-color:#2E9B5A;box-shadow:0 4px 0 #2E9B5A}
+.elbtns button.miss,.tfbtns button.miss{border-color:#D8452A;box-shadow:0 4px 0 #D8452A}
+.wopt .pick{border-width:3px;border-radius:18px}
+.wopt .hear{border-radius:18px}
+.pts,.moves{border-radius:14px;font-family:var(--display)}
+.pts.best{background:#FFE9A8;rotate:2deg}
+.streak{border-radius:12px;background:#FFD3A8;font-family:var(--display)}
+.q{font-weight:700}
+.q .art,.art{color:var(--coral)}
+.mcard{border-radius:16px;border-width:3px;background:repeating-linear-gradient(45deg,rgba(255,255,255,.18) 0 8px,transparent 8px 16px),linear-gradient(135deg,#8D6CF0,#4BA9E8)}
+.mcard.up{background:var(--card)}
+.food{border-radius:18px;border-width:3px}
+.tray{background:#E9D3B4;border-radius:22px}
+.tile{border-width:2px;box-shadow:var(--lift-sm);font-family:var(--display)}
+.answer .tile{background:#FFF1B8}
+.key{border-width:2px;box-shadow:var(--lift-sm);border-radius:9px}
+.micbtn{border-radius:22px}
+.micbtn.listening{border-color:#D8452A}
+.hp{border-width:2.5px}.hp.on{background:#FFF1B8}
+.arena{border-radius:24px}
+.rtools button{border:2px solid var(--ink);box-shadow:var(--press);background:var(--card)}
+
+/* ---------- album: a real sticker book ---------- */
+.agrid{border-radius:16px;background:var(--grain),var(--dots),#FFFDF6}
+.stk{background:none;border-radius:12px;font-size:34px;filter:drop-shadow(0 0 0 #fff)}
+.stk:not(.locked) span{filter:drop-shadow(2px 0 0 #fff) drop-shadow(-2px 0 0 #fff) drop-shadow(0 2px 0 #fff) drop-shadow(0 -2px 0 #fff) drop-shadow(0 3px 3px rgba(51,38,59,.3))}
+.stk:not(.locked):nth-child(3n){rotate:-6deg}.stk:not(.locked):nth-child(3n+1){rotate:5deg}
+.stk.locked{background:none;border:2px dashed rgba(51,38,59,.2)}
+.stk.locked span{opacity:.1}
+
+/* ---------- store ---------- */
+.shoptop{background:linear-gradient(135deg,#FFD9E5,#FFEFC9);border-radius:22px}
+.shoptabs button{font-family:var(--display);border-radius:12px}
+.shoptabs button.on{background:var(--grape)}
+.shopitem{border-radius:18px;background:var(--card)}
+.shopitem:nth-child(odd){rotate:-1deg}.shopitem:nth-child(even){rotate:1deg}
+.shopitem.sel{border-color:var(--grape);box-shadow:0 4px 0 var(--grape)}
+.shopitem .buy{border:2px solid var(--ink);font-family:var(--display)}
+
+/* ---------- cheers ---------- */
+.cheer .b{font-family:var(--display);color:#fff;-webkit-text-stroke:2px var(--ink);paint-order:stroke fill;text-shadow:0 5px 0 var(--ink)}
+.cheer.streakc .b{color:var(--sun)}
+.overscore{font-family:var(--display);color:var(--coral)}
+.toast{border:2.5px solid #fff;box-shadow:var(--stuck)}
+.toggle{border:2px solid var(--ink)}.toggle.on{background:var(--leaf)}
+select{border:2px solid var(--ink)}
+
+/* ---------- every big picture is a die-cut sticker (white rim + a little shadow) ---------- */
+.choice .pic,.food .pic,.achoice .pic,.flash .pic,.bigpic,.tcard .pic,.lcard .pic,.vcard .vpic,.overemoji,.cat .e,.mode .e,.mcard.up .f,.wtitle .we,.speech + * .pic,.tareacard .e,.tact .e{
+  display:inline-block;filter:drop-shadow(2.5px 0 0 #fff) drop-shadow(-2.5px 0 0 #fff) drop-shadow(0 2.5px 0 #fff) drop-shadow(0 -2.5px 0 #fff) drop-shadow(0 4px 3px rgba(51,38,59,.28));
+}
+.bigpic{filter:none}
+.bigpic{text-shadow:none}
+.choice .pic,.achoice .pic{rotate:-4deg}.choice:nth-child(even) .pic,.achoice:nth-child(even) .pic{rotate:5deg}
+.choice.right .pic,.choice.reveal .pic{animation:stickerjump .6s}
+@keyframes stickerjump{30%{scale:1.18;rotate:-10deg}60%{scale:.96}}
+.overemoji{font-size:70px;rotate:-6deg;margin-top:4px}
+
+/* pictures sit on pastel paper so the white sticker rim shows */
+:where(.choice,.achoice,.food):nth-child(4n+1){background:#FFF2D2}
+:where(.choice,.achoice,.food):nth-child(4n+2){background:#E2F1FF}
+:where(.choice,.achoice,.food):nth-child(4n+3){background:#FFE5EE}
+:where(.choice,.achoice,.food):nth-child(4n){background:#E3F6E6}
+.topbar .title{font-size:19px}

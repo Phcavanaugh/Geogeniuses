@@ -11,7 +11,7 @@ function dondeRound(){
   $('dq').innerHTML=`¿Dónde ${esta(target)} ${wordHTML(target)}?`;
   const box=$('choices'); box.innerHTML=''; box.className='choices n'+opts.length;
   opts.forEach(w=>{
-    const b=document.createElement('button'); b.className='choice'; b.textContent=w[2]; b.setAttribute('aria-label',w[3]); b._w=w;
+    const b=document.createElement('button'); b.className='choice'; b.innerHTML=`<span class="pic">${w[2]}</span>`; b.setAttribute('aria-label',w[3]); b._w=w;
     b.onclick=()=>dondePick(b,w);
     box.appendChild(b);
   });
