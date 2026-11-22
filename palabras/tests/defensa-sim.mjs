@@ -40,7 +40,7 @@ function think(g, kind, rand){
       // owls: one (two for the smart robot) once hidden critters are near
       // owls go where they can see the trail next to the most other towers
       if(b.sees){ const owls = g.towers.filter(t => t.i === i), want = smart ? g.np + 1 : g.np;   // about one per open trail
-        if(g.r >= g.A.hidden - 1 && owls.length < want){ let bo = null;
+        if(g.r >= R.FIRST_HIDDEN - 2 && owls.length < want){ let bo = null;
           for(const [x, y] of sp){ if(owls.some(o => Math.hypot(o.x - x, o.y - y) < rng * 1.5)) continue;
             const n = g.towers.filter(t => R.TOWERS[t.i].range && Math.hypot(t.x - x, t.y - y) <= rng).length, c = n * 3 + coverage(g, x, y, rng) * .2; if(!bo || c > bo.c) bo = { x, y, c }; }
           if(bo) opts.push({ cost, v: 99, go: () => g.place(bo.x, bo.y, i) }); }
