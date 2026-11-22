@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=40';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=41';
 
 // ====================================================================================
 // materials
@@ -86,6 +86,49 @@ const ANIMALS = {
       m(piv, sph(.15, 16, 10), toon('#DDF3FF', { transparent: true, opacity: .75 }), [.12 * sx, .05, 0], [1.2, .2, .7], [0, 0, .3 * sx]); }
     return g;
   },
+  // the Ice Monkey's twin
+  pinguino(){
+    const g = new THREE.Group(), K = toon('#2E3440'), W = toon('#FFFFFF'), O = toon('#FF9A2E'), S = toon('#4FC3F7');
+    m(g, sph(.26), K, [0, .32, 0], [1, 1.2, .95], null, true);
+    m(g, sph(.2), W, [0, .3, .09], [1, 1.15, .7]);
+    const h = role(new THREE.Group(), 'head'); h.position.set(0, .64, .02); g.add(h);
+    m(h, sph(.17), K, [0, 0, 0], null, null, true); m(h, sph(.12), W, [0, -.02, .08], [1.1, .9, .7]);
+    eyes(h, .06, .03, .14, .03, .3); cheeks(h, .09, -.04, .12, .028);
+    m(h, cone(.04, .1, 6), O, [0, -.04, .17], null, [Math.PI / 2, 0, 0]);
+    m(g, new THREE.TorusGeometry(.15, .045, 8, 20), S, [0, .5, 0], [1, 1, .9], [Math.PI / 2, 0, 0], true);                  // scarf
+    m(g, box(.08, .18, .03), S, [.1, .38, .17], null, [0, 0, .2]);
+    for(const sx of [-1, 1]){ const w = role(new THREE.Group(), 'wing', { sx }); w.position.set(.25 * sx, .42, 0); g.add(w); m(w, sph(.1, 10, 8), K, [.02 * sx, -.1, 0], [.35, 1, .6], [0, 0, .25 * sx], true);
+      m(g, sph(.06, 8, 6), O, [.1 * sx, .04, .1], [1.2, .4, 1.6]); }
+    for(let i = 0; i < 3; i++) m(g, new THREE.OctahedronGeometry(.05, 0), toon('#BFEFFF', { emissive: '#7FD8FF', emissiveIntensity: .4 }), [Math.sin(i * 2.1) * .35, .8 + i * .06, Math.cos(i * 2.1) * .35]);
+    return g; },
+  // the Wizard Monkey's twin: a fox with a wizard hat and a wand
+  mago(){
+    const g = new THREE.Group(), F = toon('#FF8A3D'), W = toon('#FFFFFF'), P = toon('#6E4BD8'), Y = toon('#FFD23F', { emissive: '#FFB300', emissiveIntensity: .4 });
+    m(g, sph(.23), F, [0, .3, 0], [1, 1.15, .95], null, true); m(g, sph(.15), W, [0, .3, .1], [1, 1.1, .7]);
+    const h = role(new THREE.Group(), 'head'); h.position.set(0, .6, .03); g.add(h);
+    m(h, sph(.17), F, [0, 0, 0], [1.05, .95, 1], null, true); m(h, sph(.1), W, [0, -.05, .1], [1.1, .7, .9]); m(h, sph(.03, 8, 6), toon('#2B2B3A'), [0, -.03, .2]);
+    eyes(h, .07, .03, .13, .03, .3); cheeks(h, .1, -.04, .12, .028);
+    for(const sx of [-1, 1]) m(h, cone(.06, .14, 6), F, [.1 * sx, .17, -.02], null, [0, 0, -.3 * sx], true);
+    const hat = new THREE.Group(); hat.position.set(0, .14, 0); h.add(hat);
+    m(hat, cyl(.2, .2, .025, 18), P, [0, 0, 0], null, null, true); m(hat, cone(.12, .32, 14), P, [0, .17, -.02], null, [-.15, 0, 0], true);
+    for(const [x, y, z] of [[.06, .12, .08], [-.05, .2, .05], [.02, .27, 0]]) m(hat, new THREE.OctahedronGeometry(.025, 0), Y, [x, y, z]);
+    const wand = role(new THREE.Group(), 'wand'); wand.position.set(.22, .35, .1); g.add(wand);
+    m(wand, cyl(.012, .012, .3, 5), toon('#7A4A2A'), [0, .12, 0], null, [0, 0, -.3]); m(wand, sph(.045, 10, 8), Y, [.05, .26, 0]);
+    const tail = role(new THREE.Group(), 'tail'); tail.position.set(0, .2, -.2); g.add(tail); tube(tail, [[0, 0, 0], [.1, .08, -.12], [.05, .22, -.22]], .07, F, true); m(tail, sph(.07, 10, 8), W, [.05, .24, -.24]);
+    return g; },
+  // the Monkey Village's twin: a big nest of lookout birds
+  nido(){
+    const g = new THREE.Group(), T = toon('#9A6A3A'), D = toon('#7A4E2A');
+    m(g, cyl(.32, .38, .3, 14), toon('#8B5A35'), [0, .15, 0], null, null, true);                                       // stump
+    for(let i = 0; i < 14; i++){ const a = i / 14 * Math.PI * 2; m(g, cyl(.025, .025, .5, 5), i % 2 ? T : D, [Math.sin(a) * .36, .38, Math.cos(a) * .36], null, [Math.cos(a) * .6, a, Math.sin(a) * .6]); }
+    m(g, new THREE.TorusGeometry(.35, .1, 8, 22), T, [0, .38, 0], [1, 1, .7], [Math.PI / 2, 0, 0], true);
+    m(g, cyl(.3, .25, .08, 16), toon('#6B4423'), [0, .34, 0]);
+    const C = ['#4FA8FF', '#FF5E7A', '#FFD23F'];
+    for(let i = 0; i < 3; i++){ const a = i * 2.1, b = role(new THREE.Group(), 'bird', { ph: i }); b.position.set(Math.sin(a) * .17, .45, Math.cos(a) * .17); g.add(b);
+      m(b, sph(.08, 12, 10), toon(C[i]), [0, .04, 0], null, null, true); m(b, sph(.055, 10, 8), toon(C[i]), [0, .13, .03]); m(b, cone(.02, .05, 5), toon('#FF9A2E'), [0, .12, .09], null, [Math.PI / 2, 0, 0]);
+      for(const sx of [-1, 1]) m(b, sph(.012, 6, 4), toon('#22222E'), [.022 * sx, .15, .075]); }
+    m(g, cyl(.012, .012, .5, 5), D, [.32, .6, -.1]); role(m(g, new THREE.PlaneGeometry(.2, .13), toon('#4FC3F7', { side: THREE.DoubleSide }), [.43, .78, -.1]), 'flag');
+    return g; },
   buho(){
     const g = new THREE.Group(), B = toon('#A5734A'), L = toon('#E9C99A'), K = toon('#2B2B3A'), O = toon('#FF9A2E');
     m(g, sph(.27), B, [0, .3, 0], [1, 1.12, .95], null, true);
@@ -535,7 +578,7 @@ function critterModel(k){ const p = proto('c' + k, () => customOr(k, () => CRITT
 // how a tower looks: 1 = new, 2 = upgraded, 3 = top of a path (gets a crown)
 const look = t => t.wall ? `${t.a}${t.b}` : Math.max(t.a, t.b) >= 3 ? 3 : Math.max(t.a, t.b) >= 1 ? 2 : 1;
 function towerModel(i, lvl){
-  const id = TOWERS[i].id, p = proto('t' + id, () => customOr(id, () => ANIMALS[id]())), farm = TOWERS[i].farm !== undefined;
+  const id = TOWERS[i].id, p = proto('t' + id, () => customOr(id, () => ANIMALS[id]())), farm = TOWERS[i].farm !== undefined || !!TOWERS[i].support;
   const root = new THREE.Group(), a = cloneRoles(p), pd = farm ? { g: new THREE.Group(), roles: {} } : cloneRoles(proto('p' + lvl, () => pedestal(lvl)));
   root.add(pd.g); a.g.position.y = farm ? 0 : .44; a.g.scale.setScalar(farm ? 1.05 + (lvl - 1) * .12 : .95); root.add(a.g);
   if(lvl === 3){ const cr = new THREE.Group(); a.g.add(cr); cr.position.set(0, farm ? 1.35 : .95, 0);
@@ -639,9 +682,9 @@ const CSS = `
 .d3 .d3auto{pointer-events:auto;margin-left:6px;height:34px;padding:0 10px;border-radius:999px;border:3px solid var(--ink);background:#FFFFFF;box-shadow:0 3px 0 var(--ink);font:700 13px Fredoka,system-ui,sans-serif;color:#6B6B7A}
 .d3 .d3auto.on{background:linear-gradient(#8BE08F,#4CC24F);color:#fff;text-shadow:0 1px 0 rgba(0,0,0,.25)}
 /* power buttons: one per kind of tower at the top of a path */
-.d3pw{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + 118px);display:flex;flex-direction:row-reverse;gap:7px;z-index:6}
+.d3pw{position:absolute;right:12px;bottom:calc(env(safe-area-inset-bottom) + var(--tray, 118px));display:flex;flex-direction:row-reverse;gap:7px;z-index:6}
 .d3:not(.land) .d3p{width:48px;height:48px}
-.d3:not(.land):has(.d3pw .d3p) .d3tip{bottom:calc(env(safe-area-inset-bottom) + 178px)}
+.d3:not(.land):has(.d3pw .d3p) .d3tip{bottom:calc(env(safe-area-inset-bottom) + var(--tray, 118px) + 60px)}
 .d3:not(.land) .d3p img{width:50px;height:50px}
 .d3:not(.land) .d3tw.lock .c{font-size:9px;white-space:nowrap;padding:0 3px}
 .d3.land .d3pw{right:176px;bottom:calc(env(safe-area-inset-bottom) + 12px);flex-direction:row-reverse}
@@ -653,7 +696,10 @@ const CSS = `
 .d3p.off{filter:saturate(.4);opacity:.75}
 @keyframes d3glow{0%,100%{box-shadow:0 3px 0 var(--ink),0 0 0 0 rgba(255,210,63,.9)}50%{box-shadow:0 3px 0 var(--ink),0 0 0 9px rgba(255,210,63,0)}}
 /* seven towers in a tall-screen tray: smaller discs */
-.d3:not(.land) .d3tw .disc{width:clamp(36px,calc((100vw - 140px) / 7),54px);height:clamp(36px,calc((100vw - 140px) / 7),54px)}
+.d3:not(.land) .d3bar{display:grid;grid-template-columns:repeat(5,minmax(0,1fr)) auto;gap:4px 2px;align-items:end}
+.d3:not(.land) .d3go{grid-column:6;grid-row:1 / span 2;align-self:center}
+.d3:not(.land) .d3tw .disc{width:clamp(36px,calc((100vw - 130px) / 5),52px);height:clamp(36px,calc((100vw - 130px) / 5),52px)}
+.d3:not(.land) .d3tip{bottom:calc(env(safe-area-inset-bottom) + var(--tray, 118px))}
 .d3:not(.land) .d3tw .disc img{width:115%;height:115%}
 .d3:not(.land) .d3tw .c{font-size:11px;padding:0 4px 0 1px}
 /* landscape: the tray becomes a sidebar on the right */
@@ -929,6 +975,7 @@ function start(el, host){
     const topPx = Math.max(60, ($('.d3info').getBoundingClientRect().bottom || 110) - rr.top + 4);
     const botPx = land ? 10 : Math.max(60, rr.bottom - (barR.top || h - 110) + 6), rightPx = land ? Math.max(10, rr.right - (barR.left || w - 160) + 6) : 0;
     const yTop = 1 - 2 * topPx / h, yBot = -1 + 2 * botPx / h, xL = -1.02, xR = 1 - 2 * rightPx / w + .02;
+    if(!land) root.style.setProperty('--tray', Math.round((barR.height || 100) + 18) + 'px');
     renderer.setSize(w, h, false); camera.aspect = w / h;
     camera.fov = 32; camera.updateProjectionMatrix();
     const yaw = land ? 0 : -Math.PI / 2, el = .9;
@@ -994,18 +1041,21 @@ function start(el, host){
     const holder = new THREE.Group(); holder.add(md.g); world.add(holder);
     const bar = hpBar(); bar.position.y = (f.fly ? .95 : .6) * s + .15; holder.add(bar);
     const ink = new THREE.Mesh(new THREE.CircleGeometry(.28, 16), basic('#5B3D9A', { transparent: true, opacity: .5, depthWrite: false })); ink.rotation.x = -Math.PI / 2; ink.position.y = .03; ink.visible = false; holder.add(ink);
+    const ice = new THREE.Mesh(new THREE.BoxGeometry(.6, .55, .6), new THREE.MeshPhongMaterial({ color: '#BFEFFF', transparent: true, opacity: .45, shininess: 90, depthWrite: false })); ice.position.y = .27; ice.visible = false; ice.renderOrder = 4; holder.add(ice);
     md.g.traverse(o => { if(o.isMesh && o.material !== INK) o.castShadow = true; });
     // fortified: a little metal helmet; regrow: a green sprout (they grow back)
     const top = (f.fly ? .9 : .5) * s;
     if(f.fort){ const hm = m(holder, new THREE.SphereGeometry(.13 * Math.min(2.5, s), 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon('#AEB8C8', { emissive: '#3A4252', emissiveIntensity: .2 }), [0, top, 0], null, null, true); hm.userData.badge = 1; }
     if(f.regrow){ const sp = new THREE.Group(); sp.position.y = top + .02; holder.add(sp); m(sp, cyl(.012, .012, .12, 5), toon('#3E8A35'), [0, .06, 0]); for(const sx of [-1, 1]) m(sp, sph(.04, 8, 6), toon('#7DD483'), [.04 * sx, .12, 0], [1, .4, .6], [0, 0, .5 * sx]); }
-    const e = { ...md, holder, bar, ink, f, k: f.k, yaw: f.dir, born: G.time, ph: Math.random() * 6, cyc: Math.random() * 6, lane: (Math.random() - .5) * .34 }; stuff.foes.set(f.id, e);
+    const e = { ...md, holder, bar, ink, ice, f, k: f.k, yaw: f.dir, born: G.time, ph: Math.random() * 6, cyc: Math.random() * 6, lane: (Math.random() - .5) * .34 }; stuff.foes.set(f.id, e);
     if(f.hidden && !f.seen) ghost(e, true);
     return e;
   }
   const SHOT = {
     gato(){ const g = new THREE.Group(); m(g, sph(.09, 12, 10), toon('#FF5E7A')); m(g, new THREE.TorusGeometry(.09, .014, 6, 18), toon('#FFC2CE'), [0, 0, 0], null, [1, .3, 0]); m(g, new THREE.TorusGeometry(.09, .014, 6, 18), toon('#FFC2CE'), [0, 0, 0], null, [.2, 1.3, 0]); return g; },
     abeja(){ const g = new THREE.Group(); m(g, cone(.035, .14, 6), toon('#FFC93D', { emissive: '#FF9A00', emissiveIntensity: .6 }), [0, 0, 0], null, [Math.PI / 2, 0, 0]); return g; },
+    mago(){ const g = new THREE.Group(); m(g, sph(.08, 12, 10), toon('#B57BFF', { emissive: '#8A4DFF', emissiveIntensity: .8 })); m(g, sph(.12, 12, 10), basic('#D9B8FF', { transparent: true, opacity: .35 })); return g; },
+    pinguino(){ const g = new THREE.Group(); m(g, new THREE.OctahedronGeometry(.06, 0), toon('#BFEFFF', { emissive: '#7FD8FF', emissiveIntensity: .5 }), [0, 0, 0], [.6, .6, 1.6]); return g; },
     buho(){ const g = new THREE.Group(); m(g, sph(.07, 12, 8), toon('#C9A170'), [0, 0, 0], [.5, .25, 1.6]); m(g, cyl(.008, .008, .2, 4), toon('#8B5A35'), [0, 0, 0], null, [Math.PI / 2, 0, 0]); return g; },
     pulpo(){ const g = new THREE.Group(); m(g, sph(.1, 12, 10), toon('#4B3A78')); m(g, sph(.05, 8, 6), toon('#4B3A78'), [.07, .05, -.04]); return g; },
     dragon(){ const g = new THREE.Group(); m(g, sph(.15, 14, 10), basic('#FFB13D')); m(g, sph(.1, 12, 8), basic('#FFF2A8')); m(g, sph(.2, 14, 10), basic('#FF6A2A', { transparent: true, opacity: .45, depthWrite: false })); return g; },
@@ -1043,7 +1093,8 @@ function start(el, host){
   // how each tower throws: wind = seconds of wind-up, hit = seconds of follow-through; back / fwd = lean, lunge = step forward, hop = jump
   const POSE = { gato: { wind: .22, hit: .3, back: .45, fwd: .5, lunge: .14, hop: 0 }, abeja: { wind: .13, hit: .2, back: .18, fwd: .35, lunge: .26, hop: 0 },
     pulpo: { wind: .3, hit: .35, back: .25, fwd: .3, lunge: .06, hop: .14 }, dragon: { wind: .42, hit: .42, back: .6, fwd: .55, lunge: .18, hop: .08 },
-    huerto: { wind: 0, hit: .01, back: 0, fwd: 0, lunge: 0, hop: 0, sway: .04 }, buho: { wind: .25, hit: .3, back: .3, fwd: .35, lunge: .08, hop: .1 } };
+    huerto: { wind: 0, hit: .01, back: 0, fwd: 0, lunge: 0, hop: 0, sway: .04 }, nido: { wind: 0, hit: .01, back: 0, fwd: 0, lunge: 0, hop: 0, sway: .02 },
+    pinguino: { wind: .3, hit: .35, back: .2, fwd: .1, lunge: 0, hop: .18 }, mago: { wind: .25, hit: .3, back: .3, fwd: .4, lunge: .1, hop: .05 }, buho: { wind: .25, hit: .3, back: .3, fwd: .35, lunge: .08, hop: .1 } };
   // how each critter moves: f = steps per second when moving at speed s (board units a second); faster = quicker steps
   const GAIT = { rana: { f: 3.2, s: 3.4 }, pollito: { f: 11, s: 6 }, conejo: { f: 4.2, s: 6.6 }, arana: { f: 10, s: 3.4 }, oveja: { f: 7, s: 3.8 }, cebra: { f: 5, s: 3.4 }, dino: { f: 1.6, s: .34 },
     hormiga: { f: 9, s: 1 }, raton: { f: 11, s: .75 }, caracol: { f: 2.6, s: .36 }, murcielago: { f: 5, s: 1.05 }, mapache: { f: 7.5, s: .57 }, cocodrilo: { f: 4.5, s: .42 }, oso: { f: 3.6, s: .33 }, elefante: { f: 2.6, s: .25 } };
@@ -1109,6 +1160,9 @@ function start(el, host){
       for(const w of e.roles.wing || []) w.rotation.z = Math.sin(now * (w.userData.fast ? 42 : 4) + w.userData.sx) * (w.userData.fast ? .5 : .25) * w.userData.sx;
       for(const h of e.roles.hover || []) h.position.y = .42 + Math.sin(now * 3 + tw.id) * .05;
       for(const tl of e.roles.tail || []) tl.rotation.y = Math.sin(now * 2.5 + tw.id) * .35 + st * .8;
+      for(const bd of e.roles.bird || []){ const ph = now * 3 + bd.userData.ph * 2.1 + tw.id; bd.position.y = .45 + Math.max(0, Math.sin(ph)) * .08; bd.rotation.y = Math.sin(ph * .5) * .8; }
+      for(const wd of e.roles.wand || []) wd.rotation.z = -wind * .6 + st * 1.1;
+      for(const f2 of e.roles.flag || []) f2.rotation.y = Math.sin(now * 5 + tw.id) * .4;
       for(const te of e.roles.tentacle || []) te.rotation.x = Math.sin(now * 3 + te.userData.ph) * .15 - wind * .5 + st * .8;
       for(const f2 of e.roles.flag || []) f2.rotation.y = Math.sin(now * 5 + tw.id) * .4;
       for(const mf of e.roles.mouthfire || []){ mf.material.opacity = st * .9; mf.scale.setScalar(1 + st * 1.5); }
@@ -1130,13 +1184,13 @@ function start(el, host){
       if(e && e.k !== f.k){ world.remove(e.holder); stuff.foes.delete(f.id); const was = e; e = addFoe(f); e.yaw = was.yaw; e.born = G.time - 1; }   // regrew into a bigger critter
       if(!e) e = addFoe(f);
       let d = f.dir - e.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); e.yaw += d * Math.min(1, dt * 8);
-      const slow = f.slowT > 0, hitK = animateFoe(e, f, now, dt, slow);
+      const slow = f.slowT > 0 && f.slowT < 1e5, hitK = f.freezeT > 0 ? 0 : animateFoe(e, f, now, dt, slow);
       const ramp = Math.min(1, f.d / .9, (G.paths[f.p].len - f.d) / .9), lane = e.lane * Math.max(0, ramp);
       const px = f.x + Math.cos(f.dir) * lane - Math.sin(f.dir) * hitK * .1, py = f.y - Math.sin(f.dir) * lane - Math.cos(f.dir) * hitK * .1;
       const age = G.time - e.born, hop = f.kid && age < .45 ? Math.sin(age / .45 * Math.PI) * .7 : 0;     // kids jump out of the bigger critter
       e.holder.position.set(wx(px), hAt(px, py) + hop, wz(py)); e.last = [px, py];
       e.holder.scale.setScalar(Math.min(1, age / (f.kid ? .12 : .3)) * (f.max > 1 ? .82 + .18 * f.hp / f.max : 1));   // a bit smaller with each layer lost
-      e.ink.visible = slow;
+      e.ink.visible = slow; e.ice.visible = f.freezeT > 0; if(e.ice.visible) e.ice.scale.setScalar(f.boss ? 2 : (f.size || .7) * 1.3);
       e.bar.visible = f.hp < f.max; if(e.bar.visible){ e.bar.quaternion.copy(camera.quaternion); const u = Math.max(0, f.hp / f.max); e.bar.userData.fg.scale.x = Math.max(.001, u); e.bar.userData.fg.position.x = -.23 * (1 - u); e.bar.userData.fg.material = basic(u > .4 ? '#3DCB6C' : '#FF5E5E', { depthTest: false }); }
     }
     // gone from the game: tumble over (defeated) or slip into the house (got through)
@@ -1178,6 +1232,8 @@ function start(el, host){
         for(let i = 0; i <= 6; i++){ const p = a.clone().lerp(z, i / 6); if(i % 6) p.add(new THREE.Vector3((Math.random() - .5) * .18, (Math.random() - .5) * .18, (Math.random() - .5) * .18)); pts.push(p); }
         const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#FFF06A', transparent: true, depthTest: false })); ln.renderOrder = 8; world.add(ln);
         stuff.fx.push({ o: ln, life: .14, max: .14, line: true }); burst('sparkle', z.x, z.y + .1, z.z, .35, .2); sfx('tink'); }
+      else if(ev.t === 'frost'){ flash(wx(ev.x), h + .2, wz(ev.y), '#BFEFFF', ev.r + .3, .4); burst('sparkle', wx(ev.x), h + 1, wz(ev.y), .5, .4, { rise: .3, tint: '#BFEFFF' }); }
+      else if(ev.t === 'shimmer'){ flash(wx(ev.x), h + .2, wz(ev.y), '#E3C8FF', ev.r, .5); }
       else if(ev.t === 'wind'){ burst('puff', wx(ev.x), h + .3, wz(ev.y), .7, .35, { rise: .2 }); }
       else if(ev.t === 'spike'){ burst('hit', wx(ev.x), h + .35, wz(ev.y), .3, .16); }
       else if(ev.t === 'seen'){ const e = stuff.foes.get(ev.foe.id); if(e && e.ghost) ghost(e, false); burst('sparkle', wx(ev.x), h + .9, wz(ev.y), .55, .5, { rise: .4 }); sfx('tink'); }
@@ -1335,6 +1391,7 @@ function start(el, host){
     {
       if(b.id === 'huerto') h += `<div class="farm">🍎 +${G.stat(t).farm} ${ic('coin')} cada ronda</div>`;
       if(b.sees) h += `<div class="farm">👀 Ve a los escondidos</div>`;
+      if(b.support){ const P = G.stat(t).support; h += `<div class="farm">🪺 Cerca: +${Math.round(P.rangeMult * 100)}% alcance${P.rate < 1 ? ' · más rápido' : ''}${P.camo ? ' · ven lo escondido' : ''}${P.allTypes ? ' · pueden con todo' : ''}</div>`; }
       if(!t.wall && G.hasPower(t)) h += `<div class="farm">⚡ ${POWERS[b.id].name}</div>`;
       for(const o of opts){ const have = o.path === 0 ? t.a : t.b, pn = b.paths[o.path].name;
         if(o.done){ h += `<div class="done"><span>${ic('crown')} ${pn}</span><span class="dots">${dots(3)}</span></div>`; continue; }
