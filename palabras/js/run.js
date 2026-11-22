@@ -3,7 +3,7 @@
 /* ======================= flashcards ======================= */
 function renderCard(dir){
   const w=S.list[S.i], f=$('flash');
-  $('pic').textContent=w[2];
+  setPic($('pic'),w[2]);
   $('word').innerHTML=wordHTML(w);
   $('en').textContent=S.showEn?w[3]:'';
   $('dots').innerHTML = S.list.length>16

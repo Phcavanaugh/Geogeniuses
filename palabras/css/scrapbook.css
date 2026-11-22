@@ -201,3 +201,11 @@ select{border:2px solid var(--ink)}
 :where(.choice,.achoice,.food):nth-child(4n+3){background:#FFE5EE}
 :where(.choice,.achoice,.food):nth-child(4n){background:#E3F6E6}
 .topbar .title{font-size:19px}
+
+/* drawn sticker art (art/words/*.png) — sized by the font size, like the emoji it replaces */
+.wart{width:1.22em;height:1.22em;object-fit:contain;display:inline-block;vertical-align:middle;-webkit-user-drag:none;pointer-events:none}
+:has(> .wart):not(.bigpic){filter:drop-shadow(0 4px 3px rgba(51,38,59,.25))}
+.stk.locked span:has(> .wart){filter:brightness(0)}
+.toast .wart{width:34px;height:34px}
+/* the memory board shares the name "big" with big buttons; keep it a plain grid */
+.mgrid.big{border:0;box-shadow:none;background:none;height:auto;padding:0;border-radius:0;place-items:stretch;min-width:0;font-size:inherit}
