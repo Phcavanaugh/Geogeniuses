@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=39';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=40';
 
 // ====================================================================================
 // materials
@@ -1178,6 +1178,7 @@ function start(el, host){
         for(let i = 0; i <= 6; i++){ const p = a.clone().lerp(z, i / 6); if(i % 6) p.add(new THREE.Vector3((Math.random() - .5) * .18, (Math.random() - .5) * .18, (Math.random() - .5) * .18)); pts.push(p); }
         const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#FFF06A', transparent: true, depthTest: false })); ln.renderOrder = 8; world.add(ln);
         stuff.fx.push({ o: ln, life: .14, max: .14, line: true }); burst('sparkle', z.x, z.y + .1, z.z, .35, .2); sfx('tink'); }
+      else if(ev.t === 'wind'){ burst('puff', wx(ev.x), h + .3, wz(ev.y), .7, .35, { rise: .2 }); }
       else if(ev.t === 'spike'){ burst('hit', wx(ev.x), h + .35, wz(ev.y), .3, .16); }
       else if(ev.t === 'seen'){ const e = stuff.foes.get(ev.foe.id); if(e && e.ghost) ghost(e, false); burst('sparkle', wx(ev.x), h + .9, wz(ev.y), .55, .5, { rise: .4 }); sfx('tink'); }
       else if(ev.t === 'unseen'){ const e = stuff.foes.get(ev.foe.id); if(e && !e.ghost) ghost(e, true); }

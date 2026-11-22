@@ -9,7 +9,7 @@ num=lambda x,d=0: float(x) if x not in ('',None) else d
 IMM={'Lead':'lead','Black':'black','Purple':'purple','White':'white','Frozen':'frozen'}
 def imm(s): return [IMM[x.strip()] for x in s.split('|') if x.strip() in IMM]
 # our tower -> (Bloons family, which Bloons path is our A, which is our B)
-MAP={'gato':('DartMonkey',2,1),'dragon':('BombShooter',1,2),'pulpo':('GlueGunner',3,1),'huerto':('BananaFarm',1,2)}
+MAP={'gato':('DartMonkey',2,1),'abeja':('TackShooter',3,1),'pulpo':('GlueGunner',3,1),'dragon':('BombShooter',1,2),'huerto':('BananaFarm',1,2),'buho':('NinjaMonkey',1,2)}
 out={}
 for our,(fam,pa,pb) in MAP.items():
     ups={ (int(u['path']),int(u['tier'])):(u['name'],int(u['price_medium'])) for u in U if u['family_id']==fam and u['kind']!='paragon' and u['tier'] in '123' and u['tier']}
@@ -41,12 +41,24 @@ for our,(fam,pa,pb) in MAP.items():
                         pr=json.loads(e['parameters']); wo['slow']={'mult':pr.get('multiplier',.5),'t':pr.get('lifespan',num(e['lifespan_s'])),'layers':min(pr.get('layers',3),999)}
                     if e['effect_type']=='SlowModifierForTagModel' and e['target_tag']=='Moabs':
                         pr=json.loads(e['parameters']); wo['slowBoss']=pr.get('slowMultiplier',1.0)
+                    if e['effect_type']=='DamageModifierForTagModel' and e['target_tag']=='Camo':
+                        pr=json.loads(e['parameters']);
+                        if pr.get('damageAddative'): wo.setdefault('bonus',{})['Camo']=pr['damageAddative']
+                    if e['effect_type']=='WindModel':
+                        pr=json.loads(e['parameters']); wo['wind']={'chance':pr['chance'],'min':pr['distanceMin'],'max':pr['distanceMax'],'moab':pr.get('affectMoab',False)}
+                    if e['effect_type']=='RemoveBloonModifiersModel':
+                        pr=json.loads(e['parameters'])
+                        if pr.get('cleanseCamo'): wo['decamo']=True
                     if e['effect_type']=='DamageOverTimeModel':
                         pr=json.loads(e['parameters']); wo['dot']={'dmg':pr.get('damage',1),'every':pr.get('interval',1)}
                 st['weapons'].append(wo)
+            # tower-wide: sees hidden critters (all ninja models), Shinobi Tactics (buffs ninjas in range)
+            if fam=='NinjaMonkey': st['camo']=True
+            for e in E:
+                if e['model_id']==mid and e['effect_type']=='SupportShinobiTacticsModel': st['shinobi']=json.loads(e['parameters'])['multiplier']
             T['stats'][f'{a}{b}']=st
     out[our]=T
-json.dump(out,open('/home/claude/gen/towers.json','w'))
+json.dump(out,open('/tmp/btd-towers.json','w'))
 for k,v in out.items():
     print(k, v['family'], v['paths'])
     for ab in ('00','10','20','30','01','02','03','31','13'):
