@@ -12,6 +12,7 @@
 // Each critter knocked out pays a coin; each round you finish pays 100 + the round. The rounds are Bloons TD 6's
 // standard rounds, and Easy / Medium / Hard are Bloons' (4–5 plays Easy, 7 Medium, 10 Hard).
 
+import { BT } from './defensa-bt.js?v=39';
 export const U = 13.33;                                   // Bloons units per board unit
 export const bu = v => v / U;                             // Bloons units → board units
 export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 BU, landscape; the island reaches MARGIN past it
@@ -35,27 +36,28 @@ export const MAPS = [
 ];
 
 // ---------- towers ----------
-// range, size and projectile speed in BU; cooldown in seconds; pierce = how many critters one shot can hit.
-// kind = what the hit is like (Bloons' damage types): 'sharp' can't hurt snails (lead); 'boom' can't hurt spiders or
-// zebras (black, zebra); 'acid' hurts anything. An upgrade with shell:true lets a sharp tower hurt snails.
-// Each tower has two upgrade paths (A and B) of three steps; you can take one path to the top and the other to step 1.
+// Towers. Four have a Bloons twin and use its exact numbers for every upgrade (from BT, in defensa-bt.js):
+// gato = Dart Monkey, dragón = Bomb Shooter, pulpo = Glue Gunner, huerto = Banana Farm. Costs and upgrade costs are Bloons'.
+// abeja and búho are still ours (no twin chosen yet): their numbers are below, in the same style (BU, seconds).
+// Shots fly straight like Bloons' darts and hit what they touch, up to their pierce. imm = balloon kinds they can't hurt
+// ('lead' = snails, 'black' = spiders and zebras, 'purple' = bats, 'white' = sheep and zebras).
 export const TOWERS = [
-  { id:'gato', name:'El gato', word:'w|🐱', cost:200, range:32, cd:.95, pierce:2, dmg:1, speed:260, kind:'sharp', tip:'Lanza bolas de estambre.',
-    paths:[ { name:'Estambre rápido', steps:[ { cost:120, name:'Más rápido', cd:.75 }, { cost:250, name:'Súper rápido', cd:.7, range:4 }, { cost:900, name:'Dos bolas', cd:.6, shots:2 } ] },
-            { name:'Bola gigante',    steps:[ { cost:150, name:'Bola grande', pierce:2 }, { cost:300, name:'Bola pesada', dmg:1 }, { cost:1100, name:'Bola gigante', pierce:6, dmg:1 } ] } ] },
-  { id:'abeja', name:'La abeja', word:'w|🐝', cost:300, range:30, cd:.42, pierce:1, dmg:1, speed:360, kind:'sharp', tip:'¡Pica muy, muy rápido! (No puede con los caracoles.)',
+  { id:'gato', twin:'DartMonkey', name:'El gato', word:'w|🐱', cost:200, range:32, tip:'Lanza bolas de estambre. (No puede con los caracoles.)',
+    paths:[ { name:'Rapidez',        steps:[ { cost:100, name:'Lanza rápido' }, { cost:190, name:'Lanza muy rápido' }, { cost:450, name:'Tres bolas' } ] },
+            { name:'Bolas fuertes',  steps:[ { cost:140, name:'Bola puntiaguda' }, { cost:200, name:'Bola muy puntiaguda' }, { cost:320, name:'Bola gigante' } ] } ] },
+  { id:'abeja', name:'La abeja', word:'w|🐝', cost:300, range:30, cd:.42, pierce:1, dmg:1, speed:360, tip:'¡Pica muy, muy rápido! (No puede con los caracoles.)',
     paths:[ { name:'Enjambre',        steps:[ { cost:150, name:'Dos aguijones', shots:2 }, { cost:350, name:'Tres aguijones', shots:3 }, { cost:1200, name:'Enjambre', shots:5, cd:.8 } ] },
             { name:'Aguijón de miel', steps:[ { cost:200, name:'Más fuerte', dmg:1 }, { cost:400, name:'Rompe conchas', shell:true }, { cost:1300, name:'Aguijón de oro', dmg:2, pierce:2 } ] } ] },
-  { id:'pulpo', name:'El pulpo', word:'w|🐙', cost:250, range:42, cd:1, pierce:2, dmg:0, speed:220, kind:'acid', slow:.5, slowT:6, tip:'Echa tinta: ¡los bichos van más lentos!',
-    paths:[ { name:'Tinta pegajosa',  steps:[ { cost:120, name:'Más tinta', pierce:2 }, { cost:250, name:'Muy pegajosa', slowTo:.33 }, { cost:800, name:'Mar de tinta', pierce:6, slowT:4 } ] },
-            { name:'Tinta ácida',     steps:[ { cost:200, name:'Tinta que pica', dot:1 }, { cost:400, name:'Tinta ácida', dot:1 }, { cost:1100, name:'Súper ácida', dot:2, dmg:1 } ] } ] },
-  { id:'dragon', name:'El dragón', word:'w|🐉', cost:450, range:38, cd:1.5, pierce:14, dmg:1, speed:200, blast:20, kind:'boom', tip:'Echa fuego a todos juntos.',
-    paths:[ { name:'Fuego grande',    steps:[ { cost:250, name:'Llamas grandes', blast:6 }, { cost:500, name:'Bola de fuego', pierce:10, blast:4 }, { cost:1600, name:'Fuego del volcán', dmg:2 } ] },
-            { name:'Fuego rápido',    steps:[ { cost:300, name:'Más rápido', cd:.75 }, { cost:600, name:'Muy rápido', cd:.7, range:6 }, { cost:1800, name:'Dragón dorado', cd:.5, dmg:1 } ] } ] },
-  { id:'huerto', name:'El huerto', word:'c|¡El huerto!', cost:700, range:0, farm:80, tip:'Un manzano: da monedas al final de cada ronda.',
-    paths:[ { name:'Más manzanas',    steps:[ { cost:300, name:'Más manzanas', farm:40 }, { cost:600, name:'Muchas manzanas', farm:60 }, { cost:1500, name:'Manzanas de oro', farm:160 } ] },
-            { name:'Abejas felices',  steps:[ { cost:400, name:'Flores', farm:30 }, { cost:700, name:'Colmena', farm:70 }, { cost:1400, name:'Miel', farm:140 } ] } ] },
-  { id:'buho', name:'El búho', word:'w|🦉', cost:250, range:46, cd:1.2, pierce:1, dmg:1, speed:280, kind:'sharp', sees:true, tip:'Ve a los bichos escondidos, y los otros animales también.',
+  { id:'pulpo', twin:'GlueGunner', name:'El pulpo', word:'w|🐙', cost:225, range:46, tip:'Echa tinta: ¡los bichos van más lentos! (A los jefes no les pega.)',
+    paths:[ { name:'Tinta pegajosa',  steps:[ { cost:280, name:'Tinta que dura' }, { cost:400, name:'Tinta más pegajosa' }, { cost:3600, name:'Tinta para jefes' } ] },
+            { name:'Tinta ácida',     steps:[ { cost:200, name:'Tinta que empapa' }, { cost:300, name:'Tinta ácida' }, { cost:2000, name:'Tinta que disuelve' } ] } ] },
+  { id:'dragon', twin:'BombShooter', name:'El dragón', word:'w|🐉', cost:375, range:40, tip:'Echa bolas de fuego que explotan. (No puede con las arañas ni las cebras.)',
+    paths:[ { name:'Fuego grande',    steps:[ { cost:250, name:'Fuego grande' }, { cost:650, name:'Fuego pesado' }, { cost:1100, name:'Fuego enorme' } ] },
+            { name:'Fuego rápido',    steps:[ { cost:250, name:'Más rápido' }, { cost:400, name:'Fuego veloz' }, { cost:1000, name:'Fuego contra jefes' } ] } ] },
+  { id:'huerto', twin:'BananaFarm', name:'El huerto', word:'c|¡El huerto!', cost:1250, range:0, farm:80, tip:'Un manzano: da monedas al final de cada ronda.',
+    paths:[ { name:'Más manzanas',    steps:[ { cost:500, name:'Más manzanas' }, { cost:600, name:'Muchas manzanas' }, { cost:3000, name:'Gran huerto' } ] },
+            { name:'Manzanas de oro', steps:[ { cost:300, name:'Manzanas que duran' }, { cost:800, name:'Manzanas de oro' }, { cost:3650, name:'Alcancía' } ] } ] },
+  { id:'buho', name:'El búho', word:'w|🦉', cost:250, range:46, cd:1.2, pierce:1, dmg:1, speed:280, sees:true, tip:'Ve a los bichos escondidos, y los otros animales también.',
     paths:[ { name:'Ojos grandes',    steps:[ { cost:150, name:'Ve más lejos', range:8 }, { cost:300, name:'Ve muy lejos', range:8 }, { cost:1000, name:'Ojos mágicos', buff:.8 } ] },
             { name:'Plumas',          steps:[ { cost:200, name:'Plumas rápidas', cd:.75 }, { cost:350, name:'Plumas fuertes', dmg:1 }, { cost:1100, name:'Tormenta de plumas', shots:3, cd:.8 } ] } ] },
 ];
@@ -71,13 +73,17 @@ export const POWERS = {
   buho:   { name:'¡Todos a la vista!',   cd:45, tip:'Todos ven a los escondidos un ratito.' },
 };                                   // how wide a tower is, in BU (like Bloons' basic tower)
 
-// la cerca: goes on a trail; critters stop and chew through it (bats fly over). HP is in bites.
-export const WALL = { id:'cerca', name:'La cerca', word:'c|¡La cerca!', cost:120, hp:[30, 70, 150], names:['La cerca', 'El muro', 'El muro de ladrillo'], up:[150, 350],
-  tip:'Ponla en el camino: los bichos tienen que pararse y morderla.' };
+// la cerca (ours — Bloons has no fences): goes on a trail; critters stop and chew through it (bats fly over).
+// hp is in bites; it stays chewed between rounds and is gone once broken. Upgrades: barbed wire hurts the critters
+// chewing on it (a sharp hit: not snails); electric zaps critters near it (snaps don't hurt bats — Bloons' purple).
+export const WALL = { id:'cerca', name:'La cerca', word:'c|¡La cerca!', cost:120, hp:30, tip:'Ponla en el camino: los bichos tienen que pararse y morderla.',
+  paths:[ { name:'Alambre de púas', steps:[ { cost:150, name:'Alambre de púas', hp:20, spike:1 }, { cost:350, name:'Púas largas', hp:40, spike:2 }, { cost:900, name:'Púas de acero', hp:80, spike:5 } ] },
+          { name:'Cerca eléctrica', steps:[ { cost:200, name:'Cerca eléctrica', hp:10, zap:{ cd:1, dmg:1, pierce:2, range:1 } }, { cost:450, name:'Más voltaje', hp:20, zap:{ cd:.6, dmg:1, pierce:4, range:1.2 } },
+                                            { cost:1200, name:'Rayo', hp:40, zap:{ cd:.4, dmg:2, pierce:8, range:1.5 } } ] } ] };
 
 // ---------- critters ----------
 // Each critter is a Bloons balloon (named in "bloon"): hp = hits to knock it out (fort = when it's fortified),
-// speed in BU per second, kids = what comes out when it's knocked out, imm = kinds of hits that can't hurt it.
+// speed in BU per second, kids = what comes out when it's knocked out, props = Bloons properties (which hits can't hurt it).
 // fly: goes over fences (our rule — Bloons has no fences). boss: the big ones (Bloons' MOAB class).
 export const FOES = {
   hormiga:    { bloon:'Red',     name:'la hormiga',     word:'w|🐜', hp:1,    speed:25,   size:.62, kids:[] },
@@ -85,11 +91,11 @@ export const FOES = {
   rana:       { bloon:'Green',   name:'la rana',        word:'w|🐸', hp:1,    speed:45,   size:.7,  kids:['raton'] },
   pollito:    { bloon:'Yellow',  name:'el pollito',     word:'w|🐤', hp:1,    speed:80,   size:.64, kids:['rana'] },
   conejo:     { bloon:'Pink',    name:'el conejo',      word:'w|🐰', hp:1,    speed:87.5, size:.72, kids:['pollito'] },
-  arana:      { bloon:'Black',   name:'la araña',       word:'w|🕷️', hp:1,    speed:45,   size:.64, kids:['conejo', 'conejo'], imm:['boom'] },
-  oveja:      { bloon:'White',   name:'la oveja',       word:'w|🐑', hp:1,    speed:50,   size:.76, kids:['conejo', 'conejo'], imm:['freeze'] },
-  murcielago: { bloon:'Purple',  name:'el murciélago',  word:'w|🦇', hp:1,    speed:75,   size:.7,  kids:['conejo', 'conejo'], imm:['magic', 'fire'], fly:true },
-  caracol:    { bloon:'Lead',    name:'el caracol',     word:'w|🐌', hp:1,    fort:4,     speed:25, size:.72, kids:['arana', 'arana'], imm:['sharp'] },
-  cebra:      { bloon:'Zebra',   name:'la cebra',       word:'w|🦓', hp:1,    speed:45,   size:.8,  kids:['arana', 'oveja'], imm:['boom', 'freeze'] },
+  arana:      { bloon:'Black',   name:'la araña',       word:'w|🕷️', hp:1,    speed:45,   size:.64, kids:['conejo', 'conejo'], props:['black'] },
+  oveja:      { bloon:'White',   name:'la oveja',       word:'w|🐑', hp:1,    speed:50,   size:.76, kids:['conejo', 'conejo'], props:['white'] },
+  murcielago: { bloon:'Purple',  name:'el murciélago',  word:'w|🦇', hp:1,    speed:75,   size:.7,  kids:['conejo', 'conejo'], props:['purple'], fly:true },
+  caracol:    { bloon:'Lead',    name:'el caracol',     word:'w|🐌', hp:1,    fort:4,     speed:25, size:.72, kids:['arana', 'arana'], props:['lead'] },
+  cebra:      { bloon:'Zebra',   name:'la cebra',       word:'w|🦓', hp:1,    speed:45,   size:.8,  kids:['arana', 'oveja'], props:['black', 'white'] },
   mapache:    { bloon:'Rainbow', name:'el mapache',     word:'w|🦝', hp:1,    speed:55,   size:.8,  kids:['cebra', 'cebra'] },
   cocodrilo:  { bloon:'Ceramic', name:'el cocodrilo',   word:'w|🐊', hp:10,   fort:20,    speed:62.5, size:.86, kids:['mapache', 'mapache'] },
   oso:        { bloon:'MOAB',    name:'el oso',         word:'w|🐻', hp:200,  fort:400,   speed:25,   size:1.15, boss:true, kids:['cocodrilo', 'cocodrilo', 'cocodrilo', 'cocodrilo'] },
@@ -271,7 +277,7 @@ export const firstHidden = r => r === FIRST_HIDDEN;
 export function newFoes(r){ return Object.keys(FIRST).filter(k => FIRST[k] === r && r > 1); }
 
 // ---------- the game ----------
-const SAVE_V = 3;                    // bump when saved games no longer fit (v3: the one-trail Bloons maps)
+const SAVE_V = 4;                    // bump when saved games no longer fit (v3: one-trail maps; v4: fences with upgrade paths)
 let uid = 0;
 const nid = () => ++uid;
 export class Game {
@@ -292,12 +298,12 @@ export class Game {
   save(){
     return { v:SAVE_V, age:this.age, map:this.mapIndex, r:this.r,  lives:this.lives, coins:this.coins, points:this.points,
       towers:this.towers.map(t => ({ i:t.i, x:t.x, y:t.y, a:t.a, b:t.b, spent:t.spent, target:t.target })),
-      walls:this.walls.map(w => ({ p:w.p, d:w.d, lvl:w.lvl, spent:w.spent })) };
+      walls:this.walls.map(w => ({ p:w.p, d:w.d, a:w.a, b:w.b, hp:w.hp, spent:w.spent })) };
   }
   load(s){
     Object.assign(this, { r:s.r, lives:s.lives, coins:s.coins, points:s.points || 0 });
     this.towers = (s.towers || []).map(t => ({ ...t, id:nid(), lvl:1 + Math.max(t.a, t.b), cd:0, aim:Math.PI, shotAt:-9, target:t.target || 'first' }));
-    this.walls = (s.walls || []).map(w => ({ ...w, id:nid(), wall:true }));
+    this.walls = (s.walls || []).map(w => ({ ...w, id:nid(), wall:true, cd:0, max:this.wallStat(w).max }));
   }
   startRound(){
     const r = this.r;
@@ -308,7 +314,7 @@ export class Game {
       return { P, seg, len: tot, start: P[0] };
     });
     this.bowl = this.map.bowl;
-    for(const w of this.walls){ const [x, y, dir] = this.posAt(w.p, w.d); Object.assign(w, { x, y, dir, max: WALL.hp[w.lvl - 1], hp: WALL.hp[w.lvl - 1] }); }   // walls are fixed up between rounds
+    for(const w of this.walls){ const [x, y, dir] = this.posAt(w.p, w.d); Object.assign(w, { x, y, dir }); }   // (walls keep their bites: no repairs)
     this.queue = makeWave(r, this.age); this.total = this.queue.length; this.clock = 0;
     this.phase = 'build'; this.foes = []; this.shots = []; this.revealT = 0; this.yarnT = 0;
     this.snapshot = this.save();             // "¡Otra vez!" goes back to here
@@ -343,23 +349,34 @@ export class Game {
     const [wx, wy, dir] = this.posAt(best.p, best.d);
     return { p: best.p, d: best.d, x: wx, y: wy, dir };
   }
-  // a tower's current numbers, with its upgrades applied (ranges in board units)
+  // a tower's current numbers, with its upgrades applied, in board units:
+  // { range, farm, buff, sees, weapons: [{ cd, n, spread (radians), speed, life, r, pierce, dmg, imm, boom, slow, slowBoss, dot, bonus }] }
   stat(t){
-    const b = TOWERS[t.i], s = { range: b.range, cd: b.cd, pierce: b.pierce, dmg: b.dmg, shots: 1, slow: b.slow || 0, slowT: b.slowT || 0, dot: 0, shell: false, blast: b.blast || 0, farm: b.farm || 0, buff: 1, kind: b.kind };
-    const apply = st => { for(const [k, v] of Object.entries(st)){
-      if(k === 'cd') s.cd *= v; else if(k === 'buff') s.buff = v; else if(k === 'slowTo') s.slow = v; else if(k === 'shots') s.shots = v; else if(k === 'shell') s.shell = true;
-      else if(k in s && typeof v === 'number') s[k] += v; } };
-    b.paths.forEach((p, pi) => { const n = pi === 0 ? t.a : t.b; for(let k = 0; k < n; k++) apply(p.steps[k]); });
-    if(s.shell && s.kind === 'sharp') s.kind = 'normal';
-    return { ...s, range: bu(s.range), blast: bu(s.blast) };
-  }
-  // what can this tower upgrade to next? [{ path, step, cost, name, locked }]
-  upOptions(t){
-    if(t.wall) return t.lvl < 3 ? [{ path: 0, cost: this.price(WALL.up[t.lvl - 1]), name: WALL.names[t.lvl] }] : [];
     const b = TOWERS[t.i];
+    if(BT[b.id]){ const S = BT[b.id][`${t.a}${t.b}`] || BT[b.id]['00'];
+      if(S.farm !== undefined) return { range: 0, farm: S.farm, buff: 1, weapons: [] };
+      return { range: bu(S.weapons[0].range), farm: 0, buff: 1, weapons: S.weapons.map(w => ({ cd: w.cd, n: w.n || 1, spread: (w.spread || 0) * Math.PI / 180, speed: bu(w.speed), life: w.life, r: bu(w.r),
+        pierce: w.pierce, dmg: w.dmg || 0, imm: w.imm || [], boom: w.boom && { r: bu(w.boom.r), pierce: w.boom.pierce, dmg: w.boom.dmg, imm: w.boom.imm || [] }, slow: w.slow, slowBoss: w.slowBoss, dot: w.dot, bonus: w.bonus || {} })) }; }
+    // ours (abeja, búho): base numbers plus upgrade steps
+    const o = { range: b.range, cd: b.cd, pierce: b.pierce, dmg: b.dmg, shots: 1, shell: false, buff: 1 };
+    b.paths.forEach((p, pi) => { const n = pi === 0 ? t.a : t.b; for(let k = 0; k < n; k++) for(const [key, v] of Object.entries(p.steps[k])){
+      if(key === 'cd') o.cd *= v; else if(key === 'shots' || key === 'buff') o[key] = v; else if(key === 'shell') o.shell = true; else if(key in o && typeof v === 'number') o[key] += v; } });
+    return { range: bu(o.range), farm: 0, buff: o.buff, sees: !!b.sees, weapons: [{ cd: o.cd, n: o.shots, spread: o.shots > 1 ? .35 : 0, speed: bu(b.speed), life: .3, r: bu(2), pierce: o.pierce, dmg: o.dmg,
+      imm: o.shell ? ['frozen'] : ['lead', 'frozen'], bonus: {} }] };
+  }
+  // a fence's numbers: most bites, barbed wire (hurts per second to each critter chewing), electric zap
+  wallStat(w){
+    const s = { max: WALL.hp, spike: 0, zap: null };
+    WALL.paths.forEach((p, pi) => { const n = pi === 0 ? w.a : w.b; for(let k = 0; k < n; k++){ const st = p.steps[k]; s.max += st.hp || 0; if(st.spike) s.spike = st.spike; if(st.zap) s.zap = st.zap; } });
+    return s;
+  }
+  // what can this tower (or fence) upgrade to next? [{ path, step, cost, name, locked }]
+  // Bloons' rule: only one path can go past step 2.
+  upOptions(t){
+    const b = t.wall ? WALL : TOWERS[t.i];
     return b.paths.map((p, pi) => { const have = pi === 0 ? t.a : t.b, other = pi === 0 ? t.b : t.a;
       if(have >= 3) return { path: pi, done: true, name: p.name };
-      const locked = Math.min(have + 1, other) > 1;   // one path can go to the top, the other only to step 1
+      const locked = have + 1 >= 3 && other >= 3;
       return { path: pi, step: have + 1, cost: this.price(p.steps[have].cost), name: p.steps[have].name, pathName: p.name, locked }; });
   }
   upCost(t){ const o = this.upOptions(t).find(o => !o.done && !o.locked); return o ? o.cost : Infinity; }
@@ -371,15 +388,15 @@ export class Game {
   }
   placeWall(x, y){
     const s = this.wallSpot(x, y), cost = this.price(WALL.cost); if(s.why || this.coins < cost) return null;
-    this.coins -= cost; const w = { id: nid(), wall: true, p: s.p, d: s.d, x: s.x, y: s.y, dir: s.dir, lvl: 1, hp: WALL.hp[0], max: WALL.hp[0], spent: cost };
+    this.coins -= cost; const w = { id: nid(), wall: true, p: s.p, d: s.d, x: s.x, y: s.y, dir: s.dir, a: 0, b: 0, hp: WALL.hp, max: WALL.hp, spent: cost, cd: 0 };
     this.walls.push(w); this.fx.push({ t:'build', x:w.x, y:w.y }); return w;
   }
   upgrade(t, path = 0){
     const o = this.upOptions(t).find(o => o.path === path); if(!o || o.done || o.locked || this.coins < o.cost) return false;
     this.coins -= o.cost; t.spent += o.cost;
-    if(t.wall){ t.lvl++; const was = t.max; t.max = WALL.hp[t.lvl - 1]; t.hp = Math.min(t.max, t.hp + (t.max - was)); }
-    else if(path === 0) t.a++; else t.b++;
-    t.lvl = t.wall ? t.lvl : 1 + Math.max(t.a, t.b);
+    if(path === 0) t.a++; else t.b++;
+    if(t.wall){ const was = t.max; t.max = this.wallStat(t).max; t.hp += t.max - was; }
+    else t.lvl = 1 + Math.max(t.a, t.b);
     this.fx.push({ t:'up', x:t.x, y:t.y, tower:t }); return true;
   }
   setTarget(t, mode){ t.target = mode; }
@@ -397,10 +414,10 @@ export class Game {
     const t = this.towers.find(t => this.hasPower(t) && TOWERS[t.i].id === id && !(t.cool > 0)); if(!t) return false;
     t.cool = POWERS[id].cd; const s = this.stat(t), alive = () => this.foes.filter(f => f.alive);
     if(id === 'gato') this.yarnT = 6;
-    else if(id === 'abeja'){ for(const f of alive()){ this.hit(f, 2, null, 'sharp'); this.fx.push({ t:'hit', x:f.x, y:f.y, kind:'abeja' }); } }
+    else if(id === 'abeja'){ for(const f of alive()){ this.hit(f, 2, null, ['lead', 'frozen']); this.fx.push({ t:'hit', x:f.x, y:f.y, kind:'abeja' }); } }
     else if(id === 'pulpo'){ for(const f of alive()) if(!f.boss){ f.slowT = 6; f.slowF = .3; f.dot = Math.max(f.dot, 1); f.dotT = 6; this.fx.push({ t:'ink', x:f.x, y:f.y }); } }
     else if(id === 'dragon'){ for(const d of this.towers.filter(d => this.hasPower(d) && TOWERS[d.i].id === 'dragon')){ const r = this.stat(d).range * 1.6;
-        this.fx.push({ t:'boom', x:d.x, y:d.y, r }); for(const f of alive()) if(Math.hypot(f.x - d.x, f.y - d.y) <= r) this.hit(f, 15, null, 'boom'); } }
+        this.fx.push({ t:'boom', x:d.x, y:d.y, r }); for(const f of alive()) if(Math.hypot(f.x - d.x, f.y - d.y) <= r) this.hit(f, 15, null, ['black']); } }
     else if(id === 'huerto'){ const n = 150 + 50 * this.towers.filter(h => TOWERS[h.i].id === 'huerto').length; this.coins += n; this.fx.push({ t:'farm', x:t.x, y:t.y, n }); }
     else if(id === 'buho') this.revealT = 12;
     this.fx.push({ t:'power', id, x:t.x, y:t.y }); return true;
@@ -415,17 +432,17 @@ export class Game {
       hidden: !!o.h, seen: false, regrow: !!o.regrow, top: o.top || k, growT: REGROW_S };
     this.foes.push(foe); if(from) this.fx.push({ t:'kids', x, y, from }); return foe;
   }
-  // a hit of dmg; kind = sharp / boom / acid / normal. Leftover damage goes on to what comes out (like Bloons)
-  hit(f, dmg, by, kind = 'normal'){
+  // a hit of dmg; imm = the balloon kinds this hit can't hurt. Leftover damage goes on to what comes out (like Bloons)
+  hit(f, dmg, by, imm = []){
     if(!f.alive || dmg <= 0) return;
-    if((FOES[f.k].imm || []).includes(kind)){ this.fx.push({ t:'bounce', x:f.x, y:f.y }); return; }
+    if((FOES[f.k].props || []).some(p => imm.includes(p))){ this.fx.push({ t:'bounce', x:f.x, y:f.y }); return; }
     const d = Math.min(dmg, f.hp); f.hp -= d; f.hitAt = this.time; f.rbe -= d;
     if(f.hp > 0){ if(f.max > 1) this.fx.push({ t:'layer', x:f.x, y:f.y }); return; }
     f.alive = false; this.points += f.pts; this.fx.push({ t:'die', x:f.x, y:f.y, pts:f.pts, foe:f });
     this.frac = (this.frac || 0) + popCash(this.r); const c = Math.floor(this.frac); this.frac -= c; this.coins += c;   // a coin for each one knocked out
     const left = dmg - d, F = FOES[f.k];
     F.kids.forEach((kk, n) => { const kid = this.spawn(kk, f.p, Math.max(0, f.d - n * .12), f, { h: f.hidden, regrow: f.regrow, fort: f.fort && F.boss, top: f.regrow ? f.top : kk });
-      kid.slowT = f.slowT; kid.slowF = f.slowF; if(left > 0) this.hit(kid, left, by, kind); });
+      kid.slowT = f.slowT; kid.slowF = f.slowF; if(left > 0) this.hit(kid, left, by, imm); });
   }
   // regrow: one step bigger (if it isn't back to what it started as)
   grow(f){
@@ -449,17 +466,28 @@ export class Game {
     while(this.queue.length && this.queue[0].t <= this.clock){ const s = this.queue.shift(); this.spawn(s.k, s.p, 0, null, s); }
     for(const f of this.foes){ if(!f.alive) continue;
       f.slowT -= dt;
-      if(f.dot > 0 && f.dotT > 0){ f.dotT -= dt; f.dotAcc = (f.dotAcc || 0) + f.dot * dt; while(f.dotAcc >= 1 && f.alive){ f.dotAcc -= 1; this.hit(f, 1, null, 'acid'); } }
+      if(f.dot > 0 && f.dotT > 0){ f.dotT -= dt; f.dotAcc = (f.dotAcc || 0) + f.dot * dt; while(f.dotAcc >= 1 && f.alive){ f.dotAcc -= 1; this.hit(f, 1, null); } }
       if(f.regrow && (f.growT -= dt) <= 0){ f.growT = REGROW_S; this.grow(f); }
       if(!f.alive) continue;
       let mult = f.slowT > 0 ? f.slowF : 1; f.atWall = null;
       // a wall in the way? stop and chew on it (one bite a second; the bear chews five)
-      if(!f.fly) for(const w of this.walls) if(!w.broken && w.p === f.p && f.d < w.d){ const gap = w.d - .3 - f.d; if(gap < .02){ f.atWall = w; w.hp -= (f.boss ? 5 : 1) * dt; w.chewAt = this.time; mult = 0; } else mult = Math.min(mult, gap / (f.spd * dt + 1e-6)); }
+      if(!f.fly) for(const w of this.walls) if(w.hp > 0 && w.p === f.p && f.d < w.d){ const gap = w.d - .3 - f.d;
+        if(gap < .02){ f.atWall = w; w.hp -= (f.boss ? 5 : 1) * dt; w.chewAt = this.time; mult = 0;
+          const sp = this.wallStat(w).spike; if(sp){ f.spikeAcc = (f.spikeAcc || 0) + sp * dt; while(f.spikeAcc >= 1 && f.alive){ f.spikeAcc -= 1; this.hit(f, 1, w, ['lead', 'frozen']); this.fx.push({ t:'spike', x:f.x, y:f.y }); } } }
+        else mult = Math.min(mult, gap / (f.spd * dt + 1e-6)); }
+      if(!f.alive) continue;
       f.d += Math.min(f.spd * mult * dt, f.spd * dt);
       if(f.d >= this.paths[f.p].len){ f.alive = false; f.leaked = true; this.lives = Math.max(0, this.lives - Math.max(1, Math.ceil(f.rbe))); this.fx.push({ t:'leak', foe:f }); continue; }
       const [x, y, dir] = this.posAt(f.p, f.d); f.x = x; f.y = y; f.dir = dir;
     }
-    for(const w of this.walls) if(w.hp <= 0 && !w.broken){ w.broken = true; this.fx.push({ t:'wallbreak', x:w.x, y:w.y, wall:w }); }
+    // a fence chewed through is gone
+    for(const w of this.walls) if(w.hp <= 0){ this.fx.push({ t:'wallbreak', x:w.x, y:w.y, wall:w }); }
+    this.walls = this.walls.filter(w => w.hp > 0);
+    // electric fences zap critters near them
+    for(const w of this.walls){ const z = this.wallStat(w).zap; if(!z) continue; w.cd -= dt; if(w.cd > 0) continue;
+      const near = this.foes.filter(f => f.alive && !f.fly && Math.hypot(f.x - w.x, f.y - w.y) <= z.range).sort((a, b) => Math.hypot(a.x - w.x, a.y - w.y) - Math.hypot(b.x - w.x, b.y - w.y)).slice(0, z.pierce);
+      if(!near.length) continue; w.cd = z.cd;
+      for(const f of near){ this.fx.push({ t:'zap', x:w.x, y:w.y, tx:f.x, ty:f.y }); this.hit(f, z.dmg, w, ['purple']); } }
     // owls: which hidden critters can be seen, and which towers get the "Ojos mágicos" boost
     const owls = this.towers.filter(t => TOWERS[t.i].sees).map(t => ({ t, s: this.stat(t) }));
     // hidden critters can be aimed at only while an owl sees them
@@ -469,38 +497,53 @@ export class Game {
     if(this.revealT > 0) this.revealT -= dt;
     if(this.yarnT > 0) this.yarnT -= dt;
     for(const t of this.towers) if(t.cool > 0) t.cool -= dt;
-    // towers
-    for(const t of this.towers){ const b = TOWERS[t.i]; if(b.farm !== undefined && !b.range) continue;
+    // towers: aim at a critter and throw (straight shots, like Bloons' darts)
+    for(const t of this.towers){ const b = TOWERS[t.i]; if(!b.range) continue;
       t.cd -= dt; if(t.cd > 0) continue;
-      const s = this.stat(t), list = this.targets(t, s); if(!list.length) continue;
-      t.cd = s.cd * t.buff * (this.yarnT > 0 && b.id === 'gato' ? .35 : 1); t.aim = Math.atan2(list[0].x - t.x, list[0].y - t.y); t.shotAt = this.time;
-      for(let n = 0; n < s.shots; n++){ const f = list[n % list.length];
-        this.shots.push({ id: nid(), x: t.x, y: t.y, f, tx: f.x, ty: f.y, s, b, tower: t, sp: bu(b.speed), born: this.time, left: s.pierce }); }
+      const s = this.stat(t), w = s.weapons[0], list = this.targets(t, s); if(!list.length) continue;
+      const f = list[0]; t.cd = w.cd * t.buff * (this.yarnT > 0 && b.id === 'gato' ? .35 : 1); t.aim = Math.atan2(f.x - t.x, f.y - t.y); t.shotAt = this.time;
+      const ang = Math.atan2(f.y - t.y, f.x - t.x);
+      for(let n = 0; n < w.n; n++){ const a = ang + (w.n > 1 ? (n - (w.n - 1) / 2) * w.spread / (w.n - 1) : 0);
+        this.shots.push({ id: nid(), x: t.x, y: t.y, x0: t.x, y0: t.y, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed, life: w.life, w, b, tower: t, pierce: w.pierce, hits: new Set(), born: this.time }); }
     }
+    const rad = f => bu(f.boss ? ({ oso: 21, elefante: 30, dino: 40 })[f.k] : 8);     // how big a critter is to hit (Bloons' sizes)
     for(const sh of this.shots){
-      if(sh.f.alive){ sh.tx = sh.f.x; sh.ty = sh.f.y; }
-      const dx = sh.tx - sh.x, dy = sh.ty - sh.y, d = Math.hypot(dx, dy), step = sh.sp * dt;
-      if(d > step){ sh.x += dx / d * step; sh.y += dy / d * step; continue; }
-      sh.done = true; const s = sh.s;
-      // what it hits: the target and, with pierce, others right around it (an explosion reaches further)
-      const reach = s.blast || .7;
-      const hits = this.foes.filter(f => f.alive && Math.hypot(f.x - sh.tx, f.y - sh.ty) <= reach).sort((a, b) => (a === sh.f ? -1 : b === sh.f ? 1 : 0)).slice(0, s.pierce);
-      if(s.blast) this.fx.push({ t:'boom', x:sh.tx, y:sh.ty, r:s.blast }); else this.fx.push({ t:'hit', x:sh.tx, y:sh.ty, kind: sh.b.id });
-      for(const f of hits){
-        if(s.slow && !f.boss){ f.slowT = s.slowT; f.slowF = Math.min(f.slowT > 0 ? f.slowF : 1, s.slow); if(s.dot){ f.dot = Math.max(f.dot, s.dot); f.dotT = s.slowT; } this.fx.push({ t:'ink', x:f.x, y:f.y }); }
-        this.hit(f, s.dmg, sh.tower, s.kind);
-      }
+      const w = sh.w, x1 = sh.x + sh.vx * dt, y1 = sh.y + sh.vy * dt, sx = x1 - sh.x, sy = y1 - sh.y, L2 = sx * sx + sy * sy || 1e-9;
+      // critters this shot touches on its way, nearest first
+      const touch = [];
+      for(const f of this.foes){ if(!f.alive || sh.hits.has(f.id)) continue;
+        const u = Math.max(0, Math.min(1, ((f.x - sh.x) * sx + (f.y - sh.y) * sy) / L2)), dx = sh.x + sx * u - f.x, dy = sh.y + sy * u - f.y;
+        if(dx * dx + dy * dy <= (w.r + rad(f)) ** 2) touch.push([u, f]); }
+      touch.sort((a, b) => a[0] - b[0]);
+      for(const [, f] of touch){
+        if(w.boom){ this.explode(sh, f.x, f.y); sh.done = true; break; }
+        sh.hits.add(f.id); this.land(sh, f);
+        if(--sh.pierce <= 0){ sh.done = true; break; } }
+      sh.x = x1; sh.y = y1; sh.life -= dt; if(sh.life <= 0) sh.done = true;
     }
     this.shots = this.shots.filter(s => !s.done);
     this.foes = this.foes.filter(f => f.alive);
     if(this.lives <= 0){ this.phase = 'lost'; this.fx.push({ t:'end', won:false }); return; }
     if(!this.queue.length && !this.foes.length) this.endRound();
   }
+  // a shot touches a critter: glue (slow, acid), damage (more on bosses / crocodiles for some upgrades)
+  land(sh, f){
+    const w = sh.w, B = w.bonus || {};
+    if(w.slow && (!f.boss || (w.slowBoss || 1) !== 1)){ f.slowT = w.slow.t; f.slowF = f.boss ? .75 : w.slow.mult; if(w.dot){ f.dot = w.dot.dmg / w.dot.every; f.dotT = w.slow.t; } this.fx.push({ t:'ink', x:f.x, y:f.y }); }
+    const dmg = w.dmg + (f.boss ? B.Moabs || 0 : 0) + (f.k === 'cocodrilo' ? B.Ceramic || 0 : 0);
+    if(dmg > 0){ this.fx.push({ t:'hit', x:f.x, y:f.y, kind: sh.b.id }); this.hit(f, dmg, sh.tower, w.imm); }
+  }
+  // a bomb goes off: hits the critters inside the blast (up to its pierce)
+  explode(sh, x, y){
+    const w = sh.w, E = w.boom, B = w.bonus || {}, rad = f => bu(f.boss ? ({ oso: 21, elefante: 30, dino: 40 })[f.k] : 8);
+    this.fx.push({ t:'boom', x, y, r: E.r });
+    const hits = this.foes.filter(f => f.alive && Math.hypot(f.x - x, f.y - y) <= E.r + rad(f)).sort((a, b) => this.left(a) - this.left(b)).slice(0, E.pierce);
+    for(const f of hits) this.hit(f, E.dmg + (f.boss ? B.Moabs || 0 : 0), sh.tower, E.imm);
+  }
   endRound(){
-    // round bonus + coin trees; fix the walls; next round
-    let farm = 0; for(const t of this.towers) if(TOWERS[t.i].farm !== undefined){ const s = this.stat(t); farm += s.farm; this.fx.push({ t:'farm', x:t.x, y:t.y, n:s.farm }); }
+    // round bonus + coin trees; next round
+    let farm = 0; for(const t of this.towers) if(TOWERS[t.i].id === 'huerto'){ const s = this.stat(t); farm += s.farm; this.fx.push({ t:'farm', x:t.x, y:t.y, n:s.farm }); }
     const bonus = roundBonus(this.r); this.coins += bonus + farm;
-    for(const w of this.walls){ w.broken = false; w.hp = w.max; }      // broken walls get fixed for next round
     const done = this.r >= this.lastRound;
     this.fx.push({ t:'end', won:true, bonus, farm, round:this.r, done });
     this.phase = done ? 'won' : 'cleared';

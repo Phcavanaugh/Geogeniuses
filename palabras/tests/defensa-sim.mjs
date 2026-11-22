@@ -23,8 +23,9 @@ function spots(g){
   for(let x = .6; x < R.COLS - .5; x += .55) for(let y = .6; y < R.ROWS - .5; y += .55) if(g.canBuild(x, y)) out.push([x, y]);
   return out;
 }
-const power = (g, t) => { const b = R.TOWERS[t.i]; if(b.farm !== undefined && !b.range) return 0; const s = g.stat(t);
-  let p = s.pierce * Math.max(s.dmg, b.id === 'pulpo' ? .6 : 0) * s.shots / s.cd; if(s.dot) p += s.dot * 2; if(s.blast) p *= 1.4; return p; };
+// how much a tower knocks out per second (roughly): hits per shot × damage × shots per second
+const power = (g, t) => { const b = R.TOWERS[t.i]; if(!b.range) return 0; const w = g.stat(t).weapons[0];
+  let p = (w.boom ? Math.min(w.boom.pierce, 6) * w.boom.dmg : Math.min(w.pierce, 3) * Math.max(w.dmg, w.slow ? .6 : 0)) * w.n / w.cd; if(w.dot) p += w.dot.dmg / w.dot.every * 2; return p; };
 
 function think(g, kind, rand){
   const smart = kind === 'smart';
@@ -34,7 +35,7 @@ function think(g, kind, rand){
     const sp = spots(g);
     R.TOWERS.forEach((b, i) => {
       if(!g.un[i] || g.coins < g.price(b.cost)) return; const cost = g.price(b.cost);
-      if(b.farm !== undefined){ if(g.coins < cost) return; const farms = g.towers.filter(t => t.i === i).length; if(g.r < g.lastRound - 12 && farms < (smart ? 3 : 1) && g.towers.length >= 6 && g.lives === g.maxLives) opts.push({ cost, v: smart ? .8 : 1.5, go: () => { const s = sp[Math.floor(rand() * sp.length)]; s && g.place(s[0], s[1], i); } }); return; }
+      if(b.id === 'huerto'){ if(g.coins < cost) return; const farms = g.towers.filter(t => t.i === i).length; if(g.r < g.lastRound - 12 && farms < (smart ? 3 : 1) && g.towers.length >= 6 && g.lives === g.maxLives) opts.push({ cost, v: smart ? .8 : 1.5, go: () => { const s = sp[Math.floor(rand() * sp.length)]; s && g.place(s[0], s[1], i); } }); return; }
       const fake = { i, a: 0, b: 0 }, rng = g.stat(fake).range; let best = null;
       for(const [x, y] of (smart ? sp : sp.filter(() => rand() < .25))){ const c = coverage(g, x, y, rng); if(!best || c > best.c) best = { x, y, c }; }
       // owls: one (two for the smart robot) once hidden critters are near
@@ -49,7 +50,7 @@ function think(g, kind, rand){
     });
     for(const t of g.towers) for(const o of g.upOptions(t)){
       if(o.done || o.locked || g.coins < o.cost) continue;
-      if(R.TOWERS[t.i].farm !== undefined){ opts.push({ v: 1.2, go: () => g.upgrade(t, o.path) }); continue; }
+      if(R.TOWERS[t.i].id === 'huerto'){ opts.push({ v: 1.2, go: () => g.upgrade(t, o.path) }); continue; }
       const before = power(g, t), after = (o.path ? t.b++ : t.a++, power(g, t)); o.path ? t.b-- : t.a--;
       const c = coverage(g, t.x, t.y, g.stat(t).range, t) * 1.5;
       opts.push({ cost: o.cost, v: (after - before) * c / o.cost * 100 * (smart ? 1 : .7), go: () => g.upgrade(t, o.path) });

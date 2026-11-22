@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=38';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=39';
 
 // ====================================================================================
 // materials
@@ -490,19 +490,20 @@ function bowlModel(){
   return { g, food };
 }
 // la cerca at its three levels; it spans the trail (along x)
-function wallModel(lvl){
-  const g = new THREE.Group();
-  if(lvl === 1){ const W = flat('#A8743F'), D = flat('#8B5A2B');
-    for(const x of [-.46, 0, .46]){ m(g, cyl(.05, .055, .5, 7), D, [x, .25, 0]); m(g, cone(.055, .08, 7), D, [x, .54, 0]); }
-    for(const y of [.17, .36]) m(g, box(1.02, .08, .05), W, [0, y, 0], null, [0, 0, (y - .26) * .1]);
-  } else if(lvl === 2){ const S = ['#B9B3A8', '#A8A196', '#C7C1B6'];
-    for(let row = 0; row < 3; row++) for(let i = 0; i < 5 - (row === 2 ? 1 : 0); i++){ const x = -.42 + i * .21 + (row % 2) * .1; m(g, new THREE.DodecahedronGeometry(.12, 0), flat(S[(i + row) % 3]), [x, .1 + row * .15, (i % 2) * .03], [1.05, .75, .9], [i, i * 2, 0]); }
-  } else { const B = ['#C2563E', '#B04A35', '#D16649'], M = flat('#E8DCC8');
-    m(g, box(1.06, .5, .24), M, [0, .25, 0]);
-    for(let row = 0; row < 4; row++) for(let i = 0; i < 5; i++){ const x = -.42 + i * .21 + (row % 2 ? .105 : 0); if(x > .5) continue; m(g, box(.19, .1, .26), flat(B[(i + row) % 3]), [x, .06 + row * .12, 0]); }
-    for(const x of [-.4, 0, .4]) m(g, box(.16, .1, .28), flat('#B04A35'), [x, .55, 0]);
-    m(g, cyl(.012, .012, .4, 5), flat('#7A5A3A'), [.45, .8, 0]); role(m(g, new THREE.PlaneGeometry(.2, .13), toon('#FFC93D', { side: THREE.DoubleSide }), [.56, .92, 0]), 'flag');
-  }
+// the fence: wooden posts and rails; barbed wire coils (path A, more with each step) or an electric fence (path B)
+function wallModel(a = 0, b = 0){
+  const g = new THREE.Group(), W = flat('#A8743F'), D = flat('#8B5A2B');
+  for(const x of [-.46, 0, .46]){ m(g, cyl(.05, .055, .5, 7), D, [x, .25, 0]); m(g, cone(.055, .08, 7), D, [x, .54, 0]); }
+  for(const y of [.17, .36]) m(g, box(1.02, .08, .05), W, [0, y, 0], null, [0, 0, (y - .26) * .1]);
+  if(a){ const Mt = toon('#8E97A6'), coils = a + 1;
+    for(let c = 0; c < coils; c++){ const y = .12 + c * (.4 / coils) + .06;
+      for(let i = 0; i < 7; i++) m(g, new THREE.TorusGeometry(.07, .008, 4, 10), Mt, [-.42 + i * .14, y, .06], null, [0, Math.PI / 2, 0]);
+      for(let i = 0; i < 9; i++) m(g, cone(.012, .05, 4), Mt, [-.44 + i * .11, y + (i % 2 ? .05 : -.05), .06], null, [0, 0, i % 2 ? 0 : Math.PI]); } }
+  if(b){ const Y = toon('#FFD23F', { emissive: '#FFB300', emissiveIntensity: .5 }), K = toon('#4A4A5A');
+    for(const x of [-.46, 0, .46]) for(const y of [.2, .4]) m(g, cyl(.03, .03, .05, 8), toon('#FFFFFF'), [x, y, .06], null, [Math.PI / 2, 0, 0]);
+    for(const y of [.2, .4]) m(g, box(1, .015, .015), K, [0, y, .08]);
+    m(g, box(.16, .16, .03), Y, [0, .5, .08]); m(g, box(.03, .1, .01), K, [0, .5, .1], null, [0, 0, .5]);                 // ⚡ sign
+    for(let i = 0; i < b; i++) role(m(g, sph(.035, 8, 6), basic('#FFF6A8'), [-.3 + i * .3, .3, .1]), 'spark'); }
   return g;
 }
 
@@ -532,7 +533,7 @@ async function loadCustomModels(){
 const customOr = (k, make) => CUSTOM[k] ? CUSTOM[k].clone(true) : make();
 function critterModel(k){ const p = proto('c' + k, () => customOr(k, () => CRITTERS[k]())); return cloneRoles(p); }
 // how a tower looks: 1 = new, 2 = upgraded, 3 = top of a path (gets a crown)
-const look = t => t.wall ? t.lvl : Math.max(t.a, t.b) >= 3 ? 3 : Math.max(t.a, t.b) >= 1 ? 2 : 1;
+const look = t => t.wall ? `${t.a}${t.b}` : Math.max(t.a, t.b) >= 3 ? 3 : Math.max(t.a, t.b) >= 1 ? 2 : 1;
 function towerModel(i, lvl){
   const id = TOWERS[i].id, p = proto('t' + id, () => customOr(id, () => ANIMALS[id]())), farm = TOWERS[i].farm !== undefined;
   const root = new THREE.Group(), a = cloneRoles(p), pd = farm ? { g: new THREE.Group(), roles: {} } : cloneRoles(proto('p' + lvl, () => pedestal(lvl)));
@@ -973,11 +974,11 @@ function start(el, host){
     return e;
   }
   function addWall(w){
-    const g = wallModel(w.lvl), holder = new THREE.Group(); holder.add(g); holder.position.set(wx(w.x), hAt(w.x, w.y), wz(w.y)); holder.rotation.y = w.dir; world.add(holder);
+    const g = wallModel(w.a, w.b), holder = new THREE.Group(); holder.add(g); holder.position.set(wx(w.x), hAt(w.x, w.y), wz(w.y)); holder.rotation.y = w.dir; world.add(holder);
     g.traverse(o => { if(o.isMesh && o.material !== INK) o.castShadow = true; });
     const bar = hpBar(); bar.position.y = .85; holder.add(bar);
     const roles = {}; g.traverse(o => { const r = o.userData.role; if(r) (roles[r] = roles[r] || []).push(o); });
-    const e = { g: holder, model: g, w, lvl: w.lvl, bar, born: G.time, roles }; stuff.walls.set(w.id, e); return e;
+    const e = { g: holder, model: g, w, lvl: look(w), bar, born: G.time, roles }; stuff.walls.set(w.id, e); return e;
   }
   function hpBar(){
     const g = new THREE.Group(), bg = new THREE.Mesh(new THREE.PlaneGeometry(.5, .07), basic('#2B2B3A', { transparent: true, opacity: .55, depthTest: false }));
@@ -1009,7 +1010,7 @@ function start(el, host){
     pulpo(){ const g = new THREE.Group(); m(g, sph(.1, 12, 10), toon('#4B3A78')); m(g, sph(.05, 8, 6), toon('#4B3A78'), [.07, .05, -.04]); return g; },
     dragon(){ const g = new THREE.Group(); m(g, sph(.15, 14, 10), basic('#FFB13D')); m(g, sph(.1, 12, 8), basic('#FFF2A8')); m(g, sph(.2, 14, 10), basic('#FF6A2A', { transparent: true, opacity: .45, depthWrite: false })); return g; },
   };
-  function addShot(s){ const o = SHOT[s.b.id](); o.traverse(q => { if(q.isMesh) q.castShadow = true; }); world.add(o); const e = { o, s, d0: Math.hypot(s.tx - s.x, s.ty - s.y) || 1 }; stuff.shots.set(s.id, e); return e; }
+  function addShot(s){ const o = SHOT[s.b.id](); o.traverse(q => { if(q.isMesh) q.castShadow = true; }); world.add(o); const e = { o, s }; stuff.shots.set(s.id, e); return e; }
 
   // short-lived effects
   function puff(x, y, z, color, n = 6, size = .09, up = .9, life = .45){
@@ -1115,12 +1116,12 @@ function start(el, host){
     for(const [id, e] of stuff.towers) if(!G.towers.includes(e.t)){ world.remove(e.g); stuff.towers.delete(id); }
     // walls
     for(const w of G.walls){ let e = stuff.walls.get(w.id);
-      if(e && e.lvl !== w.lvl){ world.remove(e.g); stuff.walls.delete(w.id); e = null; }
+      if(e && e.lvl !== look(w)){ world.remove(e.g); stuff.walls.delete(w.id); e = null; }
       if(!e) e = addWall(w);
       const drop = 1 - Math.min(1, (G.time - e.born) / .3); e.model.position.y = drop * drop * 1.2;
       const chewing = G.time - (w.chewAt || -9) < .1; e.model.position.x = chewing ? Math.sin(now * 40) * .015 : 0;
-      if(chewing && Math.random() < dt * 8) puff(e.g.position.x, e.g.position.y + .3, e.g.position.z, w.lvl === 1 ? '#C9935A' : '#BDB6AA', 1, .04, .8, .35);
-      for(const f2 of e.roles.flag || []) f2.rotation.y = Math.sin(now * 5 + w.id) * .4;
+      if(chewing && Math.random() < dt * 8) puff(e.g.position.x, e.g.position.y + .3, e.g.position.z, '#C9935A', 1, .04, .8, .35);
+      for(const sp of e.roles.spark || []) sp.visible = Math.sin(now * 23 + sp.id * 7) > .3;
       e.bar.visible = w.hp < w.max; if(e.bar.visible){ e.bar.quaternion.copy(camera.quaternion); e.bar.quaternion.premultiply(e.g.quaternion.clone().invert()); const u = Math.max(0, w.hp / w.max); e.bar.userData.fg.scale.x = Math.max(.001, u); e.bar.userData.fg.position.x = -.23 * (1 - u); e.bar.userData.fg.material = basic(u > .4 ? '#FFC93D' : '#FF5E5E', { depthTest: false }); }
     }
     for(const [id, e] of stuff.walls) if(!G.walls.includes(e.w)){ world.remove(e.g); stuff.walls.delete(id); }
@@ -1148,11 +1149,11 @@ function start(el, host){
       e.holder.rotation.set(0, 0, 0); e.g.rotation.z = u * 1.7 * e.dieDir; e.holder.position.y = e.y0 + Math.sin(u * Math.PI) * .3; e.holder.scale.setScalar(1 - u * .55);
       if(u >= 1){ world.remove(e.holder); const p = e.holder.position; burst('puff', p.x, p.y + .25, p.z, .8, .45, { rise: .3 }); coinPop(p.x, p.y, p.z, e.f.pts); } }
     stuff.dying = stuff.dying.filter(e => e.dieT < .5);
-    // shots: fly in an arc
+    // shots: fly straight out from the tower, dropping a little toward critter height
     for(const s of G.shots){ let e = stuff.shots.get(s.id); if(!e) e = addShot(s);
-      const rem = Math.hypot(s.tx - s.x, s.ty - s.y), u = 1 - Math.min(1, rem / e.d0), base = e.h0 === undefined ? (e.h0 = hAt(s.tower.x, s.tower.y)) : e.h0, ht = hAt(s.tx, s.ty);
-      e.o.position.set(wx(s.x), (base + .95) * (1 - u) + (ht + .3) * u + Math.sin(u * Math.PI) * (s.b.id === 'abeja' ? .1 : .45), wz(s.y));
-      if(s.b.id === 'abeja') e.o.lookAt(wx(s.tx), ht + .3, wz(s.ty)); else e.o.rotation.x += dt * 12;
+      const u = Math.min(1, (G.time - s.born) / .18), base = e.h0 === undefined ? (e.h0 = hAt(s.tower.x, s.tower.y)) : e.h0;
+      e.o.position.set(wx(s.x), (base + .9) * (1 - u) + (hAt(s.x, s.y) + .35) * u, wz(s.y));
+      if(s.b.id === 'abeja' || s.b.id === 'buho') e.o.lookAt(e.o.position.x + s.vx, e.o.position.y, e.o.position.z + s.vy); else e.o.rotation.x += dt * 12;
       if(s.b.id !== 'dragon' && G.shots.length < 40 && (e.tr = (e.tr || 0) + dt) > .035){ e.tr = 0; const tc = { gato: '#FF9FB4', abeja: '#FFE680', pulpo: '#8C74C8' }[s.b.id];
         if(tc){ const o = new THREE.Mesh(sph(s.b.id === 'abeja' ? .025 : .045, 8, 6), basic(tc, { transparent: true, opacity: .9, depthWrite: false })); o.position.copy(e.o.position); world.add(o); stuff.fx.push({ o, life: .2, max: .2, v: [0, 0, 0], grow: -.6 }); } }
       if(s.b.id === 'dragon' && Math.random() < .5) puff(e.o.position.x, e.o.position.y, e.o.position.z, Math.random() < .5 ? '#FF8A3D' : '#FFD23F', 1, .05, .3, .3);
@@ -1173,6 +1174,11 @@ function start(el, host){
       else if(ev.t === 'wallbreak'){ puff(wx(ev.x), h + .3, wz(ev.y), '#A8743F', 10, .07, 1.4, .6); burst('smoke', wx(ev.x), h + .4, wz(ev.y), 1.6, .8, { rise: .5 }); shakeIt(.12); sfx('boom'); }
       else if(ev.t === 'kids'){ burst('pop', wx(ev.x), h + .5, wz(ev.y), 1.6, .4); burst('confetti', wx(ev.x), h + .6, wz(ev.y), 1.4, .7, { rise: .4 }); shakeIt(.1); sfx('boom'); }
       else if(ev.t === 'bounce'){ burst('tink', wx(ev.x), h + .45, wz(ev.y), .45, .25); sfx('tink'); }
+      else if(ev.t === 'zap'){ const a = new THREE.Vector3(wx(ev.x), hAt(ev.x, ev.y) + .45, wz(ev.y)), z = new THREE.Vector3(wx(ev.tx), hAt(ev.tx, ev.ty) + .3, wz(ev.ty)), pts = [];
+        for(let i = 0; i <= 6; i++){ const p = a.clone().lerp(z, i / 6); if(i % 6) p.add(new THREE.Vector3((Math.random() - .5) * .18, (Math.random() - .5) * .18, (Math.random() - .5) * .18)); pts.push(p); }
+        const ln = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: '#FFF06A', transparent: true, depthTest: false })); ln.renderOrder = 8; world.add(ln);
+        stuff.fx.push({ o: ln, life: .14, max: .14, line: true }); burst('sparkle', z.x, z.y + .1, z.z, .35, .2); sfx('tink'); }
+      else if(ev.t === 'spike'){ burst('hit', wx(ev.x), h + .35, wz(ev.y), .3, .16); }
       else if(ev.t === 'seen'){ const e = stuff.foes.get(ev.foe.id); if(e && e.ghost) ghost(e, false); burst('sparkle', wx(ev.x), h + .9, wz(ev.y), .55, .5, { rise: .4 }); sfx('tink'); }
       else if(ev.t === 'unseen'){ const e = stuff.foes.get(ev.foe.id); if(e && !e.ghost) ghost(e, true); }
       else if(ev.t === 'grow'){ burst('sparkle', wx(ev.x), h + .7, wz(ev.y), .5, .4, { rise: .3 }); }
@@ -1190,9 +1196,10 @@ function start(el, host){
       else if(fx.no){ fx.o.scale.setScalar(.5 + u * .6); fx.o.material.opacity = .9 * (1 - u); }
       else if(fx.spr){ const k = u < .18 ? u / .18 * 1.2 : 1.2 - (u - .18) * .3; fx.o.scale.setScalar(fx.spr * Math.max(.05, k)); fx.o.material.rotation += fx.spin * dt;
         fx.o.material.opacity = u < .55 ? 1 : (1 - u) / .45; if(fx.rise) fx.o.position.y = fx.y0 + fx.rise * u; if(fx.drift){ fx.o.position.x += fx.drift[0] * dt; fx.o.position.y += fx.drift[1] * dt; fx.o.position.z += fx.drift[2] * dt; fx.drift[1] -= 3 * dt; } }
+      else if(fx.line){ fx.o.material.opacity = 1 - u; }
       else if(fx.stain){ fx.o.material.opacity = .9 * Math.min(1, (1 - u) * 3); fx.o.scale.setScalar(Math.min(1, u * 8)); }
       else if(fx.coin){ fx.o.position.y = fx.y0 + u * fx.rise; fx.coin.rotation.z += dt * 12; fx.sprite.material.opacity = Math.min(1, (1 - u) * 2.5); fx.o.scale.setScalar(Math.min(1, u * 6)); }
-      if(fx.life <= 0){ world.remove(fx.o); if(fx.spr || fx.stain) fx.o.material.dispose(); }
+      if(fx.life <= 0){ world.remove(fx.o); if(fx.spr || fx.stain || fx.line) fx.o.material.dispose(); if(fx.line) fx.o.geometry.dispose(); }
     }
     stuff.fx = stuff.fx.filter(fx => fx.life > 0);
     // home, pet, water, snow, clouds
@@ -1209,6 +1216,7 @@ function start(el, host){
     stuff.burrows.forEach((b, pi) => { const shut = pi >= G.np; if(b.block.visible && !shut){ const p = b.g.position; puff(p.x, p.y + .4, p.z, '#B9B0A0', 12, .1, 1.4, .7); sfx('boom'); } b.block.visible = shut; });
     placing();
     // range ring of the tower you tapped
+    if(menuFor && menuFor.wall && !G.walls.includes(menuFor)) hideMenu();          // the fence got chewed through
     const ringOn = !!menuFor && !menuFor.wall && !!TOWERS[menuFor.i].range;
     stuff.ring.visible = stuff.disc.visible = ringOn;
     if(ringOn){ const rg = G.stat(menuFor).range, h = hAt(menuFor.x, menuFor.y) + .05; stuff.ring.position.set(wx(menuFor.x), h, wz(menuFor.y)); stuff.ring.scale.setScalar(rg); stuff.disc.position.set(wx(menuFor.x), h, wz(menuFor.y)); stuff.disc.scale.setScalar(rg); }
@@ -1273,7 +1281,7 @@ function start(el, host){
   const short = n => (n => n[0].toUpperCase() + n.slice(1))(n.replace(/^(El|La) /, ''));
   function bar(){
     $('.d3bar').innerHTML = TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><span class="disc"><img alt="${b.name}" src="${thumb('t' + b.id, () => towerModel(i, 1).g)}"></span>${G.un[i] ? '' : ic('lock', 'lk')}<span class="c">${G.un[i] ? ic('coin') + cost(i) : 'Ronda ' + G.A.unlock[i]}</span><span class="nm">${short(b.name)}</span></button>`).join('')
-      + `<button class="d3tw" data-i="wall"><span class="disc"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(1))}"></span><span class="c">${ic('coin')}${cost('wall')}</span><span class="nm">Cerca</span></button>`
+      + `<button class="d3tw" data-i="wall"><span class="disc"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(0, 0))}"></span><span class="c">${ic('coin')}${cost('wall')}</span><span class="nm">Cerca</span></button>`
       + `<button class="d3go"></button>`;
     el.querySelectorAll('.d3tw').forEach(btn => btn.onclick = () => {
       if(btn.dataset.i === 'wall'){ hideMenu(); sel = sel === 'wall' ? -1 : 'wall'; if(sel === 'wall'){ tip(`<b>${WALL.name}</b>: ${WALL.tip} Toca el camino.`); say([WALL.word]); } else tip(''); hudKey = ''; return; }
@@ -1320,19 +1328,18 @@ function start(el, host){
   const dots = (n, max = 3) => '●'.repeat(n) + '○'.repeat(max - n);
   function showMenu(t){
     menuFor = t;
-    const b = t.wall ? null : TOWERS[t.i], name = t.wall ? WALL.names[t.lvl - 1] : b.name, opts = G.upOptions(t);
-    let h = `<div class="nm">${name}${look(t) > 1 ? ' ' + '⭐'.repeat(look(t) - 1) : ''}</div>`;
-    if(t.wall){ h += `<div class="max">💪 ${Math.ceil(t.hp)} / ${t.max}</div>`;
-      h += opts.length ? `<button data-a="up" data-p="0" class="gl ${G.coins < opts[0].cost ? 'poor' : ''}">${ic('upgrade')}${opts[0].name} · ${ic('coin')}${opts[0].cost}</button>` : `<div class="max">${ic('crown')} ¡La más fuerte!</div>`; }
-    else {
-      if(b.farm !== undefined) h += `<div class="farm">🍎 +${G.stat(t).farm} ${ic('coin')} cada ronda</div>`;
+    const b = t.wall ? WALL : TOWERS[t.i], opts = G.upOptions(t), stars = t.wall ? (t.a || t.b ? 1 : 0) : look(t) - 1;
+    let h = `<div class="nm">${b.name}${stars > 0 ? ' ' + '⭐'.repeat(stars) : ''}</div>`;
+    if(t.wall){ const ws = G.wallStat(t); h += `<div class="max">💪 ${Math.ceil(t.hp)} / ${t.max}${ws.spike ? ' · 🌵' : ''}${ws.zap ? ' · ⚡' : ''}</div>`; }
+    {
+      if(b.id === 'huerto') h += `<div class="farm">🍎 +${G.stat(t).farm} ${ic('coin')} cada ronda</div>`;
       if(b.sees) h += `<div class="farm">👀 Ve a los escondidos</div>`;
-      if(G.hasPower(t)) h += `<div class="farm">⚡ ${POWERS[b.id].name}</div>`;
+      if(!t.wall && G.hasPower(t)) h += `<div class="farm">⚡ ${POWERS[b.id].name}</div>`;
       for(const o of opts){ const have = o.path === 0 ? t.a : t.b, pn = b.paths[o.path].name;
         if(o.done){ h += `<div class="done"><span>${ic('crown')} ${pn}</span><span class="dots">${dots(3)}</span></div>`; continue; }
         h += `<button data-a="up" data-p="${o.path}" class="gl pth ${o.locked ? 'locked' : G.coins < o.cost ? 'poor' : ''}"><span class="pn"><span>${pn}</span><span class="dots">${dots(have)}</span></span>`
           + `<span class="sn"><span>${o.locked ? '🔒 ' : ''}${o.name}</span><span class="pr">${ic('coin')}${o.cost}</span></span></button>`; }
-      if(b.range) h += `<button data-a="tg" class="gl">${AIM[t.target || 'first']}</button>`;
+      if(!t.wall && b.range) h += `<button data-a="tg" class="gl">${AIM[t.target || 'first']}</button>`;
     }
     h += `<div class="row2"><button data-a="sell" class="gl">${ic('sell')}+${G.sellValue(t)}</button><button data-a="x" class="gl">✖</button></div>`;
     if(menu.innerHTML !== h) menu.innerHTML = h;
