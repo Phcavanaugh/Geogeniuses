@@ -465,7 +465,7 @@ function buildGraph(S){
   for(const s of S)for(const end of[0,1]){const px=end?s.x2:s.x1,py=end?s.y2:s.y1;let joined=false,best=14,bx=0,by=0;
     for(const i of near(px,py)){const o=S[i];if(o===s)continue;
       if(Math.hypot(o.x1-px,o.y1-py)<2||Math.hypot(o.x2-px,o.y2-py)<2){joined=true;break;}
-      const q=projSeg(px,py,o.x1,o.y1,o.x2,o.y2);if(q.d<best){best=q.d;bx=q.x;by=q.y;}}
+      const q=projSeg(px,py,o.x1,o.y1,o.x2,o.y2),sc=q.d-Math.max(0,(o.w||0)/2+SW+20-14);if(sc<best){best=sc;bx=q.x;by=q.y;}}
     if(!joined&&best<14){if(end){s.x2=bx;s.y2=by;}else{s.x1=bx;s.y1=by;}}}
   const seen=new Set();
   for(const l of grid.values())for(let a=0;a<l.length;a++)for(let b=a+1;b<l.length;b++){const i=l[a],j=l[b],k=i<j?i*65536+j:j*65536+i;
@@ -485,6 +485,12 @@ function buildGraph(S){
   const link=()=>{for(const N of nodes)N.e=[];edges.forEach((E,i)=>{const A=nodes[E.a],B=nodes[E.b];E.len=Math.hypot(B.x-A.x,B.y-A.y)||1;
     E.ux=(B.x-A.x)/E.len;E.uy=(B.y-A.y)/E.len;A.e.push(i);B.e.push(i);});};
   link();
+  if(CITYGEO)for(let pass=0;pass<24;pass++){let cut=false;
+    edges=edges.filter(E=>{if(!E.bridge)return true;const A=nodes[E.a],B=nodes[E.b];
+      if(A.e.length<2||B.e.length<2){cut=true;return false;}
+      const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,o=E.w/2+18;
+      if(E.len>12&&isLand(mx-E.uy*o,my+E.ux*o)!==isLand(mx+E.uy*o,my-E.ux*o)){cut=true;return false;}
+      return true;});link();if(!cut)break;}
   // trim little stubs left where roads were cut short
   for(let pass=0;pass<8;pass++){let cut=false;
     edges=edges.filter(E=>{const da=nodes[E.a].e.length,db=nodes[E.b].e.length;
@@ -3451,36 +3457,61 @@ function buildRoadMesh(){
   const disc=(x,z,r,y,cl,n=14)=>{for(let i=0;i<n;i++){const a0=i/n*TAU,a1=(i+1)/n*TAU;tri(x,z,x+Math.cos(a1)*r,z+Math.sin(a1)*r,x+Math.cos(a0)*r,z+Math.sin(a0)*r,y,cl);}};
   // a rectangle centred at (x,z), long side along (ux,uz)
   const box=(x,z,ux,uz,len,wid,y,cl)=>{const nx=-uz,nz=ux,l=len/2,w=wid/2;quad([x-ux*l-nx*w,z-uz*l-nz*w],[x+ux*l-nx*w,z+uz*l-nz*w],[x+ux*l+nx*w,z+uz*l+nz*w],[x-ux*l+nx*w,z-uz*l+nz*w],y,cl);};
-  const straight=N=>{if(N.e.length!==2)return false;const a=E[N.e[0]],b=E[N.e[1]],sa=Nn[a.a]===N?1:-1,sb=Nn[b.a]===N?1:-1;return(a.ux*b.ux+a.uy*b.uy)*sa*sb<-.985;};
-  const maxW=N=>{let m=0;for(const i of N.e)m=Math.max(m,E[i].w);return m;};
   const SIDE='#c4c0b6',DECK='#a9a49a',CURB='#b9b4aa',ASPH='#4d5054',WEAR='#46494d',PAINT='#eceae0',YEL='#e3b53c';
+  // ---- chain edges through gentle bends into one continuous centre-line so every layer is mitred, not overlapped ----
+  const outDir=(i,n)=>{const e=E[i];return e.a===n?[e.ux,e.uy]:[-e.ux,-e.uy];};
+  const joinable=n=>{const N=Nn[n];if(N.e.length!==2)return false;const a=E[N.e[0]],b=E[N.e[1]];
+    if(a.w!==b.w||!!a.blvd!==!!b.blvd||!!a.bridge!==!!b.bridge||N.e[0]===N.e[1])return false;const p=outDir(N.e[0],n),q=outDir(N.e[1],n);return p[0]*q[0]+p[1]*q[1]<-.42;};
+  const J=Nn.map((_,n)=>joinable(n)),used=new Uint8Array(E.length),CH=[],e2c=new Int32Array(E.length);
+  const walk=(start,i0)=>{const ns=[start],es=[];let n=start,i=i0;
+    while(true){used[i]=1;es.push(i);const e=E[i],m=e.a===n?e.b:e.a;ns.push(m);if(m===start||!J[m])break;const nx=Nn[m].e[0]===i?Nn[m].e[1]:Nn[m].e[0];if(used[nx])break;n=m;i=nx;}
+    return{ns,es};};
+  for(let n=0;n<Nn.length;n++)if(!J[n])for(const i of Nn[n].e)if(!used[i])CH.push(walk(n,i));
+  for(let i=0;i<E.length;i++)if(!used[i])CH.push(walk(E[i].a,i));
+  for(const C of CH){const e0=E[C.es[0]];C.e=e0;C.w=e0.w;C.bridge=!!e0.bridge;C.blvd=!!e0.blvd;
+    const V=C.ns.map(n=>[Nn[n].x,Nn[n].y]),m=V.length-1,loop=C.ns[0]===C.ns[m]&&J[C.ns[0]];C.V=V;C.S=[0];
+    for(let i=0;i<m;i++)C.S.push(C.S[i]+Math.hypot(V[i+1][0]-V[i][0],V[i+1][1]-V[i][1])||C.S[i]);C.L=C.S[m];
+    const sn=i=>{const d=Math.hypot(V[i+1][0]-V[i][0],V[i+1][1]-V[i][1])||1;return[-(V[i+1][1]-V[i][1])/d,(V[i+1][0]-V[i][0])/d];};
+    C.M=V.map((_,i)=>{let a,b;if(i===0||i===m){if(!loop)return sn(i===0?0:m-1);a=sn(m-1);b=sn(0);}else{a=sn(i-1);b=sn(i);}
+      let x=a[0]+b[0],y=a[1]+b[1];const l=Math.hypot(x,y)||1;x/=l;y/=l;const k=1/Math.max(.45,x*a[0]+y*a[1]);return[x*k,y*k];});
+    for(const i of C.es)e2c[i]=CH.indexOf(C);}
+  const cpt=(C,i,f,q)=>{const A=C.V[i],B=C.V[i+1],M0=C.M[i],M1=C.M[i+1];return[A[0]+(B[0]-A[0])*f+q*(M0[0]+(M1[0]-M0[0])*f),A[1]+(B[1]-A[1])*f+q*(M0[1]+(M1[1]-M0[1])*f)];};
+  const cstrip=(C,s0,s1,q0,q1,y,cl)=>{s0=Math.max(0,s0);s1=Math.min(C.L,s1);if(s1-s0<.05)return;
+    for(let i=0;i<C.V.length-1;i++){const a=C.S[i],b=C.S[i+1];if(b<=s0||a>=s1||b-a<1e-6)continue;const f0=(Math.max(s0,a)-a)/(b-a),f1=(Math.min(s1,b)-a)/(b-a);
+      quad(cpt(C,i,f0,q0),cpt(C,i,f1,q0),cpt(C,i,f1,q1),cpt(C,i,f0,q1),y,cl);}};
+  const cat=(C,s)=>{let i=0;while(i<C.V.length-2&&C.S[i+1]<s)i++;const a=C.S[i],b=C.S[i+1],f=b>a?(s-a)/(b-a):0,A=C.V[i],B=C.V[i+1],d=(b-a)||1;
+    return{x:A[0]+(B[0]-A[0])*f,y:A[1]+(B[1]-A[1])*f,ux:(B[0]-A[0])/d,uy:(B[1]-A[1])/d};};
+  const maxW=N=>{let m=0;for(const i of N.e)m=Math.max(m,E[i].w);return m;};
+  const ends=Nn.map((N,n)=>!J[n]);
   // 1) sidewalks (+ concrete joints)   2) curbs   3) asphalt
-  for(const e of E)strip(e,0,e.len,-(e.w/2+SW),e.w/2+SW,.1,e.bridge?DECK:SIDE);
-  for(const N of Nn)if(!straight(N))disc(N.x,N.y,maxW(N)/2+SW,.1,SIDE,N.e.length>2?18:10);
-  for(const e of E){if(e.bridge)continue;for(let t=6;t<e.len-4;t+=13)for(const s of[-1,1])strip(e,t,t+.9,s*(e.w/2+3),s*(e.w/2+SW),.12,'#aaa59a');}
-  for(const e of E)strip(e,0,e.len,-(e.w/2+2.6),e.w/2+2.6,.18,CURB);
-  for(const N of Nn)if(!straight(N))disc(N.x,N.y,maxW(N)/2+2.6,.18,CURB,N.e.length>2?18:10);
-  for(const e of E)strip(e,0,e.len,-e.w/2,e.w/2,.26,ASPH);
-  for(const N of Nn)if(!straight(N))disc(N.x,N.y,maxW(N)/2,.26,ASPH,N.e.length>2?18:10);
+  for(const C of CH)cstrip(C,0,C.L,-(C.w/2+SW),C.w/2+SW,.1,C.bridge?DECK:SIDE);
+  Nn.forEach((N,n)=>{if(ends[n])disc(N.x,N.y,maxW(N)/2+SW,.1,SIDE,N.e.length>2?20:12);});
+  for(const C of CH){if(C.bridge)continue;for(let t=6;t<C.L-4;t+=13)for(const s of[-1,1])cstrip(C,t,t+.9,s*(C.w/2+3),s*(C.w/2+SW),.12,'#aaa59a');}
+  for(const C of CH)cstrip(C,0,C.L,-(C.w/2+2.6),C.w/2+2.6,.18,CURB);
+  Nn.forEach((N,n)=>{if(ends[n])disc(N.x,N.y,maxW(N)/2+2.6,.18,CURB,N.e.length>2?20:12);});
+  for(const C of CH)cstrip(C,0,C.L,-C.w/2,C.w/2,.26,ASPH);
+  Nn.forEach((N,n)=>{if(ends[n])disc(N.x,N.y,maxW(N)/2,.26,ASPH,N.e.length>2?20:12);});
   // where each street's paint starts/stops near a junction
   const cw=(nid,e)=>{const N=Nn[nid];if(N.e.length<3)return 0;let m=0;for(const i of N.e)if(E[i]!==e)m=Math.max(m,E[i].w/2);return m;};
-  for(const e of E){const ma=cw(e.a,e),mb=cw(e.b,e),a=ma?ma+SW+26:2,b=e.len-(mb?mb+SW+26:2),n=lanesOf(e),med=e.blvd?8:0,lw=(e.w/2-med)/n;
+  for(const C of CH){const e=C.e,eL=E[C.es[C.es.length-1]],n0=C.ns[0],n1=C.ns[C.ns.length-1],ma=cw(n0,e),mb=cw(n1,eL),
+      a=ma?ma+SW+26:(Nn[n0].e.length===1?2:0),b=C.L-(mb?mb+SW+26:(Nn[n1].e.length===1?2:0)),n=lanesOf(e),med=C.blvd?8:0,lw=(C.w/2-med)/n;
     // patches, cracks and manholes
-    const A=Nn[e.a];for(let t=24,k=0;t<e.len-24;t+=55+hash(k,e.a)*110,k++){const q=(hash(e.b,k)-.5)*e.w*.7,x=A.x+e.ux*t-e.uy*q,z=A.y+e.uy*t+e.ux*q,h=hash(k,e.b);
+    for(let t=24,k=0;t<C.L-24;t+=55+hash(k,n0)*110,k++){const q=(hash(n1,k)-.5)*C.w*.7,P0=cat(C,t),x=P0.x-P0.uy*q,z=P0.y+P0.ux*q,h=hash(k,n1);
       if(h<.35){disc(x,z,4.2,.29,'#6a6d70',10);disc(x,z,3.3,.3,'#3a3d40',10);}
-      else if(h<.75)box(x,z,e.ux,e.uy,14+hash(k,7)*18,6+hash(k,9)*6,.28,'#4f5256');
-      else box(x,z,e.ux*.8-e.uy*.6,e.uy*.8+e.ux*.6,10+hash(k,3)*10,.9,.29,'#3d4043');}
+      else if(h<.75)box(x,z,P0.ux,P0.uy,14+hash(k,7)*18,6+hash(k,9)*6,.28,'#4f5256');
+      else box(x,z,P0.ux*.8-P0.uy*.6,P0.uy*.8+P0.ux*.6,10+hash(k,3)*10,.9,.29,'#3d4043');}
     if(b-a<10)continue;
     // tyre-worn strips in each lane
-    if(!e.bridge)for(const s of[-1,1])for(let k=0;k<n;k++){const c=s*(med+lw*(k+.5));for(const o of[-6.5,6.5])strip(e,a-10,b+10,c+o-2.2,c+o+2.2,.27,WEAR);}
-    if(e.blvd){strip(e,a-14,b+14,-9.5,9.5,.31,CURB);strip(e,a-12,b+12,-7.5,7.5,.33,'#9fc47e');}
+    if(!C.bridge)for(const s of[-1,1])for(let k=0;k<n;k++){const c=s*(med+lw*(k+.5));for(const o of[-6.5,6.5])cstrip(C,a-10,b+10,c+o-2.2,c+o+2.2,.27,WEAR);}
+    if(C.blvd){cstrip(C,a-14,b+14,-9.5,9.5,.31,CURB);cstrip(C,a-12,b+12,-7.5,7.5,.33,'#9fc47e');}
     // centre line: double yellow in the US, dashed white in London/Tokyo; none on narrow back streets
-    if(!e.blvd&&e.w>=56){if(US){for(const o of[-2.6,2.6])strip(e,a,b,o-1.1,o+1.1,.36,YEL);}
-      else for(let t=a;t<b;t+=30)strip(e,t,Math.min(b,t+16),-1.3,1.3,.36,PAINT);}
-    for(let k=1;k<n;k++)for(const s of[-1,1]){const q=s*(med+lw*k);for(let t=a;t<b;t+=32)strip(e,t,Math.min(b,t+14),q-1.2,q+1.2,.36,PAINT);}
-    if(n>1)for(const s of[-1,1])strip(e,a,b,s*(e.w/2-5),s*(e.w/2-3.4),.36,PAINT);}
+    if(!C.blvd&&C.w>=56){if(US){for(const o of[-2.6,2.6])cstrip(C,a,b,o-1.1,o+1.1,.36,YEL);}
+      else for(let t=a;t<b;t+=30)cstrip(C,t,Math.min(b,t+16),-1.3,1.3,.36,PAINT);}
+    for(let k=1;k<n;k++)for(const s of[-1,1]){const q=s*(med+lw*k);for(let t=a;t<b;t+=32)cstrip(C,t,Math.min(b,t+14),q-1.2,q+1.2,.36,PAINT);}
+    if(n>1)for(const s of[-1,1])cstrip(C,a,b,s*(C.w/2-5),s*(C.w/2-3.4),.36,PAINT);
+    if(C.bridge)for(const s of[-1,1])cstrip(C,0,C.L,s*(C.w/2+SW-3),s*(C.w/2+SW-1),.38,'#8d99a3');}
   // crosswalks, stop lines and turn arrows at each junction
-  Nn.forEach((N,ni)=>{if(N.e.length<3)return;for(const i of N.e){const e=E[i],s=e.a===ni?1:-1,m=cw(ni,e),d=m+SW*.5+9;if(e.len<d+30||e.bridge)continue;
+  Nn.forEach((N,ni)=>{if(N.e.length<3)return;for(const i of N.e){const e=E[i],C=CH[e2c[i]],s=e.a===ni?1:-1,m=cw(ni,e),d=m+SW*.5+9;if(C.L<d+30||e.bridge)continue;
     const ux=e.ux*s,uz=e.uy*s,nx=-e.uy,nz=e.ux,cx=N.x+ux*d,cz=N.y+uz*d;
     for(let q=-e.w/2+6.5;q<=e.w/2-6;q+=9)box(cx+nx*q,cz+nz*q,ux,uz,16,5.4,.38,PAINT);
     const sg=(US?-s:s),sx=cx+ux*12,sz=cz+uz*12,half=e.w/2-(e.blvd?8:1);
@@ -3488,8 +3519,6 @@ function buildRoadMesh(){
     const n=lanesOf(e);if(n>1&&e.len>d+90){const med=e.blvd?8:0,lw=(e.w/2-med)/n;
       for(let k=0;k<n;k++){const q=sg*(med+lw*(k+.5)),ax=cx+ux*44+nx*q,az=cz+uz*44+nz*q;   // arrow pointing toward the junction
         box(ax+ux*6,az+uz*6,ux,uz,14,2.4,.38,PAINT);tri(ax-ux*1,az-uz*1,ax-ux*8+nx*4.5,az-uz*8+nz*4.5,ax-ux*8-nx*4.5,az-uz*8-nz*4.5,.38,PAINT);}}}});
-  // bridge railings
-  for(const e of E)if(e.bridge)for(const s of[-1,1])strip(e,0,e.len,s*(e.w/2+SW-3),s*(e.w/2+SW-1),.38,'#8d99a3');
   // Shibuya-style scramble crossing
   const G=CITYGEO;if(G&&G.scramble){let best=null,bd=1e9;for(const N of Nn)if(N.e.length>=4){const d=Math.hypot(N.x-G.scramble[0],N.y-G.scramble[1]);if(d<bd){bd=d;best=N;}}
     if(best)for(const a of[Math.PI/4,-Math.PI/4]){const ux=Math.cos(a),uz=Math.sin(a);for(let q=-5;q<=5;q++)box(best.x-uz*q*7,best.y+ux*q*7,ux,uz,88,5,.39,PAINT);}}
