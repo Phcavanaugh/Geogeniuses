@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=36';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=37';
 
 // ====================================================================================
 // materials
@@ -165,6 +165,101 @@ function pedestal(lvl){
 // critters (facing +z)
 // ====================================================================================
 const CRITTERS = {
+  // Bloons' green balloon
+  rana(){
+    const g = new THREE.Group(), Gr = toon('#6CCB52'), L = toon('#D9F2A6');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    m(body, sph(.19), Gr, [0, .15, -.02], [1.15, .75, 1.1], null, true);
+    m(body, sph(.13), L, [0, .1, .07], [1.1, .6, .9]);
+    for(const sx of [-1, 1]){ const ey = m(body, sph(.075, 14, 10), Gr, [.09 * sx, .28, .1], null, null, true); m(ey, sph(.055, 12, 8), toon('#FFFFFF'), [0, .02, .035]); m(ey, sph(.03, 8, 6), toon('#22222E'), [0, .02, .075]); }
+    m(body, new THREE.TorusGeometry(.07, .012, 6, 16, Math.PI), toon('#3E8A35'), [0, .16, .19], null, [0, 0, Math.PI]);   // smile
+    cheeks(body, .12, .17, .16, .03);
+    for(const sx of [-1, 1]){ const leg = role(new THREE.Group(), 'leg', { ph: sx > 0 ? 1 : 0 }); leg.position.set(.15 * sx, .08, -.1); g.add(leg); m(leg, sph(.08, 10, 8), Gr, [0, 0, 0], [.7, .6, 1.3], null, true);
+      m(g, sph(.04, 8, 6), Gr, [.09 * sx, .03, .14], [1.2, .5, 1.3]); }
+    return g;
+  },
+  // Bloons' yellow balloon
+  pollito(){
+    const g = new THREE.Group(), Y = toon('#FFD93D'), O = toon('#FF9A2E');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    m(body, sph(.17), Y, [0, .2, 0], [1, 1.05, 1], null, true);
+    const h = m(body, sph(.12), Y, [0, .36, .06], null, null, true);
+    m(h, cone(.035, .07, 6), O, [0, -.01, .12], null, [Math.PI / 2, 0, 0]); eyes(h, .05, .03, .09, .025, .3); cheeks(h, .08, -.02, .07, .022);
+    for(let i = 0; i < 3; i++) m(h, sph(.03, 6, 5), Y, [(i - 1) * .03, .12, -.01], [.6, 1.4, .6]);                // fluff on top
+    for(const sx of [-1, 1]){ const w = role(new THREE.Group(), 'wing', { sx }); w.position.set(.15 * sx, .22, 0); body.add(w); m(w, sph(.07, 10, 8), Y, [.02 * sx, 0, 0], [.4, .8, 1], null, true); }
+    for(const sx of [-1, 1]){ const leg = role(new THREE.Group(), 'leg', { ph: sx > 0 ? 1 : 0 }); leg.position.set(.06 * sx, .06, 0); g.add(leg); m(leg, cyl(.012, .012, .08, 5), O, [0, -.02, 0]); m(leg, sph(.04, 8, 6), O, [0, -.06, .03], [1, .4, 1.4]); }
+    return g;
+  },
+  // Bloons' pink balloon
+  conejo(){
+    const g = new THREE.Group(), P = toon('#FFC1D6'), W = toon('#FFFFFF'), In = toon('#FF8FB1');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    m(body, sph(.17), P, [0, .17, -.04], [1, .9, 1.2], null, true);
+    const h = role(new THREE.Group(), 'head'); h.position.set(0, .32, .14); body.add(h);
+    m(h, sph(.12), P, [0, 0, 0], null, null, true);
+    for(const sx of [-1, 1]){ const ear = role(new THREE.Group(), 'ear', { sx }); ear.position.set(.05 * sx, .09, -.02); h.add(ear); m(ear, new THREE.CapsuleGeometry(.035, .16, 4, 10), P, [0, .1, 0], null, [0, 0, -.15 * sx], true); m(ear, new THREE.CapsuleGeometry(.018, .12, 4, 8), In, [0, .1, .02], null, [0, 0, -.15 * sx]); }
+    m(h, sph(.022, 8, 6), In, [0, -.01, .12]); eyes(h, .05, .03, .1, .026, .3); cheeks(h, .08, -.03, .08, .024);
+    m(body, sph(.06, 10, 8), W, [0, .19, -.25], null, null, true);                                                // cotton tail
+    for(let i = 0; i < 4; i++){ const sx = i % 2 ? 1 : -1, leg = role(new THREE.Group(), 'leg', { ph: i }); leg.position.set(.09 * sx, .05, i < 2 ? .08 : -.12); g.add(leg); m(leg, sph(.05, 8, 6), P, [0, -.01, .03], [1, .6, 1.5]); }
+    return g;
+  },
+  // Bloons' black balloon (explosions can't hurt it)
+  arana(){
+    const g = new THREE.Group(), K = toon('#2C2433'), R = toon('#7B5CFF');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    m(body, sph(.17), K, [0, .2, -.08], [1, .9, 1.1], null, true);
+    m(body, sph(.03, 8, 6), R, [0, .34, -.1]); m(body, sph(.025, 8, 6), R, [.06, .31, -.18]); m(body, sph(.025, 8, 6), R, [-.06, .31, -.18]);
+    const h = m(body, sph(.1), K, [0, .17, .12], null, null, true); eyes(h, .045, .03, .08, .028, .2); eyes(h, .02, .08, .07, .016, 0);
+    for(let i = 0; i < 4; i++) for(const sx of [-1, 1]){ const leg = role(new THREE.Group(), 'leg', { ph: i * 2 + (sx > 0 ? 1 : 0) }); leg.position.set(.1 * sx, .2, .08 - i * .07); g.add(leg);
+      tube(leg, [[0, 0, 0], [.12 * sx, .07, 0], [.22 * sx, -.18, (i - 1.5) * .04]], .014, K); }
+    return g;
+  },
+  // Bloons' white balloon
+  oveja(){
+    const g = new THREE.Group(), W = toon('#FBF8F2'), D = toon('#4A4050');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    for(const [x, y, z, r] of [[0, .24, 0, .16], [.1, .26, .08, .1], [-.1, .26, .08, .1], [.1, .25, -.1, .1], [-.1, .25, -.1, .1], [0, .35, 0, .1], [0, .24, -.16, .1]]) m(body, sph(r, 12, 10), W, [x, y, z], null, null, true);
+    const h = m(body, sph(.09), D, [0, .27, .2], [.9, 1, 1.1], null, true); eyes(h, .04, .03, .08, .024, .3);
+    m(h, sph(.06, 10, 8), W, [0, .08, -.01], [1.2, .6, 1]);
+    for(const sx of [-1, 1]) m(h, sph(.035, 8, 6), D, [.09 * sx, .02, -.02], [1.4, .5, .8]);
+    for(let i = 0; i < 4; i++){ const sx = i % 2 ? 1 : -1, leg = role(new THREE.Group(), 'leg', { ph: i }); leg.position.set(.08 * sx, .14, i < 2 ? .09 : -.1); g.add(leg); m(leg, cyl(.025, .025, .14, 6), D, [0, -.07, 0]); }
+    return g;
+  },
+  // Bloons' zebra balloon (explosions and ice can't hurt it)
+  cebra(){
+    const g = new THREE.Group(), W = toon('#FBF8F2'), K = toon('#2C2433');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    m(body, sph(.17), W, [0, .3, -.02], [.9, .85, 1.35], null, true);
+    for(let i = 0; i < 4; i++) m(body, new THREE.TorusGeometry(.15, .018, 6, 20), K, [0, .3, -.16 + i * .1], [.95, .9, 1], [0, 0, 0]);
+    const h = role(new THREE.Group(), 'head'); h.position.set(0, .45, .2); body.add(h);
+    m(h, sph(.09), W, [0, 0, 0], [.85, 1, 1.4], null, true); m(h, sph(.06, 10, 8), K, [0, -.03, .11], [1, .8, .9]); eyes(h, .05, .03, .05, .022, .3);
+    for(const sx of [-1, 1]) m(h, cone(.025, .07, 6), W, [.05 * sx, .09, -.04], null, null, true);
+    m(body, box(.03, .1, .22), K, [0, .52, .08], null, [.3, 0, 0]);                                                 // mane
+    for(let i = 0; i < 4; i++){ const sx = i % 2 ? 1 : -1, leg = role(new THREE.Group(), 'leg', { ph: i }); leg.position.set(.08 * sx, .2, i < 2 ? .12 : -.14); g.add(leg);
+      m(leg, cyl(.025, .022, .2, 6), W, [0, -.1, 0]); m(leg, cyl(.026, .026, .03, 6), K, [0, -.19, 0]); }
+    const tail = role(new THREE.Group(), 'tail'); tail.position.set(0, .34, -.24); body.add(tail); tube(tail, [[0, 0, 0], [0, -.06, -.06], [0, -.14, -.07]], .012, K);
+    return g;
+  },
+  // Bloons' ZOMG: the biggest boss
+  dino(){
+    const g = new THREE.Group(), Gr = toon('#5FB86A'), L = toon('#C9EFA0'), W = toon('#FFFFFF');
+    const body = role(new THREE.Group(), 'body'); g.add(body);
+    m(body, sph(.32), Gr, [0, .5, -.05], [.95, 1, 1.25], null, true); m(body, sph(.24), L, [0, .45, .1], [.9, 1, .8]);
+    for(let i = 0; i < 5; i++) m(body, cone(.05, .1, 5), toon('#3E8A4A'), [0, .82 - i * .03, -.25 + i * .1 - .2], null, [-.3, 0, 0]);   // back spikes
+    const h = role(new THREE.Group(), 'head'); h.position.set(0, .82, .32); body.add(h);
+    m(h, sph(.2), Gr, [0, 0, 0], [.9, .85, 1.2], null, true);
+    const jaw = role(new THREE.Group(), 'jaw'); jaw.position.set(0, -.08, .02); h.add(jaw); m(jaw, sph(.16), L, [0, -.02, .08], [.85, .45, 1.1]);
+    for(let i = 0; i < 4; i++) for(const sx of [-1, 1]) m(h, cone(.018, .05, 4), W, [.05 * sx + i * .025 * sx, -.1, .18 - i * .03], null, [Math.PI, 0, 0]);
+    eyes(h, .09, .07, .12, .04, .3); cheeks(h, .14, -.03, .13, .035);
+    const cr = new THREE.Group(); cr.position.set(0, .18, 0); h.add(cr);                                          // boss crown
+    m(cr, cyl(.12, .13, .08, 12), toon('#FFC93D', { emissive: '#7A5A00', emissiveIntensity: .3 }));
+    for(let i = 0; i < 6; i++){ const a = i / 6 * Math.PI * 2; m(cr, cone(.03, .08, 5), toon('#FFC93D'), [Math.sin(a) * .1, .07, Math.cos(a) * .1]); }
+    for(const sx of [-1, 1]) m(body, new THREE.CapsuleGeometry(.03, .1, 4, 8), Gr, [.2 * sx, .55, .28], null, [.8, 0, .3 * sx]);  // little arms
+    for(const sx of [-1, 1]){ const leg = role(new THREE.Group(), 'leg', { ph: sx > 0 ? 1 : 0 }); leg.position.set(.17 * sx, .32, -.02); g.add(leg);
+      m(leg, sph(.13, 12, 10), Gr, [0, -.08, 0], [.9, 1.3, 1], null, true); m(leg, sph(.08, 10, 8), Gr, [0, -.3, .06], [1, .5, 1.5], null, true); }
+    const tail = role(new THREE.Group(), 'tail'); tail.position.set(0, .45, -.4); body.add(tail); tube(tail, [[0, 0, 0], [0, -.05, -.25], [0, -.15, -.5]], .1, Gr, true);
+    return g;
+  },
   hormiga(){
     const g = new THREE.Group(), K = toon('#3A2E3F');
     m(g, sph(.14), K, [0, .16, -.17], [1, .85, 1.25], null, true);
@@ -899,7 +994,11 @@ function start(el, host){
     const bar = hpBar(); bar.position.y = (f.fly ? .95 : .6) * s + .15; holder.add(bar);
     const ink = new THREE.Mesh(new THREE.CircleGeometry(.28, 16), basic('#5B3D9A', { transparent: true, opacity: .5, depthWrite: false })); ink.rotation.x = -Math.PI / 2; ink.position.y = .03; ink.visible = false; holder.add(ink);
     md.g.traverse(o => { if(o.isMesh && o.material !== INK) o.castShadow = true; });
-    const e = { ...md, holder, bar, ink, f, yaw: f.dir, born: G.time, ph: Math.random() * 6, cyc: Math.random() * 6, lane: (Math.random() - .5) * .34 }; stuff.foes.set(f.id, e);
+    // fortified: a little metal helmet; regrow: a green sprout (they grow back)
+    const top = (f.fly ? .9 : .5) * s;
+    if(f.fort){ const hm = m(holder, new THREE.SphereGeometry(.13 * Math.min(2.5, s), 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), toon('#AEB8C8', { emissive: '#3A4252', emissiveIntensity: .2 }), [0, top, 0], null, null, true); hm.userData.badge = 1; }
+    if(f.regrow){ const sp = new THREE.Group(); sp.position.y = top + .02; holder.add(sp); m(sp, cyl(.012, .012, .12, 5), toon('#3E8A35'), [0, .06, 0]); for(const sx of [-1, 1]) m(sp, sph(.04, 8, 6), toon('#7DD483'), [.04 * sx, .12, 0], [1, .4, .6], [0, 0, .5 * sx]); }
+    const e = { ...md, holder, bar, ink, f, k: f.k, yaw: f.dir, born: G.time, ph: Math.random() * 6, cyc: Math.random() * 6, lane: (Math.random() - .5) * .34 }; stuff.foes.set(f.id, e);
     if(f.hidden && !f.seen) ghost(e, true);
     return e;
   }
@@ -945,12 +1044,23 @@ function start(el, host){
     pulpo: { wind: .3, hit: .35, back: .25, fwd: .3, lunge: .06, hop: .14 }, dragon: { wind: .42, hit: .42, back: .6, fwd: .55, lunge: .18, hop: .08 },
     huerto: { wind: 0, hit: .01, back: 0, fwd: 0, lunge: 0, hop: 0, sway: .04 }, buho: { wind: .25, hit: .3, back: .3, fwd: .35, lunge: .08, hop: .1 } };
   // how each critter moves: f = steps per second when moving at speed s (board units a second); faster = quicker steps
-  const GAIT = { hormiga: { f: 9, s: 1 }, raton: { f: 11, s: .75 }, caracol: { f: 2.6, s: .36 }, murcielago: { f: 5, s: 1.05 }, mapache: { f: 7.5, s: .57 }, cocodrilo: { f: 4.5, s: .42 }, oso: { f: 3.6, s: .33 }, elefante: { f: 2.6, s: .25 } };
+  const GAIT = { rana: { f: 3.2, s: 3.4 }, pollito: { f: 11, s: 6 }, conejo: { f: 4.2, s: 6.6 }, arana: { f: 10, s: 3.4 }, oveja: { f: 7, s: 3.8 }, cebra: { f: 5, s: 3.4 }, dino: { f: 1.6, s: .34 },
+    hormiga: { f: 9, s: 1 }, raton: { f: 11, s: .75 }, caracol: { f: 2.6, s: .36 }, murcielago: { f: 5, s: 1.05 }, mapache: { f: 7.5, s: .57 }, cocodrilo: { f: 4.5, s: .42 }, oso: { f: 3.6, s: .33 }, elefante: { f: 2.6, s: .25 } };
   function animateFoe(e, f, now, dt, slow){
     const chewing = !!f.atWall, k = f.k, c = (e.cyc += dt * GAIT[k].f * Math.min(2.2, f.spd / GAIT[k].s) * (slow ? f.slowF : 1) * (G.phase === 'wave' && !chewing ? 1 : 0)), g = e.g, sc = f.size * 1.35;
     let bob = 0, pitch = 0, roll = 0, sway = 0, sx = 1, sy = 1, sz = 1;
     const legs = e.roles.leg || [];
-    if(k === 'hormiga'){ bob = Math.abs(Math.sin(c)) * .012; sway = Math.sin(c * .5) * .07;
+    if(k === 'rana' || k === 'conejo'){ const u = (c % (Math.PI * 2)) / (Math.PI * 2), hop = Math.sin(u * Math.PI); bob = hop * (k === 'rana' ? .16 : .13); pitch = -Math.cos(u * Math.PI) * .25 * hop;
+      sy = 1 + (hop > .1 ? .1 * hop : -.12 * (1 - hop * 10)); sx = sz = 1 - (sy - 1) * .5; for(const l of legs) l.rotation.x = hop * 1.1;
+      for(const ear of e.roles.ear || []) ear.rotation.x = -hop * .6; }
+    else if(k === 'pollito'){ bob = Math.abs(Math.sin(c)) * .03; roll = Math.sin(c) * .14; for(const l of legs) l.rotation.x = Math.sin(c + l.userData.ph * Math.PI) * .9; }
+    else if(k === 'arana'){ bob = Math.abs(Math.sin(c * 2)) * .012; for(const l of legs){ const tri = (Math.floor(l.userData.ph / 2) + l.userData.ph % 2) % 2; l.rotation.y = Math.sin(c + tri * Math.PI) * .35; l.rotation.z = Math.max(0, Math.sin(c + tri * Math.PI)) * .25 * (l.userData.ph % 2 ? -1 : 1); } }
+    else if(k === 'oveja'){ bob = Math.abs(Math.sin(c)) * .03; roll = Math.sin(c) * .05; for(const l of legs){ const diag = ((l.userData.ph % 2) ^ (l.userData.ph < 2 ? 1 : 0)); l.rotation.x = Math.sin(c + diag * Math.PI) * .6; } }
+    else if(k === 'cebra'){ bob = Math.abs(Math.sin(c)) * .05; pitch = Math.sin(c * 2) * .05; for(const l of legs) l.rotation.x = Math.sin(c + (l.userData.ph < 2 ? 0 : Math.PI) + (l.userData.ph % 2) * .5) * .75;
+      for(const hd of e.roles.head || []) hd.rotation.x = Math.sin(c * 2) * .1; }
+    else if(k === 'dino'){ bob = Math.abs(Math.sin(c)) * .05; roll = Math.sin(c) * .08; for(const l of legs) l.rotation.x = Math.sin(c + l.userData.ph * Math.PI) * .45;
+      for(const hd of e.roles.head || []){ hd.rotation.y = Math.sin(c * .5) * .2; } for(const j of e.roles.jaw || []) j.rotation.x = Math.max(0, Math.sin(now * 3 + e.ph)) * .35; }
+    else if(k === 'hormiga'){ bob = Math.abs(Math.sin(c)) * .012; sway = Math.sin(c * .5) * .07;
       for(const l of legs){ const tri = (Math.floor(l.userData.ph / 2) + l.userData.ph % 2) % 2; l.rotation.y = Math.sin(c + tri * Math.PI) * .45; l.rotation.x = Math.max(0, Math.sin(c + tri * Math.PI)) * .3; } }
     else if(k === 'raton'){ bob = Math.abs(Math.sin(c)) * .035; pitch = Math.sin(c * 2) * .07;
       for(const l of legs) l.rotation.x = Math.sin(c + (l.userData.ph < 2 ? 0 : Math.PI)) * .8; }
@@ -967,8 +1077,8 @@ function start(el, host){
     else if(k === 'oso'){ bob = Math.abs(Math.sin(c)) * .05; roll = Math.sin(c) * .09;
       for(const l of legs){ const diag = ((l.userData.ph % 2) ^ (l.userData.ph < 2 ? 1 : 0)); l.rotation.x = Math.sin(c + diag * Math.PI) * .5; }
       for(const hd of e.roles.head || []) hd.rotation.x = Math.sin(c * 2) * .07; }
-    for(const w of e.roles.wing || []) w.rotation.z = (Math.sin(now * 16 + e.ph) * .55 + .2) * w.userData.sx;
-    for(const tl of e.roles.tail || []) tl.rotation.y = Math.sin(c * (k === 'cocodrilo' ? 1 : .5) + (k === 'cocodrilo' ? Math.PI : 0)) * (k === 'raton' ? .6 : .4);
+    for(const w of e.roles.wing || []) w.rotation.z = (Math.sin(now * (k === 'pollito' ? 22 : 16) + e.ph) * .55 + .2) * w.userData.sx;
+    for(const tl of e.roles.tail || []) tl.rotation.y = Math.sin(c * (k === 'cocodrilo' || k === 'dino' ? 1 : .5) + (k === 'cocodrilo' || k === 'dino' ? Math.PI : 0)) * (k === 'raton' ? .6 : k === 'dino' ? .25 : .4);
     for(const st of e.roles.stalk || []) st.rotation.z = Math.sin(c * .7 + st.userData.sx) * .22;
     if(chewing){ pitch += .18 + Math.sin(now * 22 + e.ph) * .12; bob = Math.abs(Math.sin(now * 11 + e.ph)) * .02; }   // munch munch
     // a hit pushes them back a little and squishes them
@@ -1015,7 +1125,9 @@ function start(el, host){
     }
     for(const [id, e] of stuff.walls) if(!G.walls.includes(e.w)){ world.remove(e.g); stuff.walls.delete(id); }
     // critters: walk in a loose group (each keeps its own lane), with their own gait
-    for(const f of G.foes){ let e = stuff.foes.get(f.id); if(!e) e = addFoe(f);
+    for(const f of G.foes){ let e = stuff.foes.get(f.id);
+      if(e && e.k !== f.k){ world.remove(e.holder); stuff.foes.delete(f.id); const was = e; e = addFoe(f); e.yaw = was.yaw; e.born = G.time - 1; }   // regrew into a bigger critter
+      if(!e) e = addFoe(f);
       let d = f.dir - e.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); e.yaw += d * Math.min(1, dt * 8);
       const slow = f.slowT > 0, hitK = animateFoe(e, f, now, dt, slow);
       const ramp = Math.min(1, f.d / .9, (G.paths[f.p].len - f.d) / .9), lane = e.lane * Math.max(0, ramp);
@@ -1062,6 +1174,8 @@ function start(el, host){
       else if(ev.t === 'kids'){ burst('pop', wx(ev.x), h + .5, wz(ev.y), 1.6, .4); burst('confetti', wx(ev.x), h + .6, wz(ev.y), 1.4, .7, { rise: .4 }); shakeIt(.1); sfx('boom'); }
       else if(ev.t === 'bounce'){ burst('tink', wx(ev.x), h + .45, wz(ev.y), .45, .25); sfx('tink'); }
       else if(ev.t === 'seen'){ const e = stuff.foes.get(ev.foe.id); if(e && e.ghost) ghost(e, false); burst('sparkle', wx(ev.x), h + .9, wz(ev.y), .55, .5, { rise: .4 }); sfx('tink'); }
+      else if(ev.t === 'unseen'){ const e = stuff.foes.get(ev.foe.id); if(e && !e.ghost) ghost(e, true); }
+      else if(ev.t === 'grow'){ burst('sparkle', wx(ev.x), h + .7, wz(ev.y), .5, .4, { rise: .3 }); }
       else if(ev.t === 'power'){ const P = POWERS[ev.id]; toast(P.name, 0, P.tip); say(['c|' + P.name]); burst('pop', wx(ev.x), h + 1.2, wz(ev.y), 1.6, .4); shakeIt(.15); sfx('up'); }
       else if(ev.t === 'farm'){ coinPop(wx(ev.x), h + .6, wz(ev.y), ev.n); }
       else if(ev.t === 'gift'){ setTimeout(() => toast('¡Un camino nuevo!', ev.n, 'Toma monedas para protegerlo.'), 300); }
@@ -1141,7 +1255,7 @@ function start(el, host){
     const left = G.queue.length + G.foes.length, k = [G.powers().map(p => p.id + (p.ready ? '!' : Math.ceil(p.left * 24))).join(), G.lives, G.coins, G.points, left, G.phase, G.r, sel, speed, menuFor && menuFor.a, menuFor && menuFor.b, menuFor && menuFor.lvl, menuFor && menuFor.target, menuFor && menuFor.wall && Math.ceil(menuFor.hp)].join('|'); if(k === hudKey) return; hudKey = k;
     const num = (v, n) => { const b = pill(v).querySelector('b'); if(b.textContent !== String(n)){ if(b.textContent && v !== 'lives'){ pill(v).classList.remove('bump'); void pill(v).offsetWidth; pill(v).classList.add('bump'); } b.textContent = n; } };
     num('lives', G.lives); num('coins', G.coins); num('points', G.points);
-    if(shownR !== G.r){ shownR = G.r; $('.tt b').textContent = `Ronda ${G.r}`; $('.tt small').textContent = `de ${G.lastRound} · ${G.map.name}${G.queue.some(q => q.boss) ? ' · 🐻' : ''}`; }
+    if(shownR !== G.r){ shownR = G.r; $('.tt b').textContent = `Ronda ${G.r}`; $('.tt small').textContent = `de ${G.lastRound} · ${G.A.mode}${G.queue.some(q => q.boss) ? ' · 🐻' : ''}`; }
     $('.d3left').textContent = G.phase === 'build' ? `🐾 ${G.total}${G.np > 1 ? ` · ${G.np} caminos` : ''}` : G.phase === 'wave' ? `🐾 Faltan ${left}` : '';
     el.querySelectorAll('.d3tw').forEach(b => { const i = b.dataset.i, w = i === 'wall'; b.classList.toggle('sel', (w ? 'wall' : +i) === sel); b.classList.toggle('poor', (w || G.un[+i]) && G.coins < cost(w ? 'wall' : +i)); });
     const go = $('.d3go'); go.disabled = G.phase !== 'build' && G.phase !== 'wave';
