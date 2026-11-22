@@ -12,7 +12,7 @@
 // Each critter knocked out pays a coin; each round you finish pays 100 + the round. The rounds are Bloons TD 6's
 // standard rounds, and Easy / Medium / Hard are Bloons' (4–5 plays Easy, 7 Medium, 10 Hard).
 
-import { BT } from './defensa-bt.js?v=39';
+import { BT } from './defensa-bt.js?v=40';
 export const U = 13.33;                                   // Bloons units per board unit
 export const bu = v => v / U;                             // Bloons units → board units
 export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 BU, landscape; the island reaches MARGIN past it
@@ -36,18 +36,18 @@ export const MAPS = [
 ];
 
 // ---------- towers ----------
-// Towers. Four have a Bloons twin and use its exact numbers for every upgrade (from BT, in defensa-bt.js):
-// gato = Dart Monkey, dragón = Bomb Shooter, pulpo = Glue Gunner, huerto = Banana Farm. Costs and upgrade costs are Bloons'.
-// abeja and búho are still ours (no twin chosen yet): their numbers are below, in the same style (BU, seconds).
+// Towers. Each has a Bloons twin and uses its exact numbers for every upgrade (from BT, in defensa-bt.js):
+// gato = Dart Monkey, abeja = Tack Shooter, pulpo = Glue Gunner, dragón = Bomb Shooter, huerto = Banana Farm,
+// búho = Ninja Monkey (the only one that can see hidden critters, like Bloons). Costs and upgrade costs are Bloons'.
 // Shots fly straight like Bloons' darts and hit what they touch, up to their pierce. imm = balloon kinds they can't hurt
 // ('lead' = snails, 'black' = spiders and zebras, 'purple' = bats, 'white' = sheep and zebras).
 export const TOWERS = [
   { id:'gato', twin:'DartMonkey', name:'El gato', word:'w|🐱', cost:200, range:32, tip:'Lanza bolas de estambre. (No puede con los caracoles.)',
     paths:[ { name:'Rapidez',        steps:[ { cost:100, name:'Lanza rápido' }, { cost:190, name:'Lanza muy rápido' }, { cost:450, name:'Tres bolas' } ] },
             { name:'Bolas fuertes',  steps:[ { cost:140, name:'Bola puntiaguda' }, { cost:200, name:'Bola muy puntiaguda' }, { cost:320, name:'Bola gigante' } ] } ] },
-  { id:'abeja', name:'La abeja', word:'w|🐝', cost:300, range:30, cd:.42, pierce:1, dmg:1, speed:360, tip:'¡Pica muy, muy rápido! (No puede con los caracoles.)',
-    paths:[ { name:'Enjambre',        steps:[ { cost:150, name:'Dos aguijones', shots:2 }, { cost:350, name:'Tres aguijones', shots:3 }, { cost:1200, name:'Enjambre', shots:5, cd:.8 } ] },
-            { name:'Aguijón de miel', steps:[ { cost:200, name:'Más fuerte', dmg:1 }, { cost:400, name:'Rompe conchas', shell:true }, { cost:1300, name:'Aguijón de oro', dmg:2, pierce:2 } ] } ] },
+  { id:'abeja', twin:'TackShooter', name:'La abeja', word:'w|🐝', cost:260, range:23, tip:'Lanza aguijones a todos lados. (No puede con los caracoles.)',
+    paths:[ { name:'Más aguijones',   steps:[ { cost:150, name:'Más aguijones' }, { cost:150, name:'Muchos aguijones' }, { cost:450, name:'Lluvia de aguijones' } ] },
+            { name:'Más rápida',      steps:[ { cost:150, name:'Más rápida' }, { cost:220, name:'Muy rápida' }, { cost:600, name:'Aguijones de fuego' } ] } ] },
   { id:'pulpo', twin:'GlueGunner', name:'El pulpo', word:'w|🐙', cost:225, range:46, tip:'Echa tinta: ¡los bichos van más lentos! (A los jefes no les pega.)',
     paths:[ { name:'Tinta pegajosa',  steps:[ { cost:280, name:'Tinta que dura' }, { cost:400, name:'Tinta más pegajosa' }, { cost:3600, name:'Tinta para jefes' } ] },
             { name:'Tinta ácida',     steps:[ { cost:200, name:'Tinta que empapa' }, { cost:300, name:'Tinta ácida' }, { cost:2000, name:'Tinta que disuelve' } ] } ] },
@@ -57,9 +57,9 @@ export const TOWERS = [
   { id:'huerto', twin:'BananaFarm', name:'El huerto', word:'c|¡El huerto!', cost:1250, range:0, farm:80, tip:'Un manzano: da monedas al final de cada ronda.',
     paths:[ { name:'Más manzanas',    steps:[ { cost:500, name:'Más manzanas' }, { cost:600, name:'Muchas manzanas' }, { cost:3000, name:'Gran huerto' } ] },
             { name:'Manzanas de oro', steps:[ { cost:300, name:'Manzanas que duran' }, { cost:800, name:'Manzanas de oro' }, { cost:3650, name:'Alcancía' } ] } ] },
-  { id:'buho', name:'El búho', word:'w|🦉', cost:250, range:46, cd:1.2, pierce:1, dmg:1, speed:280, sees:true, tip:'Ve a los bichos escondidos, y los otros animales también.',
-    paths:[ { name:'Ojos grandes',    steps:[ { cost:150, name:'Ve más lejos', range:8 }, { cost:300, name:'Ve muy lejos', range:8 }, { cost:1000, name:'Ojos mágicos', buff:.8 } ] },
-            { name:'Plumas',          steps:[ { cost:200, name:'Plumas rápidas', cd:.75 }, { cost:350, name:'Plumas fuertes', dmg:1 }, { cost:1100, name:'Tormenta de plumas', shots:3, cd:.8 } ] } ] },
+  { id:'buho', twin:'NinjaMonkey', name:'El búho', word:'w|🦉', cost:400, range:40, sees:true, tip:'Ve a los bichos escondidos y les tira plumas. (Los otros animales no los ven.)',
+    paths:[ { name:'Plumas',          steps:[ { cost:350, name:'Búho veloz' }, { cost:350, name:'Plumas afiladas' }, { cost:900, name:'Dos plumas' } ] },
+            { name:'Trucos',          steps:[ { cost:250, name:'Susto' }, { cost:400, name:'¡Te vi!' }, { cost:1200, name:'Escuela de búhos' } ] } ] },
 ];
 export const SIZE = 12;
 
@@ -355,7 +355,7 @@ export class Game {
     const b = TOWERS[t.i];
     if(BT[b.id]){ const S = BT[b.id][`${t.a}${t.b}`] || BT[b.id]['00'];
       if(S.farm !== undefined) return { range: 0, farm: S.farm, buff: 1, weapons: [] };
-      return { range: bu(S.weapons[0].range), farm: 0, buff: 1, weapons: S.weapons.map(w => ({ cd: w.cd, n: w.n || 1, spread: (w.spread || 0) * Math.PI / 180, speed: bu(w.speed), life: w.life, r: bu(w.r),
+      return { range: bu(S.weapons[0].range), farm: 0, buff: 1, sees: !!S.camo, shinobi: S.shinobi || 0, weapons: S.weapons.map(w => ({ wind: w.wind, decamo: !!w.decamo, cd: w.cd, n: w.n || 1, spread: (w.spread || 0) * Math.PI / 180, speed: bu(w.speed), life: w.life, r: bu(w.r),
         pierce: w.pierce, dmg: w.dmg || 0, imm: w.imm || [], boom: w.boom && { r: bu(w.boom.r), pierce: w.boom.pierce, dmg: w.boom.dmg, imm: w.boom.imm || [] }, slow: w.slow, slowBoss: w.slowBoss, dot: w.dot, bonus: w.bonus || {} })) }; }
     // ours (abeja, búho): base numbers plus upgrade steps
     const o = { range: b.range, cd: b.cd, pierce: b.pierce, dmg: b.dmg, shots: 1, shell: false, buff: 1 };
@@ -452,7 +452,7 @@ export class Game {
   }
   // critters in range of a tower, in the order the tower wants them
   targets(t, s){
-    const list = this.foes.filter(f => f.alive && (!f.hidden || f.seen) && Math.hypot(f.x - t.x, f.y - t.y) <= s.range);
+    const list = this.foes.filter(f => f.alive && (!f.hidden || s.sees || this.revealT > 0) && Math.hypot(f.x - t.x, f.y - t.y) <= s.range);
     if(t.target === 'strong') list.sort((a, b) => b.hp - a.hp || this.left(a) - this.left(b));
     else if(t.target === 'close') list.sort((a, b) => Math.hypot(a.x - t.x, a.y - t.y) - Math.hypot(b.x - t.x, b.y - t.y));
     else list.sort((a, b) => this.left(a) - this.left(b));
@@ -488,12 +488,11 @@ export class Game {
       const near = this.foes.filter(f => f.alive && !f.fly && Math.hypot(f.x - w.x, f.y - w.y) <= z.range).sort((a, b) => Math.hypot(a.x - w.x, a.y - w.y) - Math.hypot(b.x - w.x, b.y - w.y)).slice(0, z.pierce);
       if(!near.length) continue; w.cd = z.cd;
       for(const f of near){ this.fx.push({ t:'zap', x:w.x, y:w.y, tx:f.x, ty:f.y }); this.hit(f, z.dmg, w, ['purple']); } }
-    // owls: which hidden critters can be seen, and which towers get the "Ojos mágicos" boost
-    const owls = this.towers.filter(t => TOWERS[t.i].sees).map(t => ({ t, s: this.stat(t) }));
-    // hidden critters can be aimed at only while an owl sees them
-    for(const f of this.foes) if(f.hidden){ const now = this.revealT > 0 || owls.some(o => Math.hypot(o.t.x - f.x, o.t.y - f.y) <= o.s.range);
-      if(now !== f.seen){ f.seen = now; this.fx.push({ t: now ? 'seen' : 'unseen', x:f.x, y:f.y, foe:f }); } }
-    for(const t of this.towers){ t.buff = 1; for(const o of owls) if(o.s.buff < 1 && o.t !== t && Math.hypot(o.t.x - t.x, o.t.y - t.y) <= o.s.range) t.buff = Math.min(t.buff, o.s.buff); }
+    // hidden critters show up for everyone only during "¡Todos a la vista!" (or once an owl's "¡Te vi!" strips their hiding)
+    for(const f of this.foes){ const now = !f.hidden || this.revealT > 0; if(now !== f.seen){ f.seen = now; this.fx.push({ t: now ? 'seen' : 'unseen', x:f.x, y:f.y, foe:f }); } }
+    // Shinobi Tactics: owls near a "Escuela de búhos" owl throw faster (Bloons: ×0.92 per one, up to 20)
+    const shin = this.towers.filter(t => TOWERS[t.i].id === 'buho').map(t => ({ t, s: this.stat(t) })).filter(o => o.s.shinobi);
+    for(const t of this.towers){ t.buff = 1; if(TOWERS[t.i].id === 'buho'){ let n = 0; for(const o of shin) if(Math.hypot(o.t.x - t.x, o.t.y - t.y) <= o.s.range) n++; t.buff = Math.pow(shin[0] ? shin[0].s.shinobi : 1, Math.min(20, n)); } }
     if(this.revealT > 0) this.revealT -= dt;
     if(this.yarnT > 0) this.yarnT -= dt;
     for(const t of this.towers) if(t.cool > 0) t.cool -= dt;
@@ -503,7 +502,8 @@ export class Game {
       const s = this.stat(t), w = s.weapons[0], list = this.targets(t, s); if(!list.length) continue;
       const f = list[0]; t.cd = w.cd * t.buff * (this.yarnT > 0 && b.id === 'gato' ? .35 : 1); t.aim = Math.atan2(f.x - t.x, f.y - t.y); t.shotAt = this.time;
       const ang = Math.atan2(f.y - t.y, f.x - t.x);
-      for(let n = 0; n < w.n; n++){ const a = ang + (w.n > 1 ? (n - (w.n - 1) / 2) * w.spread / (w.n - 1) : 0);
+      const ring = w.spread >= 6.2;           // a full circle (the bee's tacks): evenly around
+      for(let n = 0; n < w.n; n++){ const a = ang + (ring ? n * Math.PI * 2 / w.n : w.n > 1 ? (n - (w.n - 1) / 2) * w.spread / (w.n - 1) : 0);
         this.shots.push({ id: nid(), x: t.x, y: t.y, x0: t.x, y0: t.y, vx: Math.cos(a) * w.speed, vy: Math.sin(a) * w.speed, life: w.life, w, b, tower: t, pierce: w.pierce, hits: new Set(), born: this.time }); }
     }
     const rad = f => bu(f.boss ? ({ oso: 21, elefante: 30, dino: 40 })[f.k] : 8);     // how big a critter is to hit (Bloons' sizes)
@@ -530,8 +530,12 @@ export class Game {
   land(sh, f){
     const w = sh.w, B = w.bonus || {};
     if(w.slow && (!f.boss || (w.slowBoss || 1) !== 1)){ f.slowT = w.slow.t; f.slowF = f.boss ? .75 : w.slow.mult; if(w.dot){ f.dot = w.dot.dmg / w.dot.every; f.dotT = w.slow.t; } this.fx.push({ t:'ink', x:f.x, y:f.y }); }
-    const dmg = w.dmg + (f.boss ? B.Moabs || 0 : 0) + (f.k === 'cocodrilo' ? B.Ceramic || 0 : 0);
+    const dmg = w.dmg + (f.boss ? B.Moabs || 0 : 0) + (f.k === 'cocodrilo' ? B.Ceramic || 0 : 0) + (f.hidden ? B.Camo || 0 : 0);
     if(dmg > 0){ this.fx.push({ t:'hit', x:f.x, y:f.y, kind: sh.b.id }); this.hit(f, dmg, sh.tower, w.imm); }
+    // "¡Te vi!": a hidden critter that gets hurt stops hiding (and so do the ones that come out of it)
+    if(w.decamo && f.hidden && dmg > 0){ f.hidden = false; for(const k of this.foes) if(k.kid && k.alive && k.hidden && Math.hypot(k.x - f.x, k.y - f.y) < .3) k.hidden = false; }
+    // "Susto": sometimes blows a critter back along the trail (not bosses; crocodiles only half as far)
+    if(w.wind && f.alive && !f.boss && Math.random() < w.wind.chance){ const back = bu(w.wind.min + Math.random() * (w.wind.max - w.wind.min)) * (f.k === 'cocodrilo' ? .5 : 1); f.d = Math.max(0, f.d - back); this.fx.push({ t:'wind', x:f.x, y:f.y }); }
   }
   // a bomb goes off: hits the critters inside the blast (up to its pierce)
   explode(sh, x, y){
