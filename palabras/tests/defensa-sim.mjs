@@ -24,7 +24,7 @@ function spots(g){
   return out;
 }
 // how much a tower knocks out per second (roughly): hits per shot × damage × shots per second
-const power = (g, t) => { const b = R.TOWERS[t.i]; if(!b.range) return 0; const w = g.stat(t).weapons[0];
+const power = (g, t) => { const b = R.TOWERS[t.i]; if(!b.range || b.support) return 0; const w = g.stat(t).weapons[0];
   let p = (w.boom ? Math.min(w.boom.pierce, 6) * w.boom.dmg : Math.min(w.pierce, 3) * Math.max(w.dmg, w.slow ? .6 : 0)) * w.n / w.cd; if(w.dot) p += w.dot.dmg / w.dot.every * 2; return p; };
 
 function think(g, kind, rand){
