@@ -3507,7 +3507,10 @@ function buildRoadMesh(){
   for(const C of CH)cstrip(C,0,C.L,-C.w/2,C.w/2,.26,ASPH);
   Nn.forEach((N,n)=>{if(ends[n])disc(N.x,N.y,maxW(N)/2,.26,ASPH,N.e.length>2?20:12);});
   // where each street's paint starts/stops near a junction
-  const cw=(nid,e)=>{const N=Nn[nid];if(N.e.length<3)return 0;let m=0;for(const i of N.e)if(E[i]!==e)m=Math.max(m,E[i].w/2);return m;};
+  // how far along street e the other streets at this junction reach (angle-aware, so slanted crossings don't overlap)
+  const cw=(nid,e)=>{const N=Nn[nid];if(N.e.length<3)return 0;const ie=E.indexOf(e),u=outDir(ie,nid);let m=0;
+    for(const i of N.e){if(i===ie)continue;const f=E[i],v=outDir(i,nid),c=u[0]*v[0]+u[1]*v[1],sn=Math.max(.34,Math.sqrt(Math.max(0,1-c*c)));
+      m=Math.max(m,Math.min(170,(f.w/2+SW*.4)/sn+(e.w/2)*Math.abs(c)/sn-SW*.4));}return m;};
   for(const C of CH){const e=C.e,eL=E[C.es[C.es.length-1]],n0=C.ns[0],n1=C.ns[C.ns.length-1],ma=cw(n0,e),mb=cw(n1,eL),
       a=ma?ma+SW+26:(Nn[n0].e.length===1?2:0),b=C.L-(mb?mb+SW+26:(Nn[n1].e.length===1?2:0)),n=lanesOf(e),med=C.blvd?8:0,lw=(C.w/2-med)/n;
     // patches, cracks and manholes
@@ -3526,7 +3529,7 @@ function buildRoadMesh(){
     if(n>1)for(const s of[-1,1])cstrip(C,a,b,s*(C.w/2-5),s*(C.w/2-3.4),.36,PAINT);
     if(C.bridge)for(const s of[-1,1])cstrip(C,0,C.L,s*(C.w/2+SW-3),s*(C.w/2+SW-1),.38,'#8d99a3');}
   // crosswalks, stop lines and turn arrows at each junction
-  Nn.forEach((N,ni)=>{if(N.e.length<3)return;for(const i of N.e){const e=E[i],C=CH[e2c[i]],s=e.a===ni?1:-1,m=cw(ni,e),d=m+SW*.5+9;if(C.L<d+30||e.bridge)continue;
+  Nn.forEach((N,ni)=>{if(N.e.length<3||N.scr)return;for(const i of N.e){const e=E[i],C=CH[e2c[i]],s=e.a===ni?1:-1,m=cw(ni,e),d=m+SW*.5+9;if(C.L<d+30||e.bridge)continue;
     const ux=e.ux*s,uz=e.uy*s,nx=-e.uy,nz=e.ux,cx=N.x+ux*d,cz=N.y+uz*d;
     for(let q=-e.w/2+6.5;q<=e.w/2-6;q+=9)box(cx+nx*q,cz+nz*q,ux,uz,16,5.4,.38,PAINT);
     const sg=(US?-s:s),sx=cx+ux*12,sz=cz+uz*12,half=e.w/2-(e.blvd?8:1);
@@ -3535,8 +3538,14 @@ function buildRoadMesh(){
       for(let k=0;k<n;k++){const q=sg*(med+lw*(k+.5)),ax=cx+ux*44+nx*q,az=cz+uz*44+nz*q;   // arrow pointing toward the junction
         box(ax+ux*6,az+uz*6,ux,uz,14,2.4,.38,PAINT);tri(ax-ux*1,az-uz*1,ax-ux*8+nx*4.5,az-uz*8+nz*4.5,ax-ux*8-nx*4.5,az-uz*8-nz*4.5,.38,PAINT);}}}});
   // Shibuya-style scramble crossing
-  const G=CITYGEO;if(G&&G.scramble){let best=null,bd=1e9;for(const N of Nn)if(N.e.length>=4){const d=Math.hypot(N.x-G.scramble[0],N.y-G.scramble[1]);if(d<bd){bd=d;best=N;}}
-    if(best)for(const a of[Math.PI/4,-Math.PI/4]){const ux=Math.cos(a),uz=Math.sin(a);for(let q=-5;q<=5;q++)box(best.x-uz*q*7,best.y+ux*q*7,ux,uz,88,5,.39,PAINT);}}
+  {const G=CITYGEO;if(G&&G.scramble){let best=null,bd=1e9;
+    for(let n=0;n<Nn.length;n++){const N=Nn[n];if(N.e.length!==4)continue;   // only a clean, square four-way crossing gets the diagonal zebras
+      const an=N.e.map(i=>{const d=outDir(i,n);return Math.atan2(d[1],d[0]);}).sort((a,b)=>a-b);let sq=true;
+      for(let k=0;k<4;k++){const g=(k<3?an[k+1]:an[0]+TAU)-an[k];if(Math.abs(g-HP)>.3)sq=false;}
+      if(!sq)continue;const d=Math.hypot(N.x-G.scramble[0],N.y-G.scramble[1]);if(d<bd&&d<500){bd=d;best=N;}}
+    if(best){best.scr=1;const n=Nn.indexOf(best),d0=outDir(best.e[0],n),base=Math.atan2(d0[1],d0[0]);let r=0;for(const i of best.e)r=Math.max(r,E[i].w/2);
+      for(const a of[base+Math.PI/4,base-Math.PI/4]){const ux=Math.cos(a),uz=Math.sin(a),L=r*2*1.2;for(let q=-3;q<=3;q++)box(best.x-uz*q*7,best.y+ux*q*7,ux,uz,L,5,.39,PAINT);}
+}}}
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(P,3));geo.setAttribute('color',new THREE.Float32BufferAttribute(C,3));
   const nm=new Float32Array(P.length);for(let i=1;i<nm.length;i+=3)nm[i]=1;geo.setAttribute('normal',new THREE.BufferAttribute(nm,3));geo.setAttribute('aSurf',new THREE.Float32BufferAttribute(SU,1));
   roadMesh=new THREE.Mesh(geo,ROAD_MAT);roadMesh.receiveShadow=true;roadMesh.frustumCulled=false;scene.add(roadMesh);}
