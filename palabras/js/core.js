@@ -106,8 +106,8 @@ const wordHTML = w => `<span class="art">${w[0]}</span> ${w[1]}`;
 const VOICE = { on: store.get('recVoice', true), clips:{}, loading:{}, tok:0, unlocked:false, status:'', loadedGroups:0 };
 // Drawn sticker art for word pictures: art/words/<name>.png. Any word not listed here keeps its emoji.
 // To add art: drop the PNG in art/words/ and add its emoji → file name here.
-const ART = { '🐶':'perro', '🐱':'gato', '🐮':'vaca', '🐷':'cerdo', '🐴':'caballo', '🐑':'oveja',
-  '🐐':'cabra', '🐔':'gallina', '🐓':'gallo', '🐤':'pollito', '🦆':'pato', '🦃':'pavo' };
+const ART = {   // En la granja
+  '🐶':'perro', '🐱':'gato', '🐮':'vaca', '🐷':'cerdo', '🐴':'caballo', '🐑':'oveja', '🐐':'cabra', '🐔':'gallina', '🐓':'gallo', '🐤':'pollito', '🦆':'pato', '🦃':'pavo', '🐰':'conejo', '🐭':'raton', '🦙':'llama', '🐂':'toro', '🫏':'burro', '🐏':'carnero', '🐃':'bufalo', '🐀':'rata', '🐈‍⬛':'gato-negro', '🐩':'caniche', '🐹':'hamster', '🧑‍🌾':'granjero', '🌾':'trigo', '🪺':'nido', '🪶':'pluma', '🐾':'huellas', '🦮':'perro-guia' };
 const ART_V = 2;
 function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
 function setPic(el, e){ el.innerHTML = picHTML(e); }
