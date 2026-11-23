@@ -119,8 +119,10 @@ const ART = {
   '🐝':'abeja', '🦋':'mariposa', '🐜':'hormiga', '🕷️':'aranya', '🐞':'mariquita', '🐛':'oruga', '🪲':'escarabajo', '🦗':'saltamontes', '🪰':'mosca', '🦟':'mosquito', '🪱':'gusano', '🐌':'caracol', '🦂':'escorpion', '🪳':'cucaracha', '🦠':'microbio', '🕸️':'telaranya',
   // Los pájaros
   '🐦':'pajaro', '🐧':'pinguino', '🦜':'loro', '🦩':'flamenco', '🦚':'pavo-real', '🦢':'cisne', '🦅':'aguila', '🕊️':'paloma', '🦤':'dodo', '🪿':'ganso', '🐦‍⬛':'cuervo', '🐣':'pollito-en-el-huevo',
+  // La comida
+  '🍎':'manzana', '🍌':'platano', '🥛':'leche', '🍞':'pan', '🧀':'queso', '🍇':'uvas', '🍪':'galleta', '🥚':'huevo', '🍓':'fresa', '🍦':'helado', '🍊':'naranja', '🥕':'zanahoria', '🍉':'sandia', '🍍':'pinya', '🍋':'limon', '🍐':'pera', '🍒':'cerezas', '🍑':'durazno', '🥥':'coco', '🥑':'aguacate', '🍅':'tomate', '🥦':'brocoli', '🌽':'maiz', '🥔':'papa', '🥒':'pepino', '🎂':'pastel', '🍕':'pizza', '🍔':'hamburguesa', '🌮':'taco', '🥪':'sandwich', '🍲':'sopa', '🍚':'arroz', '🍿':'palomitas', '🍟':'papas-fritas', '🍩':'dona', '🍫':'chocolate', '🍬':'dulce', '🍯':'miel', '🧃':'jugo', '🥞':'panqueques', '🥭':'mango', '🥝':'kiwi', '🍏':'manzana-verde', '🍈':'melon', '🫐':'arandanos', '🫒':'aceituna', '🌶️':'chile', '🫑':'pimiento', '🧄':'ajo', '🧅':'cebolla', '🍠':'camote', '🥬':'lechuga', '🥜':'cacahuate', '🌰':'castanya', '🫘':'frijoles', '🥐':'cruasan', '🥖':'pan-frances', '🥨':'pretzel', '🧇':'wafle', '🥓':'tocino', '🥩':'carne', '🍗':'pollo', '🌭':'hot-dog', '🌯':'burrito', '🫔':'tamal', '🥗':'ensalada', '🧂':'sal', '🧈':'mantequilla', '🍳':'huevo-frito', '🍝':'espagueti', '🍜':'fideos', '🍣':'sushi', '🥟':'empanada', '🧁':'panquecito', '🥧':'pay', '🍮':'flan', '🍭':'paleta', '🍧':'raspado', '🍵':'te', '🥤':'refresco',
   // Mi cuerpo y la gente
-  '👣':'huellas',
+  '👣':'huellas', '👨':'papa',
 };
 const ART_V = 2;
 function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
