@@ -92,6 +92,13 @@ const saveJ = () => store.set('journey', J);
 const modeInfo = L => L.mix ? (L.final ? {...MIXINFO, e:'🏆', es:'¡Gran final!', en:'The final challenge: every game, every word', k:'c|¡Gran final!'} : MIXINFO) : MODES_ALL.find(m=>m.id===L.mode);
 const starStr = (n, max=3) => [0,1,2].slice(0,max).map(k=>`<span class="${k<n?'':'star-off'}">⭐</span>`).join('');
 const NODE_X=[22,50,78,64,36,50];
+// each level on the map shows a sticker from its world: the boss gets the world's own picture,
+// the others get words spread through the list (words with drawn art first)
+function levelPic(W, k, n){
+  if(k===n-1) return W.c.icon;
+  const ws=W.c.words.filter(w=>w[2]!==W.c.icon), art=ws.filter(w=>ART[w[2]]), pool=art.length>=n-1?art:ws;
+  return pool[Math.floor(k*pool.length/(n-1))][2];
+}
 function renderMap(prevLevel){
   const wrap=$('mapwrap'); wrap.innerHTML='';
   let total=0; Object.values(J.stars).forEach(v=>total+=v);
@@ -102,7 +109,7 @@ function renderMap(prevLevel){
     const lv=LEVELS.filter(l=>l.world===W.wi);
     const got=lv.reduce((t,l)=>t+(J.stars[l.i]||0),0);
     const box=document.createElement('div'); box.className='world'+(lv[0].i>J.open?' locked':''); box.style.background=W.c.color;
-    box.innerHTML=`<div class="wtitle"><span class="we">${W.c.icon}</span>${W.c.es}<small>${got}/${lv.length*3} ⭐</small></div>`;
+    box.innerHTML=`<div class="wtitle"><span class="we">${picHTML(W.c.icon)}</span>${W.c.es}<small>${got}/${lv.length*3} ⭐</small></div>`;
     const path=document.createElement('div'); path.className='wpath';
     const H=lv.length*100+30; path.style.height=H+'px';
     const pts=lv.map((l,k)=>[lv.length===1?50:NODE_X[k], 50+k*100]);
@@ -116,7 +123,10 @@ function renderMap(prevLevel){
       const b=document.createElement('button');
       b.className='node'+(locked?' n-lock':cur?' n-cur':' n-done')+(l.boss?' boss':'');
       b.style.left=pts[k][0]+'%'; b.style.top=pts[k][1]+'px';
-      b.innerHTML = locked ? '🔒' : `${l.boss ? (l.final?'🏆':'👑') : l.n}${l.boss?'':`<span class="badge">${info.e}</span>`}${st?`<span class="nstars">${starStr(st)}</span>`:''}`;
+      const pic = levelPic(W, k, lv.length);
+      b.innerHTML = `<span class="npic">${picHTML(pic)}</span>`
+        + (locked ? '<span class="nlock">🔒</span>' : l.boss ? `<span class="badge">${l.final?'🏆':'👑'}</span><span class="nnum">${l.n===1&&l.final?'★':'6'}</span>` : `<span class="badge">${info.e}</span><span class="nnum">${l.n}</span>`)
+        + (st?`<span class="nstars">${starStr(st)}</span>`:'');
       b.onclick=()=>{ if(locked){ b.classList.remove('wig'); void b.offsetWidth; b.classList.add('wig'); talk(['c|¿Qué será?']); return; } openLevelCard(l); };
       path.appendChild(b);
       if(cur){ curEl=b; curPos={path, x:pts[k][0], y:pts[k][1]}; }

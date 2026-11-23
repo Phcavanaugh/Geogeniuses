@@ -209,3 +209,16 @@ select{border:2px solid var(--ink)}
 .toast .wart{width:34px;height:34px}
 /* the memory board shares the name "big" with big buttons; keep it a plain grid */
 .mgrid.big{border:0;box-shadow:none;background:none;height:auto;padding:0;border-radius:0;place-items:stretch;min-width:0;font-size:inherit}
+
+/* map levels: a sticker on each stop, with its number on a little tag */
+.node .npic{font-size:40px;line-height:1;display:grid;place-items:center}
+.node.boss .npic{font-size:54px}
+.node .nnum{position:absolute;left:-8px;bottom:-6px;min-width:26px;height:26px;padding:0 5px;border-radius:9px;background:var(--card);border:2px solid var(--ink);box-shadow:0 2px 0 var(--ink);font-size:15px;line-height:22px;color:var(--ink);text-shadow:none;rotate:-6deg}
+.node.n-cur .nnum{background:var(--leaf);color:#fff}
+.node.n-done .nnum{background:var(--sun)}
+.node .nstars{margin-top:8px}
+.node.n-lock .npic{filter:brightness(0);opacity:.18}
+.node.n-lock .nlock{position:absolute;right:-6px;bottom:-6px;font-size:16px;filter:grayscale(.3)}
+.node.n-done,.node.n-cur{background:var(--card)}
+.node.n-done{box-shadow:var(--lift),inset 0 0 0 4px var(--sun)}
+.node.n-cur .npic{animation:none}
