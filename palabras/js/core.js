@@ -111,6 +111,8 @@ const ART = {
   '🐶':'perro', '🐱':'gato', '🐮':'vaca', '🐷':'cerdo', '🐴':'caballo', '🐑':'oveja', '🐐':'cabra', '🐔':'gallina', '🐓':'gallo', '🐤':'pollito', '🦆':'pato', '🦃':'pavo', '🐰':'conejo', '🐭':'raton', '🦙':'llama', '🐂':'toro', '🫏':'burro', '🐏':'carnero', '🐃':'bufalo', '🐀':'rata', '🐈‍⬛':'gato-negro', '🐩':'caniche', '🐹':'hamster', '🧑‍🌾':'granjero', '🌾':'trigo', '🪺':'nido', '🪶':'pluma', '🐾':'huellas', '🦮':'perro-guia',
   // En el zoológico
   '🦁':'leon', '🐯':'tigre', '🐘':'elefante', '🦒':'jirafa', '🦓':'cebra', '🐵':'mono', '🦍':'gorila', '🦛':'hipopotamo', '🦏':'rinoceronte', '🐊':'cocodrilo', '🐫':'camello', '🦘':'canguro', '🐨':'koala', '🐼':'panda', '🐍':'serpiente', '🦥':'perezoso', '🐆':'leopardo', '🦧':'orangutan', '🐪':'dromedario', '🦖':'tiranosaurio', '🐉':'dragon', '🦄':'unicornio',
+  // En el mar
+  '🐟':'pez', '🐙':'pulpo', '🐳':'ballena', '🐬':'delfin', '🦈':'tiburon', '🐢':'tortuga', '🦀':'cangrejo', '🦭':'foca', '🦑':'calamar', '🦞':'langosta', '🦐':'camaron', '🐡':'pez-globo', '🦦':'nutria', '🐠':'pez-tropical', '🪼':'medusa', '🐚':'concha', '🪸':'coral', '🐻‍❄️':'oso-polar', '🐋':'ballena-azul',
   // Mi cuerpo y la gente
   '👣':'huellas',
 };
