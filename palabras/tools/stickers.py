@@ -39,14 +39,28 @@ def add_rim(rgba, white=9, line=4):
 def main():
     args = [a for a in sys.argv[1:] if not a.startswith('--')]
     rim = '--rim' in sys.argv
+    join = next((int(a.split('=')[1]) for a in sys.argv if a.startswith('--join=')), 0)
     sheet, names = args[0], args[1:]
-    a = np.asarray(Image.open(sheet).convert('RGBA'))
+    a = np.asarray(Image.open(sheet).convert('RGBA')).copy()
+    if a[..., 3].min() == 255:      # no transparency: cut away the flat paper background
+        rgb = a[..., :3].astype(int)
+        edge = np.concatenate([rgb[:4].reshape(-1, 3), rgb[-4:].reshape(-1, 3), rgb[:, :4].reshape(-1, 3), rgb[:, -4:].reshape(-1, 3)])
+        bgc = np.median(edge, axis=0)
+        near = np.abs(rgb - bgc).sum(axis=2) < 42
+        lab0, _ = ndimage.label(near)
+        touch = np.unique(np.concatenate([lab0[0], lab0[-1], lab0[:, 0], lab0[:, -1]]))
+        bg = np.isin(lab0, touch[touch > 0])
+        fgm = ndimage.binary_opening(~bg, disk(2))
+        a[..., 3] = (ndimage.gaussian_filter(fgm.astype(float), .8) * 255).astype(np.uint8)
+        rim = True
     alpha = a[..., 3]
     # find one seed per sticker; stickers whose borders touch are pulled apart by shrinking first
     for t, shrink in ((40, 0), (128, 0), (200, 4), (250, 4), (250, 10), (250, 16), (250, 24)):
         m = alpha > t
         if shrink:
             m = ndimage.binary_erosion(m, disk(shrink))
+        if join:                     # parts of one sticker drawn apart (two footprints): glue them
+            m = ndimage.binary_dilation(m, np.ones((1, 2 * join + 1), bool))
         seeds, n = ndimage.label(m)
         sizes = ndimage.sum(m, seeds, range(1, n + 1))
         keep = [i + 1 for i, s in enumerate(sizes) if s > 0.15 * sizes.max()]

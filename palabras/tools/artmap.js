@@ -7,12 +7,14 @@ const src = fs.readFileSync(path.join(root, 'js/words.js'), 'utf8').replace(/^co
 eval(src);
 const slug = s => s.toLowerCase().replace(/ñ/g, 'ny').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/ de animal$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const have = new Set(fs.readdirSync(path.join(root, 'art/words')).filter(f => f.endsWith('.png')).map(f => f.slice(0, -4)));
+// words that share a Spanish name with another group's word get their own file
+const OVERRIDE = { '👣': 'huellas-de-pies' };
 const lines = [], used = new Set(), seen = new Set();
 for (const [key, c] of Object.entries(VOCAB)) {
   if (key === 'todas' || key === 'todos') continue;
   const pairs = [];
   for (const w of c.words) {
-    const f = slug(w[1]);
+    const f = OVERRIDE[w[2]] || slug(w[1]);
     if (have.has(f) && !seen.has(w[2])) { pairs.push(`'${w[2]}':'${f}'`); seen.add(w[2]); used.add(f); }
   }
   if (pairs.length) lines.push(`  // ${c.es}\n  ${pairs.join(', ')},`);
