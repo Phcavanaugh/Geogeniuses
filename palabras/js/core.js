@@ -115,6 +115,10 @@ const ART = {
   '🐟':'pez', '🐙':'pulpo', '🐳':'ballena', '🐬':'delfin', '🦈':'tiburon', '🐢':'tortuga', '🦀':'cangrejo', '🦭':'foca', '🦑':'calamar', '🦞':'langosta', '🦐':'camaron', '🐡':'pez-globo', '🦦':'nutria', '🐠':'pez-tropical', '🪼':'medusa', '🐚':'concha', '🪸':'coral', '🐻‍❄️':'oso-polar', '🐋':'ballena-azul',
   // En el bosque
   '🐻':'oso', '🦊':'zorro', '🐺':'lobo', '🐿️':'ardilla', '🦔':'erizo', '🦉':'buho', '🦇':'murcielago', '🦌':'venado', '🦫':'castor', '🦝':'mapache', '🐗':'jabali', '🦡':'tejon', '🐸':'rana', '🦬':'bisonte', '🦎':'lagartija', '🦣':'mamut', '🦨':'zorrillo', '🫎':'alce',
+  // Los bichos
+  '🐝':'abeja', '🦋':'mariposa', '🐜':'hormiga', '🕷️':'aranya', '🐞':'mariquita', '🐛':'oruga', '🪲':'escarabajo', '🦗':'saltamontes', '🪰':'mosca', '🦟':'mosquito', '🪱':'gusano', '🐌':'caracol', '🦂':'escorpion', '🪳':'cucaracha', '🦠':'microbio', '🕸️':'telaranya',
+  // Los pájaros
+  '🐦':'pajaro', '🐧':'pinguino', '🦜':'loro', '🦩':'flamenco', '🦚':'pavo-real', '🦢':'cisne', '🦅':'aguila', '🕊️':'paloma', '🦤':'dodo', '🪿':'ganso', '🐦‍⬛':'cuervo', '🐣':'pollito-en-el-huevo',
   // Mi cuerpo y la gente
   '👣':'huellas',
 };
