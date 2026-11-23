@@ -41,10 +41,21 @@ def main():
     rim = '--rim' in sys.argv
     sheet, names = args[0], args[1:]
     a = np.asarray(Image.open(sheet).convert('RGBA'))
-    fg = ndimage.binary_dilation(a[..., 3] > 40, disk(3))
-    lab, n = ndimage.label(fg)
-    sizes = ndimage.sum(fg, lab, range(1, n + 1))
-    keep = [i + 1 for i, s in enumerate(sizes) if s > 0.15 * sizes.max()]
+    alpha = a[..., 3]
+    # find one seed per sticker; stickers whose borders touch are pulled apart by shrinking first
+    for t, shrink in ((40, 0), (128, 0), (200, 4), (250, 4), (250, 10), (250, 16), (250, 24)):
+        m = alpha > t
+        if shrink:
+            m = ndimage.binary_erosion(m, disk(shrink))
+        seeds, n = ndimage.label(m)
+        sizes = ndimage.sum(m, seeds, range(1, n + 1))
+        keep = [i + 1 for i, s in enumerate(sizes) if s > 0.15 * sizes.max()]
+        if len(keep) >= len(names):
+            break
+    seeds = np.where(np.isin(seeds, keep), seeds, 0)
+    # every visible pixel belongs to the nearest seed
+    _, (iy, ix) = ndimage.distance_transform_edt(seeds == 0, return_indices=True)
+    lab = np.where(alpha > 24, seeds[iy, ix], 0)
     objs = ndimage.find_objects(lab)
     cy = {k: (objs[k - 1][0].start + objs[k - 1][0].stop) / 2 for k in keep}
     rows, row0 = [], None          # group into rows: a new row starts when the middle drops a lot
