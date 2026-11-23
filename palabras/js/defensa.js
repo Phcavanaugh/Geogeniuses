@@ -26,7 +26,7 @@ window.TD = (() => {
     onSave(data){ st.game = data; save(); badge(); },
     onRound(r){ const prize = r % 10 === 0 ? 3 : 1; setStars(S.stars + prize); return { prize }; },   // a star a round (3 for a bear round)
     onEnd(won, r, points){
-      const k = 'm' + st.map, record = points > (st.best[k] || 0); if(record) st.best[k] = points;
+      const k = 'p' + st.map, record = points > (st.best[k] || 0); if(record) st.best[k] = points;   // 'p': scores counted one per pop (older 'm' records used bigger points)
       let prize = 0;
       if(won){ prize = 10; setStars(S.stars + prize); st.islands++; st.map = (st.map + 1) % 3; st.game = null; }
       save(); badge();

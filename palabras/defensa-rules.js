@@ -12,7 +12,7 @@
 // Each critter knocked out pays a coin; each round you finish pays 100 + the round. The rounds are Bloons TD 6's
 // standard rounds, and Easy / Medium / Hard are Bloons' (4–5 plays Easy, 7 Medium, 10 Hard).
 
-import { BT } from './defensa-bt.js?v=59';
+import { BT } from './defensa-bt.js?v=60';
 export const U = 13.33;                                   // Bloons units per board unit
 export const bu = v => v / U;                             // Bloons units → board units
 export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 BU, landscape; the island reaches MARGIN past it
@@ -121,7 +121,7 @@ export const REGROW_S = 3;
 // hits to knock out a critter and everything inside it (Bloons' RBE); fortified bosses carry fortified bosses / crocodiles
 export const hpOf = (k, fort) => fort && FOES[k].fort ? FOES[k].fort : FOES[k].hp;
 export const rbeOf = (k, fort = false) => hpOf(k, fort) + FOES[k].kids.reduce((s, c) => s + rbeOf(c, fort && !!FOES[k].boss), 0);
-for(const [k, f] of Object.entries(FOES)) f.pts = Math.round(10 * Math.sqrt(rbeOf(k)));      // points for knocking one out
+for(const f of Object.values(FOES)) f.pts = 1;      // one point per pop (like Bloons)
 
 // Bloons TD 6 standard rounds 1–80 (default round set), each balloon swapped for its critter:
 // [critter, how many, first at (s), last at (s), hidden?, regrow?, fortified?]
