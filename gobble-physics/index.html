@@ -463,9 +463,12 @@ function buildGraph(S){
   const near=(x,y)=>grid.get(Math.floor(x/CS)*4096+Math.floor(y/CS))||[];
   // dangling ends snap onto a road that's just short of them (T-junctions)
   for(const s of S)for(const end of[0,1]){const px=end?s.x2:s.x1,py=end?s.y2:s.y1;let joined=false,best=14,bx=0,by=0;
+    let ed=CITYGEO?28:0,ex=0,ey=0;
     for(const i of near(px,py)){const o=S[i];if(o===s)continue;
       if(Math.hypot(o.x1-px,o.y1-py)<2||Math.hypot(o.x2-px,o.y2-py)<2){joined=true;break;}
+      for(const[qx,qy]of[[o.x1,o.y1],[o.x2,o.y2]]){const d=Math.hypot(qx-px,qy-py);if(d<ed){ed=d;ex=qx;ey=qy;}}
       const q=projSeg(px,py,o.x1,o.y1,o.x2,o.y2),sc=q.d-Math.max(0,(o.w||0)/2+SW+20-14);if(sc<best){best=sc;bx=q.x;by=q.y;}}
+    if(!joined&&ed>0&&ed<28){if(end){s.x2=ex;s.y2=ey;}else{s.x1=ex;s.y1=ey;}continue;}
     if(!joined&&best<14){if(end){s.x2=bx;s.y2=by;}else{s.x1=bx;s.y1=by;}}}
   const seen=new Set();
   for(const l of grid.values())for(let a=0;a<l.length;a++)for(let b=a+1;b<l.length;b++){const i=l[a],j=l[b],k=i<j?i*65536+j:j*65536+i;
@@ -491,11 +494,13 @@ function buildGraph(S){
       const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,o=E.w/2+18;
       if(E.len>12&&isLand(mx-E.uy*o,my+E.ux*o)!==isLand(mx+E.uy*o,my-E.ux*o)){cut=true;return false;}
       return true;});link();if(!cut)break;}
-  // trim little stubs left where roads were cut short
-  for(let pass=0;pass<8;pass++){let cut=false;
-    edges=edges.filter(E=>{const da=nodes[E.a].e.length,db=nodes[E.b].e.length;
-      if((E.len<45&&((da===1&&!gate(E.a)&&db>=3)||(db===1&&!gate(E.b)&&da>=3)))||(CITYGEO&&E.len<130&&((da===1&&!gate(E.a))||(db===1&&!gate(E.b))))){cut=true;return false;}return true;});
-    link();if(!cut)break;}
+  // trim short dead-end spurs: measure the whole dangling stretch (through bends), not one little edge at a time
+  for(let pass=0;pass<4;pass++){const kill=new Set();
+    nodes.forEach((N,n)=>{if(N.e.length!==1||gate(n))return;let cur=n,ei=N.e[0],L=0;const path=[];
+      while(true){const E=edges[ei];path.push(ei);L+=E.len;const nx=E.a===cur?E.b:E.a,M=nodes[nx];if(M.e.length!==2){if(M.e.length===1&&!gate(nx))L=1e9;break;}
+        cur=nx;ei=M.e[0]===ei?M.e[1]:M.e[0];if(path.length>400)break;}
+      const lim=CITYGEO?130:45;if(L<lim&&(CITYGEO||nodes[edges[path[path.length-1]].a].e.length>=3||nodes[edges[path[path.length-1]].b].e.length>=3))for(const i of path)kill.add(i);});
+    if(!kill.size)break;edges=edges.filter((E,i)=>!kill.has(i));link();}
   // drop tiny islands of road
   const comp=new Int32Array(nodes.length).fill(-1),clen=[];let c=0;
   for(let s=0;s<nodes.length;s++){if(comp[s]>=0||!nodes[s].e.length)continue;let L=0;const st=[s];comp[s]=c;
@@ -695,6 +700,12 @@ function respawnSpot(){if(!SPOTS.length)return false;for(let i=0;i<10;i++){const
     if(holes.some(h=>h.alive&&Math.hypot(h.x-S.x,h.y-S.y)<h.r+260))continue;if(!clearSpot(S.x,S.y,T[S.k].w,T[S.k].d))continue;
     S.o=spawnObj(S.k,S.x,S.y,Object.assign({yaw:S.yaw,v:S.v},WSPD[S.k]?{wb:[S.x-14,S.y-14,S.x+14,S.y+14],moveT:0}:{}));if(S.o)spawnedCount++;return true;}return false;}
 
+function lmFits(G,x,y,w,d,yaw){const R=Math.hypot(w,d)/2,c=Math.cos(yaw),sn=Math.sin(yaw);
+  for(const a of[-.5,0,.5])for(const b of[-.5,0,.5])if(maskAt(x+a*w*c+b*d*sn,y-a*w*sn+b*d*c)!==1)return false;
+  for(const sg of G.segs){const pad=R+sg.w/2+SW+12;if(Math.min(sg.x1,sg.x2)>x+pad||Math.max(sg.x1,sg.x2)<x-pad||Math.min(sg.y1,sg.y2)>y+pad||Math.max(sg.y1,sg.y2)<y-pad)continue;
+    if(projSeg(x,y,sg.x1,sg.y1,sg.x2,sg.y2).d>pad)continue;const L=Math.hypot(sg.x2-sg.x1,sg.y2-sg.y1),n=Math.max(1,Math.ceil(L/8)),sh={rr:1,x,y,w,d,yaw,m:sg.w/2+SW+4};
+    for(let i=0;i<=n;i++){const t=i/n;if(inShape(sg.x1+(sg.x2-sg.x1)*t,sg.y1+(sg.y2-sg.y1)*t,sh))return false;}}
+  return true;}
 function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[];blocks=[];const PF=G.prof={plan:performance.now()-T0};
   for(const k in G.styles){const st=G.styles[k];if(!st.fill)st.fill=[['tree',1]];
     if(st.front&&!st._stk){st._stk=1;const add=st.zone==='downtown'?[['S_glass',1.4],['S_office',1.4],['S_step',.6],['S_slab',.6]]:st.zone==='shops'?[['S_apt',1.2],['S_slab',.7],['S_office',.5]]:st.zone==='park'?[]:[['S_apt',.5]];
@@ -703,18 +714,22 @@ function genCity(){const T0=performance.now(),C=city,G=C.plan();CITYGEO=G;LOTS=[
   G.styles.park=G.styles.park||PARKST;
   buildMask(G);PF.mask=performance.now()-T0;
   {const BIG=['twin','condo','hospital','arena','mallblock','garage'],want={core:['twin','condo','hospital','arena'],downtown:['twin','condo','hospital','arena']},pts=[];for(const L of G.landmarks)pts.push([L[1],L[2]]);let n=0;
-    for(let tries=0;tries<1600&&n<28;tries++){const x=rnd(180,W-180),y=rnd(180,W-180);if(maskAt(x,y)!==1)continue;const dk=G.district(x,y),st=G.styles[dk];if(!st)continue;
+    for(let tries=0;tries<4000&&n<28;tries++){const x=rnd(180,W-180),y=rnd(180,W-180);if(maskAt(x,y)!==1)continue;const dk=G.district(x,y),st=G.styles[dk];if(!st)continue;
       const z=st.zone,wgt=z==='downtown'?1:z==='shops'?.75:.45;if(Math.random()>wgt)continue;if(pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<300))continue;
       const k=Math.random()<(z==='downtown'?.66:z==='shops'?.55:.2)?'stkcluster':z==='downtown'?pick(want.core):z==='shops'?pick(['mallblock','hospital','garage','condo','arena']):pick(['mallblock','garage','condo']);
-      G.landmarks.push([k,x,y,G.yawAt?G.yawAt(x,y):0,{big:1}]);pts.push([x,y]);n++;}}
-  G.lm=[];for(const L of G.landmarks){const r=placeLM(G,L);if(!r)continue;G.lm.push(r);G.noroad.push({rr:1,x:r.x,y:r.y,w:T[r.k].w,d:T[r.k].d,yaw:r.yaw,m:r.water?14:r.big?64:44});}
+      // big pieces must sit inside a city block: never on top of a street (that used to chop the grid to bits)
+      const yaw=G.yawAt?G.yawAt(x,y):0;let sz=0,ok=false;
+      for(const S of(k==='stkcluster'?[250,210,170,136]:[0])){const w=S||T[k].w,d=S||T[k].d;if(lmFits(G,x,y,w,d,yaw)){sz=S;ok=true;break;}}
+      if(!ok)continue;
+      G.landmarks.push([k,x,y,yaw,{big:1,fit:1,sz}]);pts.push([x,y]);n++;}}
+  G.lm=[];for(const L of G.landmarks){const r=placeLM(G,L);if(!r)continue;const op=L[4]||{};if(op.sz)r.sz=op.sz;G.lm.push(r);G.noroad.push({rr:1,x:r.x,y:r.y,w:r.sz||T[r.k].w,d:r.sz||T[r.k].d,yaw:r.yaw,m:r.water?14:op.fit?4:r.big?64:44});}
   setGraph(buildGraph(dedupeSegs(clipSegs(G))));PF.graph=performance.now()-T0;
   OCC=new Uint8Array(ON*ON);
   for(const L of G.lm){if(L.k==='stkcluster'){const c=Math.cos(L.yaw),s=Math.sin(L.yaw),v=ri(0,5);
       const dk=G.styles[G.district(L.x,L.y)],z=dk&&dk.zone,st=z==='downtown'?wpick([['S_office',3],['S_glass',4],['S_step',2],['S_slab',1.5],['S_apt',.8]]):z==='shops'?wpick([['S_apt',2],['S_slab',2],['S_office',2],['S_glass',1.5],['S_step',1.2]]):wpick([['S_apt',3],['S_slab',1]]),S=T[st];
-      const gp=S.w>70?10:14,nx=Math.max(1,Math.floor(252/(S.w+gp))),ny=Math.max(1,Math.floor(252/(S.d+gp)));
+      const gp=S.w>70?10:14,ZZ=(L.sz||250)+2,nx=Math.max(1,Math.floor(ZZ/(S.w+gp))),ny=Math.max(1,Math.floor(ZZ/(S.d+gp)));
       for(let a=0;a<nx;a++)for(let b=0;b<ny;b++){const u=(a-(nx-1)/2)*(S.w+gp),w=(b-(ny-1)/2)*(S.d+gp),x=L.x+u*c+w*s,y=L.y-u*s+w*c;putStack(st,x,y,L.yaw);}
-      occMark(L.x,L.y,T[L.k].w+16,T[L.k].d+16,L.yaw);continue;}
+      occMark(L.x,L.y,(L.sz||T[L.k].w)+16,(L.sz||T[L.k].d)+16,L.yaw);continue;}
     const lo=aabb(mk(L.k,L.x,L.y,{yaw:L.yaw}));if(L.big)LOTS.push({k:L.k,x:L.x,y:L.y,yaw:L.yaw,o:lo});occMark(L.x,L.y,T[L.k].w+16,T[L.k].d+16,L.yaw);}
   // buildings lined up along every street, facing it
   const CH=buildChains();
