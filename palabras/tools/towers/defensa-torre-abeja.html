@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>¡Defensa! — taller de torres: la abeja</title>
+<style>
+  html,body{margin:0;height:100%;background:#7EC8F0;font-family:system-ui,sans-serif;overflow:hidden}
+  canvas{display:block;touch-action:none}
+  .ui{position:fixed;left:10px;top:10px;display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.85);padding:8px 10px;border-radius:12px;font-size:14px}
+  .ui .row{display:flex;gap:4px;align-items:center}
+  .ui button{min-width:34px;height:32px;border-radius:8px;border:2px solid #333;background:#fff;font-weight:700}
+  .ui button.on{background:#FFD23F}
+  .ui small{color:#555}
+</style>
+<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }</script>
+</head>
+<body>
+<div class="ui">
+  <b>La abeja</b>
+  <div class="row">Camino A <span id="pa"></span></div>
+  <div class="row">Camino B <span id="pb"></span></div>
+  <div class="row"><button id="slow">🐢 Lento</button><button id="pause">⏸</button></div>
+  <small>Arrastra para girar · rueda para acercar</small>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+/* =====================================================================================
+   HOW THIS FILE WORKS (for whoever edits it)
+
+   This is a practice scene for ONE tower from the kids' game "¡Defensa!" (three.js r170).
+   Only edit the code between the two "EDIT BELOW / EDIT ABOVE" lines. Everything else is
+   the same as the real game, so what you build here can be copied straight into it.
+
+   You write two functions:
+
+   1) makeTower(a, b) → { g, parts }
+      Builds the tower animal. a = upgrade step on path A (0-3), b = upgrade step on path B (0-3).
+      - g is a THREE.Group. The animal FACES +Z. g INCLUDES THE BASE the animal sits on, standing on the
+        ground at y = 0 (there is no stone tower any more). The base should suit the creature and be fun
+        (for the bee: a beehive, honeycomb, flower...). Base about 0.85 wide; whole thing about 1.2 tall.
+      - The base usually does NOT turn when the tower aims: put it in parts.base and the game will keep
+        it still while the animal above turns. Put everything that should turn to aim in parts.turn.
+      - Use the helpers below (m, toon, basic, sph, cyl, cone, box, tube, eyes, cheeks): chunky, rounded,
+        cartoon look with dark outlines (the last argument of m(..., true) adds an outline).
+      - Each upgrade step must look clearly different; step 3 on each path should look special.
+      - parts is an object of anything you want to move later (head, arms, tail, ears, the ball...).
+        Optionally parts.hand = an Object3D where the thrown ball should start.
+
+   2) animateTower(parts, s)
+      Called every frame. Move/rotate/scale ONLY things inside g. Never set parts.turn.rotation.y or g's
+      rotation: the game turns parts.turn to aim (and keeps parts.base still).
+      s = { now: seconds, dt: seconds since last frame,
+            wind: 0→1 during the wind-up just before a throw (0 the rest of the time),
+            strike: 1 right at the throw, fading to 0 over ~0.3 s,
+            busy: true while there are critters to shoot }
+      Make it lively like Bloons TD 6 monkeys: a clear wind-up, a snappy throw, follow-through,
+      and small idle movement (breathing, blinking, tail swish) when nothing is happening.
+
+   Rules: plain three.js only, no new files, no textures or images, keep it fast (it runs on phones,
+   up to ~30 towers on screen). Don't change anything outside the EDIT lines.
+   ===================================================================================== */
+
+// ---------- helpers (same as the game) ----------
+const GRAD = (() => { const t = new THREE.DataTexture(new Uint8Array([105, 185, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const MATS = {};
+const toon = (c, o = {}) => { const k = c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshToonMaterial({ color: c, gradientMap: GRAD, ...o })); };
+const basic = (c, o = {}) => { const k = 'b' + c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshBasicMaterial({ color: c, ...o })); };
+const INK = new THREE.MeshBasicMaterial({ color: '#2B2B3A', side: THREE.BackSide });
+const GEO = {};
+const sph = (r, w = 20, h = 14) => GEO['s' + r + w] || (GEO['s' + r + w] = new THREE.SphereGeometry(r, w, h));
+const cyl = (a, b, h, n = 12) => GEO[['c', a, b, h, n].join()] || (GEO[['c', a, b, h, n].join()] = new THREE.CylinderGeometry(a, b, h, n));
+const cone = (r, h, n = 12) => GEO[['k', r, h, n].join()] || (GEO[['k', r, h, n].join()] = new THREE.ConeGeometry(r, h, n));
+const box = (x, y, z) => GEO[['b', x, y, z].join()] || (GEO[['b', x, y, z].join()] = new THREE.BoxGeometry(x, y, z));
+// put a mesh in a group: m(parent, geometry, material, [x,y,z], [sx,sy,sz] or s, [rx,ry,rz], outline)
+function m(parent, g, mat, p = [0, 0, 0], s = null, r = null, outline = false){
+  const o = new THREE.Mesh(g, mat); o.position.set(...p); if(s) o.scale.set(...(Array.isArray(s) ? s : [s, s, s])); if(r) o.rotation.set(...r);
+  o.castShadow = true; o.receiveShadow = true;
+  if(outline){ const ol = new THREE.Mesh(g, INK); ol.scale.setScalar(1.08); ol.castShadow = false; o.add(ol); }
+  parent.add(o); return o;
+}
+function tube(parent, pts, r, mat, outline = false){
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p))), 16, r, 8, false);
+  return m(parent, g, mat, [0, 0, 0], null, null, outline);
+}
+function eyes(parent, x, y, z, r, tilt = 0){
+  for(const sx of [-1, 1]){ const e = m(parent, sph(r, 14, 10), toon('#22222E'), [x * sx, y, z]); m(e, sph(r * .38, 8, 6), basic('#FFFFFF'), [r * .3, r * .35, r * .72]); e.rotation.y = sx * tilt; }
+}
+function cheeks(parent, x, y, z, r = .045){ for(const sx of [-1, 1]) m(parent, sph(r, 10, 8), basic('#FF8FB1', { transparent: true, opacity: .6 }), [x * sx, y, z], [1, .6, .4]); }
+const spiky = (g, r, col, pos) => { const b = m(g, sph(r, 12, 10), toon(col), pos, null, null, true);
+  for(let i = 0; i < 8; i++){ const v = new THREE.Vector3(Math.sin(i * 2.4) * Math.cos(i), Math.cos(i * 1.3), Math.cos(i * 2.4) * Math.sin(i + 1)).normalize();
+    const c = m(b, cone(r * .28, r * .7, 5), toon('#E8E8F0'), [v.x * r, v.y * r, v.z * r]); c.lookAt(v.x * 9, v.y * 9, v.z * 9); c.rotateX(Math.PI / 2); } return b; };
+const goggles = (g, y, z, w, col, lens) => { for(const sx of [-1, 1]){ m(g, new THREE.TorusGeometry(w * .45, w * .12, 8, 16), toon(col), [w * .55 * sx, y, z]);
+    m(g, new THREE.CircleGeometry(w * .42, 16), basic(lens, { transparent: true, opacity: .7 }), [w * .55 * sx, y, z + .005]); }
+  m(g, box(w * 2.4, w * .14, w * .1), toon(col), [0, y, z - .02]); };
+const band = (g, y, r, col, tilt = 0) => m(g, new THREE.TorusGeometry(r, .035, 8, 24), toon(col), [0, y, 0], [1, 1, 1], [Math.PI / 2 + tilt, 0, 0], true);
+
+// ======================================= EDIT BELOW =======================================
+// The bee is the game's twin of Bloons' Tack Shooter: every shot fires 8 stingers out in a ring, all directions at once.
+// Upgrade names (path A "Más aguijones"): 1 Más aguijones · 2 Muchos aguijones · 3 Lluvia de aguijones (fires 16, then 32 stingers)
+// Upgrade names (path B "Más rápida"):   1 Más rápida · 2 Muy rápida · 3 Aguijones de fuego (flaming stingers)
+// Below is today's bee: a simple hive of rings with the bee hovering on top. Make it much better.
+function makeTower(a, b){
+  const g = new THREE.Group(), parts = {};
+  const Y = toon('#FFD23F'), K = toon('#2B2B3A');
+  const base = new THREE.Group(); g.add(base); parts.base = base;                 // stays still
+  for(let i = 0; i < 3; i++) m(base, new THREE.TorusGeometry(.3 - i * .07, .1, 10, 20), toon(i % 2 ? '#F5B83D' : '#FFC94D'), [0, .09 + i * .15, 0], null, [Math.PI / 2, 0, 0]);
+  m(base, cyl(.07, .07, .02, 12), K, [0, .15, .3], null, [Math.PI / 2, 0, 0]);
+  const turn = new THREE.Group(); turn.position.y = .62; g.add(turn); parts.turn = turn;   // turns to aim
+  const fly = new THREE.Group(); turn.add(fly); parts.fly = fly;
+  const body = new THREE.Group(); fly.add(body);
+  m(body, new THREE.CapsuleGeometry(.16, .16, 8, 16), Y, [0, 0, -.03], null, [Math.PI / 2, 0, 0], true);
+  for(const z of [-.01, -.13]) m(body, new THREE.TorusGeometry(.158, .034, 8, 24), K, [0, 0, z]);
+  m(body, cone(.04, .12, 8), K, [0, 0, -.3], null, [-Math.PI / 2, 0, 0]);
+  const head = m(body, sph(.14), Y, [0, .04, .2], null, null, true);
+  eyes(head, .065, .02, .1, .04, .3); cheeks(head, .1, -.04, .08, .03);
+  for(const sx of [-1, 1]){ tube(head, [[.04 * sx, .1, 0], [.07 * sx, .2, .02], [.1 * sx, .24, .08]], .01, K); m(head, sph(.025, 8, 6), K, [.1 * sx, .24, .08]); }
+  parts.wings = [];
+  for(const sx of [-1, 1]){ const piv = new THREE.Group(); piv.position.set(.08 * sx, .14, -.02); body.add(piv); parts.wings.push({ piv, sx });
+    m(piv, sph(.15, 16, 10), toon('#DDF3FF', { transparent: true, opacity: .75 }), [.12 * sx, .05, 0], [1.2, .2, .7], [0, 0, .3 * sx]); }
+  // upgrades
+  const n = a >= 3 ? 10 : a * 2; for(let i = 0; i < n; i++){ const an = i / n * Math.PI * 2; m(base, cone(.035, .14, 5), toon('#3A3A48'), [Math.sin(an) * .3, a >= 3 ? .45 : .3, Math.cos(an) * .3], null, [Math.cos(an) * -.9, 0, Math.sin(an) * .9]); }
+  if(b >= 1) goggles(head, .05, .1, .07, '#FF8A3D', '#BFEFFF');
+  if(b >= 2) for(const z of [.05, -.07]) m(body, new THREE.TorusGeometry(.162, .02, 6, 20), toon('#FF4D4D'), [0, 0, z]);
+  if(b >= 3){ const f = m(body, cone(.07, .22, 10), toon('#FF8A3D', { emissive: '#FF5A00', emissiveIntensity: .7 }), [0, 0, -.34], null, [-Math.PI / 2, 0, 0]); m(f, cone(.04, .14, 8), basic('#FFE36A'), [0, -.03, 0]); }
+  return { g, parts };
+}
+
+function animateTower(parts, s){
+  parts.fly.position.y = Math.sin(s.now * 3) * .05 - s.wind * .05 + s.strike * .08;
+  for(const { piv, sx } of parts.wings) piv.rotation.z = Math.sin(s.now * 42 + sx) * .5 * sx;
+  parts.fly.scale.setScalar(1 + s.strike * .15);
+}
+// ======================================= EDIT ABOVE =======================================
+
+// ---------- the practice scene (same camera angle and lighting as the game) ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#7EC8F0');
+scene.add(new THREE.HemisphereLight('#FFFFFF', '#6A8A4A', 1.6));
+const sun = new THREE.DirectionalLight('#FFFFFF', 2.4); sun.position.set(3, 6, 4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); scene.add(sun);
+const grass = new THREE.Mesh(new THREE.CircleGeometry(4, 48), toon('#7CC85A')); grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; scene.add(grass);
+const trail = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.1, 64), toon('#B9875A')); trail.rotation.x = -Math.PI / 2; trail.position.y = .005; trail.receiveShadow = true; scene.add(trail);
+function pedestal(){ const g = new THREE.Group(), st = toon('#CFC8BC'), dk = toon('#B1A898');
+  m(g, cyl(.36, .43, .36, 8), st, [0, .18, 0]); m(g, cyl(.43, .4, .08, 8), dk, [0, .4, 0]);
+  for(let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2 + Math.PI / 8; m(g, box(.12, .1, .08), dk, [Math.sin(a) * .37, .49, Math.cos(a) * .37], null, [0, a, 0]); }
+  return g; }
+
+const critter = new THREE.Group(); m(critter, sph(.13), toon('#E0533D'), [0, .13, 0], null, null, true); eyes(critter, .05, .17, .1, .03); scene.add(critter);
+
+let A = 0, B = 0, tower = null;
+function build(){ if(tower) scene.remove(tower.g); tower = makeTower(A, B); scene.add(tower.g);
+  document.querySelectorAll('#pa button').forEach((b, i) => b.classList.toggle('on', i === A)); document.querySelectorAll('#pb button').forEach((b, i) => b.classList.toggle('on', i === B)); }
+for(const [id, set] of [['pa', v => A = v], ['pb', v => B = v]]) for(let i = 0; i <= 3; i++){ const b = document.createElement('button'); b.textContent = i; b.onclick = () => { set(i); build(); }; document.getElementById(id).appendChild(b); }
+build();
+
+const camera = new THREE.PerspectiveCamera(32, 1, .05, 60);
+let yaw = .3, el = 1.0, dist = 4.6;
+function placeCam(){ camera.position.set(Math.sin(yaw) * Math.cos(el) * dist, Math.sin(el) * dist + .3, Math.cos(yaw) * Math.cos(el) * dist); camera.lookAt(0, .5, 0); }
+function fit(){ renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', fit); fit(); placeCam();
+let drag = null;
+renderer.domElement.addEventListener('pointerdown', e => drag = [e.clientX, e.clientY]);
+addEventListener('pointerup', () => drag = null);
+addEventListener('pointermove', e => { if(!drag) return; yaw -= (e.clientX - drag[0]) * .008; el = Math.min(1.45, Math.max(.2, el + (e.clientY - drag[1]) * .006)); drag = [e.clientX, e.clientY]; placeCam(); });
+addEventListener('wheel', e => { dist = Math.min(9, Math.max(2, dist * Math.exp(e.deltaY * .001))); placeCam(); });
+
+let slow = false, paused = false;
+document.getElementById('slow').onclick = e => { slow = !slow; e.target.classList.toggle('on', slow); };
+document.getElementById('pause').onclick = e => { paused = !paused; e.target.classList.toggle('on', paused); };
+
+const RATE = 1.1, WIND = .13;          // the bee fires a ring of stingers about once a second; short wind-up
+let cd = RATE, since = 9, aim = 0, now = 0, last = performance.now();
+const shots = [];
+function frame(ts){
+  let dt = Math.min(.05, (ts - last) / 1000); last = ts; if(paused) dt = 0; if(slow) dt *= .25; now += dt;
+  const ca = now * .5; critter.position.set(Math.sin(ca) * 1.85, 0, Math.cos(ca) * 1.85); critter.rotation.y = ca + Math.PI / 2;
+  const want = Math.atan2(critter.position.x, critter.position.z); let d = want - aim; d = Math.atan2(Math.sin(d), Math.cos(d)); aim += d * Math.min(1, dt * 12);
+  (tower.parts.turn || tower.g).rotation.y = aim;                 // the game turns parts.turn to aim
+  cd -= dt; since += dt;
+  if(cd <= 0){ cd += RATE; since = 0;
+    const from = new THREE.Vector3(); (tower.parts.hand || tower.parts.turn || tower.g).getWorldPosition(from);
+    const N = A >= 3 ? 16 : 8;
+    for(let k = 0; k < N; k++){ const an = k / N * Math.PI * 2, to = from.clone().add(new THREE.Vector3(Math.sin(an) * 2.2, -from.y + .15, Math.cos(an) * 2.2));
+      const st = m(scene, cone(.03, .14, 6), toon(B >= 3 ? '#FF7A1A' : '#3A3A48'), from.toArray(), null, null, true); st.lookAt(to); st.rotateX(Math.PI / 2);
+      shots.push({ o: st, from: from.clone(), to, t: 0, straight: true }); } }
+  for(let i = shots.length - 1; i >= 0; i--){ const sh = shots[i]; sh.t += dt * 3; sh.o.position.lerpVectors(sh.from, sh.to, Math.min(1, sh.t)); if(!sh.straight){ sh.o.position.y += Math.sin(Math.min(1, sh.t) * Math.PI) * .25; sh.o.rotation.x += dt * 12; }
+    if(sh.t >= 1){ scene.remove(sh.o); shots.splice(i, 1); } }
+  const wind = cd < WIND ? Math.pow(1 - cd / WIND, 1.6) : 0, strike = since < .3 ? Math.pow(1 - since / .3, 2) : 0;
+  animateTower(tower.parts, { now, dt, wind, strike, busy: true });
+  renderer.render(scene, camera); requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
