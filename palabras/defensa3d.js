@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=68';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=69';
 
 // ====================================================================================
 // materials
@@ -1176,8 +1176,11 @@ function start(el, host){
   const ghostOf = new Map();
   function ghostMat(mat){ let g = ghostOf.get(mat); if(!g){ g = mat.clone(); g.transparent = true; g.opacity = mat === INK ? .12 : .3; g.depthWrite = false; ghostOf.set(mat, g); } return g; }
   function ghost(e, on){ e.ghost = on; e.g.traverse(o => { if(!o.isMesh) return; if(on){ o.userData.mat0 = o.material; o.material = ghostMat(o.material); o.castShadow = false; } else if(o.userData.mat0){ o.material = o.userData.mat0; o.castShadow = o.material !== INK; } }); }
+  // how big each critter is drawn: small ones fill most of the trail (like Bloons' balloons); bosses stay as they are
+  const BIGGER = { cebra:1.25, mapache:1.25, caracol:1.25, cocodrilo:1.25, oso:1, elefante:1, dino:1 };
+  const look3 = f => f.size * 1.35 * (BIGGER[f.k] || 1.5);
   function addFoe(f){
-    const md = critterModel(f.k), s = f.size * 1.35 * TS; md.g.scale.setScalar(s);
+    const md = critterModel(f.k), s = look3(f); md.g.scale.setScalar(s);
     const holder = new THREE.Group(); holder.add(md.g); world.add(holder);
     const bar = hpBar(); bar.position.y = (f.fly ? .95 : .6) * s + .15; holder.add(bar);
     const ink = new THREE.Mesh(new THREE.CircleGeometry(.28, 16), basic('#5B3D9A', { transparent: true, opacity: .5, depthWrite: false })); ink.rotation.x = -Math.PI / 2; ink.position.y = .03; ink.visible = false; holder.add(ink);
@@ -1239,7 +1242,7 @@ function start(el, host){
   const GAIT = { rana: { f: 3.2, s: 3.4 }, pollito: { f: 11, s: 6 }, conejo: { f: 4.2, s: 6.6 }, arana: { f: 10, s: 3.4 }, oveja: { f: 7, s: 3.8 }, cebra: { f: 5, s: 3.4 }, dino: { f: 1.6, s: .34 },
     hormiga: { f: 9, s: 1 }, raton: { f: 11, s: .75 }, caracol: { f: 2.6, s: .36 }, murcielago: { f: 5, s: 1.05 }, mapache: { f: 7.5, s: .57 }, cocodrilo: { f: 4.5, s: .42 }, oso: { f: 3.6, s: .33 }, elefante: { f: 2.6, s: .25 } };
   function animateFoe(e, f, now, dt, slow){
-    const chewing = !!f.atWall, k = f.k, c = (e.cyc += dt * GAIT[k].f * Math.min(2.2, f.spd / GAIT[k].s) * (slow ? f.slowF : 1) * (G.phase === 'wave' && !chewing ? 1 : 0)), g = e.g, sc = f.size * 1.35;
+    const chewing = !!f.atWall, k = f.k, c = (e.cyc += dt * GAIT[k].f * Math.min(2.2, f.spd / GAIT[k].s) * (slow ? f.slowF : 1) * (G.phase === 'wave' && !chewing ? 1 : 0)), g = e.g, sc = look3(f);
     let bob = 0, pitch = 0, roll = 0, sway = 0, sx = 1, sy = 1, sz = 1;
     const legs = e.roles.leg || [];
     if(k === 'rana' || k === 'conejo'){ const u = (c % (Math.PI * 2)) / (Math.PI * 2), hop = Math.sin(u * Math.PI); bob = hop * (k === 'rana' ? .16 : .13); pitch = -Math.cos(u * Math.PI) * .25 * hop;
@@ -1331,7 +1334,7 @@ function start(el, host){
       const age = G.time - e.born, hop = f.kid && age < .45 ? Math.sin(age / .45 * Math.PI) * .7 : 0;     // kids jump out of the bigger critter
       e.holder.position.set(wx(px), hAt(px, py) + hop, wz(py)); e.last = [px, py];
       e.holder.scale.setScalar(Math.min(1, age / (f.kid ? .12 : .3)) * (f.max > 1 ? .82 + .18 * f.hp / f.max : 1));   // a bit smaller with each layer lost
-      e.ink.visible = slow; e.ice.visible = f.freezeT > 0; if(e.ice.visible) e.ice.scale.setScalar(f.boss ? 2 : (f.size || .7) * 1.3);
+      e.ink.visible = slow; e.ice.visible = f.freezeT > 0; if(e.ice.visible) e.ice.scale.setScalar(f.boss ? 2 : look3(f) * .96);
       e.bar.visible = f.hp < f.max; if(e.bar.visible){ e.bar.quaternion.copy(camera.quaternion); const u = Math.max(0, f.hp / f.max); e.bar.userData.fg.scale.x = Math.max(.001, u); e.bar.userData.fg.position.x = -.23 * (1 - u); e.bar.userData.fg.material = basic(u > .4 ? '#3DCB6C' : '#FF5E5E', { depthTest: false }); }
     }
     // gone from the game: tumble over (defeated) or slip into the house (got through)
