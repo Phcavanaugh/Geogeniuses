@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=73';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=74';
 
 // ====================================================================================
 // materials
@@ -666,6 +666,195 @@ const GEAR = {
       m(ag, box(.1, .025, .02), basic('#111111'), [0, .14, .08]); m(ag, box(.07, .05, .02), toon('#4A3A2A'), [.07, .02, .06]); }
   },
 };
+// ====================================================================================
+// towers built and animated in the practice file (tools/towers/*.html, edited with ChatGPT):
+// make(a, b) → { g, parts } builds the animal with its upgrade looks; animate(parts, s) moves it every frame.
+// ====================================================================================
+// --- gato (from defensa-torre-gato.html) ---
+// Upgrade names (path A "Rapidez"): 1 Lanza rápido · 2 Lanza muy rápido · 3 Tres bolas
+// Upgrade names (path B "Bolas fuertes"): 1 Bola puntiaguda · 2 Bola muy puntiaguda · 3 Bola gigante
+// These pieces are all children of g. Animation never changes g, which the game rotates to aim.
+function catYarn(parent, radius, color, spikes = false){
+  const ball = new THREE.Group(); parent.add(ball);
+  m(ball, sph(radius, 14, 10), toon(color), [0, 0, 0], null, null, true);
+  const thread = toon(spikes ? '#FFD6A1' : '#FFE5EA');
+  for(let i = 0; i < 3; i++) m(ball, new THREE.TorusGeometry(radius * 1.015, .008, 5, 20), thread,
+    [0, 0, 0], null, [i * .73 + .2, i * 1.02, .33 * i]);
+  if(spikes) for(let i = 0; i < 8; i++){
+    const angle = i * Math.PI * 2 / 8, v = new THREE.Vector3(Math.cos(angle), .3 * (i % 2 ? 1 : -1), Math.sin(angle)).normalize();
+    const tip = m(ball, cone(radius * .21, radius * .52, 6), toon('#FFF1C7'),
+      [v.x * radius, v.y * radius, v.z * radius]);
+    tip.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v);
+  }
+  return ball;
+}
+
+function gatoMake(a, b){
+  const g = new THREE.Group(), parts = { a, b, floats: [], ears: [], lids: [] };
+  const fur = toon('#FFAB43'), light = toon('#FFD070'), cream = toon('#FFF4DB');
+  const stripe = toon('#DF721E'), coral = toon('#FF7187'), teal = toon('#147F91');
+  const gold = toon('#FFD04D'), dark = toon('#2B2B3A');
+
+  // Tail and cape sit behind the cat; the chunky feet and paws stay in front.
+  const tail = new THREE.Group(); tail.position.set(-.06, .16, -.21); g.add(tail); parts.tail = tail;
+  tube(tail, [[0, 0, 0], [-.09, .04, -.1], [-.13, .16, -.15], [-.08, .24, -.12]], .044, fur, true);
+  m(tail, sph(.052, 12, 8), light, [-.08, .24, -.12], null, null, true);
+  if(a >= 3){
+    // A light cloth panel slopes away from the shoulders and hangs behind the body.
+    const cape = new THREE.BufferGeometry();
+    cape.setAttribute('position', new THREE.Float32BufferAttribute([
+      -.13,.50,-.19,  .13,.50,-.19, -.17,.29,-.29,
+       .13,.50,-.19,  .17,.29,-.29, -.17,.29,-.29,
+      -.17,.29,-.29,  .17,.29,-.29, -.21,.10,-.41,
+       .17,.29,-.29,  .21,.10,-.41, -.21,.10,-.41,
+      -.21,.10,-.41,  .21,.10,-.41,  0,.075,-.44
+    ], 3));
+    cape.computeVertexNormals();
+    m(g, cape, toon('#F6B83A', { side: THREE.DoubleSide }));
+    tube(g, [[-.13,.50,-.19],[-.17,.29,-.29],[-.21,.10,-.41],[0,.075,-.44],
+      [.21,.10,-.41],[.17,.29,-.29],[.13,.50,-.19]], .009, toon('#B96A20'));
+    tube(g, [[-.09,.47,-.206],[0,.31,-.305],[0,.087,-.439]], .006, gold);
+  }
+  if(b >= 3){
+    const giant = catYarn(g, .178, '#D94D66', true); giant.position.set(0, .56, -.27);
+    m(giant, sph(.039, 10, 8), gold, [0, .06, .168]);
+    parts.giant = giant;
+  }
+
+  const body = new THREE.Group(); body.position.set(0, .255, -.015); g.add(body); parts.body = body;
+  m(body, sph(.225, 18, 14), fur, [0, 0, 0], [1.04, 1.13, 1.12], null, true);
+  m(body, sph(.16, 16, 12), cream, [0, -.034, .161], [1, 1.08, .6]);
+  for(const x of [-.105, 0, .105]) m(body, sph(.023, 8, 6), stripe, [x, .095, .193], [.8, .32, .55]);
+  for(const side of [-1, 1]){
+    m(g, sph(.07, 12, 10), fur, [side * .15, .22, .07], [1.1, 1.18, 1], null, true);
+    m(g, sph(.083, 12, 10), cream, [side * .135, .07, .145], [1.2, .66, 1.3], null, true);
+    if(a >= 2){
+      m(g, sph(.09, 12, 8), teal, [side * .135, .071, .15], [1.15, .56, 1.48], null, true);
+      m(g, sph(.06, 10, 8), cream, [side * .135, .107, .22], [1.1, .2, .55]);
+      m(g, sph(.037, 8, 6), coral, [side * .135, .088, .27], [1.3, .2, .55]);
+      m(g, cone(.055, .14, 6), gold, [side * .23, .087, -.008], [1, 1, .42], [0, 0, side * 1.08], true);
+    }
+  }
+
+  const head = new THREE.Group(); head.position.set(0, .625, .065); g.add(head); parts.head = head;
+  m(head, sph(.232, 18, 14), fur, [0, 0, 0], [1.12, 1.0, 1], null, true);
+  m(head, sph(.185, 14, 10), light, [0, -.105, .145], [1.06, .53, .62]);
+  for(const side of [-1, 1]){
+    const ear = new THREE.Group(); ear.position.set(side * .163, .153, -.005); head.add(ear); parts.ears.push(ear);
+    m(ear, cone(.105, .2, 10), fur, [0, .068, 0], null, [0, 0, -side * .24], true);
+    m(ear, cone(.061, .118, 8), coral, [0, .071, .061], null, [0, 0, -side * .24]);
+    m(head, sph(.084, 12, 8), cream, [side * .069, -.091, .269], [1, .76, .65]);
+    m(head, sph(.037, 10, 8), basic('#F48AA1', { transparent: true, opacity: .75 }), [side * .176, -.066, .237], [1, .57, .34]);
+    for(let i = 0; i < 2; i++) m(head, sph(.009, 8, 6), dark,
+      [side * (.19 + i * .017), -.106 + i * .037, .263], [1.9, .55, .6]);
+    // Independent eye groups squash into a quick blink.
+    const lid = new THREE.Group(); lid.position.set(side * .096, .043, .204); head.add(lid); parts.lids.push(lid);
+    m(lid, sph(.051, 12, 10), cream, [0, 0, 0], [.91, 1.15, .43], null, true);
+    m(lid, sph(.03, 10, 8), dark, [side * .006, -.002, .028]);
+    m(lid, sph(.012, 8, 6), basic('#FFFFFF'), [-.01, .012, .051]);
+  }
+  m(head, sph(.036, 10, 8), coral, [0, -.052, .331], [1.18, .8, .7]);
+  m(head, sph(.017, 8, 6), dark, [0, -.128, .319], [1.4, .38, .42]);
+  for(const x of [-.1, 0, .1]) m(head, sph(.022, 8, 6), stripe, [x, .184, .084], [.7, 1.15, .7]);
+
+  // Both arms have shoulder and elbow pivots; the right paw physically carries its yarn.
+  for(const side of [-1, 1]){
+    const shoulder = new THREE.Group(); shoulder.position.set(side * .206, .446, .066); g.add(shoulder);
+    m(shoulder, sph(.071, 12, 10), fur, [side * .026, -.065, .067], [.95, 1.45, .92], [side * .22, 0, side * .18], true);
+    const elbow = new THREE.Group(); elbow.position.set(side * .052, -.133, .096); shoulder.add(elbow);
+    m(elbow, sph(.064, 12, 10), fur, [0, -.042, .047], [.93, 1.13, 1.02], [-.24, 0, 0], true);
+    m(elbow, sph(.059, 12, 10), cream, [0, -.116, .095], [1.13, .78, 1.12], null, true);
+    if(b >= 2){
+      m(elbow, sph(.073, 12, 8), teal, [0, -.064, .062], [1.13, .6, 1.08], null, true);
+      m(elbow, sph(.015, 8, 6), gold, [0, -.055, .128]);
+    } else if(a >= 2) m(elbow, sph(.071, 12, 8), coral, [0, -.061, .057], [1.03, .35, 1]);
+    if(side === 1){
+      const held = catYarn(elbow, b >= 2 ? .088 : .072, b ? '#E65270' : '#F35374', b >= 1);
+      held.position.set(0, -.126, .172); parts.held = held;
+      parts.arm = shoulder; parts.elbow = elbow;
+    } else { parts.otherArm = shoulder; parts.otherElbow = elbow; }
+  }
+  // The game samples this release point immediately before calling animateTower on the throw frame.
+  const hand = new THREE.Object3D(); hand.position.set(.27, .65, .33); g.add(hand); parts.hand = hand;
+
+  if(a >= 1){
+    // Narrow forehead strip with a small tied knot behind the head.
+    tube(head, [[-.223,.144,-.04],[-.204,.155,.072],[-.12,.158,.167],
+      [0,.158,.191],[.12,.158,.167],[.204,.155,.072],[.223,.144,-.04]], .012, teal, true);
+    m(head, sph(.024, 8, 6), gold, [0,.164,.203], [.9,.75,.45]);
+    m(head, sph(.025, 8, 6), teal, [0,.142,-.219], null, null, true);
+    for(const side of [-1, 1])
+      tube(head, [[0,.14,-.219],[side*.045,.10,-.232],[side*.07,.052,-.248]], .009, teal);
+  }
+  if(a >= 3){
+    // Two floating yarn balls plus the ball in the paw: three visible at once.
+    for(const [side, col] of [[-1, '#32C2D5'], [1, '#B681F5']]){
+      const float = new THREE.Group(); float.position.set(side * .32, .74, -.035); g.add(float);
+      const orb = catYarn(float, .065, col); parts.floats.push({ float, side, orb });
+    }
+    for(const side of [-1, 1]) m(head, cone(.047, .12, 7), gold, [side * .085, .249, -.04], null, [0, 0, side * .18], true);
+    m(head, sph(.052, 10, 8), gold, [0, .249, .003], [1, 1.35, .6], null, true);
+  }
+  if(b >= 2){
+    m(head, sph(.239, 16, 10), teal, [0, .116, -.048], [1.06, .65, .84], null, true);
+    m(head, sph(.045, 8, 6), gold, [0, .2, .089], [.6, 1.9, .5]);
+    for(const side of [-1, 1]) m(head, sph(.056, 10, 8), teal, [side * .225, .003, -.006], [.62, 1.22, .8], null, true);
+  }
+  if(b >= 3){
+    m(body, sph(.19, 14, 10), teal, [0, .06, .16], [1.14, .83, .52], null, true);
+    m(body, sph(.079, 10, 8), gold, [0, .096, .247], [1.05, .84, .48], null, true);
+    m(body, sph(.025, 8, 6), dark, [0, .096, .277]);
+    for(const side of [-1, 1]){
+      m(g, sph(.104, 10, 8), teal, [side * .22, .48, -.029], [1.05, .56, 1.2], null, true);
+      m(g, sph(.035, 8, 6), gold, [side * .27, .502, .038]);
+    }
+  }
+  return { g, parts };
+}
+
+function gatoAnimate(parts, s){
+  const t = s.now, breathe = Math.sin(t * 3.1), swish = Math.sin(t * 2.7);
+  // s.strike is a quadratic fade; recover the time since release for a held follow-through.
+  const phase = s.strike > 0 ? 1 - Math.sqrt(s.strike) : 1;
+  const settle = Math.max(0, Math.min(1, (phase - .4) / .6));
+  const follow = s.strike > 0 ? 1 - settle * settle * (3 - 2 * settle) : 0;
+  const wind = s.wind;
+  parts.body.scale.set(1 + breathe * .009, 1 + breathe * .019, 1 + breathe * .012);
+  parts.body.rotation.x = wind * .085 - follow * .10;
+  parts.head.position.y = .625 + breathe * .006 - wind * .013 + follow * .008;
+  parts.head.rotation.x = wind * .19 - follow * .19 + Math.sin(t * 1.7) * .025;
+  parts.head.rotation.z = Math.sin(t * 1.37) * .027 - wind * .04 + follow * .045;
+  parts.tail.rotation.y = swish * .42 + follow * .22;
+  parts.tail.rotation.x = Math.sin(t * 1.8) * .13;
+  const twitch = (t % 5.3) < .17 ? Math.sin((t % 5.3) / .17 * Math.PI) : 0;
+  parts.ears[0].rotation.z = -.12 * twitch + Math.sin(t * 2.1) * .018;
+  parts.ears[1].rotation.z = .09 * twitch - Math.sin(t * 1.8) * .018;
+  const blinkTime = t % 3.65;
+  const blink = blinkTime < .14 ? Math.sin(Math.PI * blinkTime / .14) : 0;
+  for(const lid of parts.lids) lid.scale.y = 1 - .91 * blink;
+
+  // The right arm draws the yarn behind the shoulder, snaps across the face,
+  // then holds its extended pose briefly before returning to its ready position.
+  parts.arm.position.x = .206 + wind * .075 - follow * .015;
+  parts.arm.position.y = .446 + wind * .22 - follow * .02;
+  parts.arm.rotation.x = -.08 + wind * .87 - follow * 1.12 + breathe * .018;
+  parts.arm.rotation.y = -.08 - wind * .20 + follow * .28;
+  parts.arm.rotation.z = -.08 + wind * .19 - follow * .18;
+  parts.elbow.rotation.x = -.05 + wind * .44 - follow * .45;
+  parts.otherArm.rotation.x = -.08 - wind * .3 + follow * .35 + breathe * .026;
+  parts.otherArm.rotation.z = .06 - wind * .13 + follow * .12;
+  parts.otherElbow.rotation.x = .09 + wind * .14 - follow * .16;
+  parts.held.rotation.z = Math.sin(t * 2.8) * .05 + wind * .3 + follow * .55;
+  if(parts.giant) parts.giant.rotation.z = Math.sin(t * 2) * .028;
+  for(const { float, side, orb } of parts.floats){
+    float.position.y = .74 + Math.sin(t * 3.2 + side) * .027 + wind * .028;
+    float.position.x = side * (.32 + Math.sin(t * 2.2 + side) * .018);
+    orb.rotation.y = t * (side < 0 ? 2.5 : -2.5);
+  }
+}
+
+const KIT = { gato: { make: gatoMake, animate: gatoAnimate } };
+
 // flat top-down tower pictures (like Bloons): art/defensa/towers/<id>/0.png plain, 1-3 path A steps, 4-6 path B steps.
 // Drawn facing UP; the base circle's center sits at BASE (fraction of the picture from the left / top). A tower listed
 // here uses its pictures instead of the 3D model; the rest keep the 3D model until their pictures come.
@@ -684,6 +873,9 @@ function spriteModel(id, ua, ub){
 const CROWN_Y = { mago: 1.25, nido: .95, huerto: 1.35, pinguino: .95, buho: .95 };
 function towerModel(i, lvl, ua = 0, ub = 0){
   if(SPRITES[TOWERS[i].id]) return spriteModel(TOWERS[i].id, ua, ub);
+  if(KIT[TOWERS[i].id]){ const k = KIT[TOWERS[i].id], pd = cloneRoles(proto('p' + lvl, () => pedestal(lvl))), root = new THREE.Group(), a = k.make(ua, ub);
+    a.g.position.y = .44; a.g.scale.setScalar(.95); root.add(pd.g); root.add(a.g);
+    return { g: root, animal: a.g, roles: { flag: pd.roles.flag || [] }, kit: k, parts: a.parts }; }
   const id = TOWERS[i].id, p = proto('t' + id, () => customOr(id, () => ANIMALS[id]())), farm = TOWERS[i].farm !== undefined || !!TOWERS[i].support;
   const root = new THREE.Group(), a = cloneRoles(p), pd = farm ? { g: new THREE.Group(), roles: {} } : cloneRoles(proto('p' + lvl, () => pedestal(lvl)));
   root.add(pd.g); a.g.position.y = farm ? 0 : .44; a.g.scale.setScalar(farm ? 1.05 + (lvl - 1) * .12 : .95); root.add(a.g);
@@ -1320,6 +1512,11 @@ function start(el, host){
       const wind = busy && tw.cd > 0 && tw.cd < P.wind ? Math.pow(1 - tw.cd / P.wind, 1.6) : 0;
       const st = since < .05 ? since / .05 : since < P.hit ? Math.pow(1 - (since - .05) / (P.hit - .05), 2) : 0;
       const pitch = -wind * P.back + st * P.fwd, lunge = st * P.lunge - wind * P.lunge * .35, B = e.base, breathe = 1 + Math.sin(now * 2 + tw.id) * .015;
+      if(e.kit){ e.animal.rotation.set(0, e.yaw, 0);
+        const sinceK = G.time - tw.shotAt, strike = busy && sinceK < .3 ? Math.pow(1 - sinceK / .3, 2) : 0, windK = busy && tw.cd > 0 && tw.cd < .22 ? Math.pow(1 - tw.cd / .22, 1.6) : 0;
+        e.kit.animate(e.parts, { now, dt, wind: windK, strike, busy });
+        for(const f2 of e.roles.flag || []) f2.rotation.y = Math.sin(now * 5 + tw.id) * .4;
+        e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(TS * (e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1)); continue; }
       if(e.sprite){ e.animal.rotation.set(0, e.yaw, 0); e.animal.position.set(Math.sin(e.yaw) * lunge * .6, 0, Math.cos(e.yaw) * lunge * .6);
         const sq = 1 + wind * .06 - st * .04; e.animal.scale.set(sq * breathe, 1, sq * breathe); e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(TS * (e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1)); continue; }
       e.animal.rotation.order = 'YXZ'; e.animal.rotation.set(pitch, e.yaw, P.sway ? Math.sin(now * 1.3 + tw.id) * P.sway : 0);
