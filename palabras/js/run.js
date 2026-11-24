@@ -33,7 +33,7 @@ const sec = () => $(S.mode);
 const bestKey = () => `best_${S.mode}_${S.cat}` + (S.mode==='donde' ? '_'+S.nChoices : '') + (S.mode==='memory' ? '' : '_L'+S.len);
 function newRun(){
   S.herm=null;
-  S.run++; S.score=0; S.lives=LIVES; S.correct=0; S.streak=0; S.treats=0; S.recent=[]; S.locked=false; S.asked=0;
+  S.run++; S.score=0; S.lives=LIVES; S.correct=0; S.streak=0; S.treats=0; S.recent=[]; S.locked=false; S.asked=0; S.got=0;
   S.lvlBefore=petLevel().level;
   S.best=store.get(bestKey(),0);
   $('over').classList.remove('on');
@@ -60,16 +60,19 @@ function renderHud(breakIdx){
   const st=h.querySelector('.streak'), mult=multiplier();
   st.classList.toggle('on', mult>1); st.textContent = `🔥 x${mult}`;
   const g=h.querySelector('.gprog');
-  if(g){ g.querySelector('i').style.width=(100*Math.min(S.asked,S.runLen)/S.runLen)+'%'; g.querySelector('.n').textContent=`${Math.min(S.asked,S.runLen)}/${S.runLen}`; }
+  const n=Math.min(S.got||0,S.runLen);   // counts right answers: a game of 10 needs 10 right
+  if(g){ g.querySelector('i').style.width=(100*n/S.runLen)+'%'; g.querySelector('.n').textContent=`${n}/${S.runLen}`; }
 }
-// Call once per word answered (right or wrong). Returns true when the game has reached its length.
-function wordDone(){ S.asked++; renderHud(); return !!S.runLen && S.asked>=S.runLen; }
+// A game is won after S.runLen RIGHT answers (misses don't count toward it, they only cost hearts).
+const goalReached = () => !!S.runLen && (S.herm ? S.asked : S.got)>=S.runLen;
+// Call once per word answered (right or wrong).
+function wordDone(){ S.asked++; renderHud(); return goalReached(); }
 // What to do after a word's feedback has played
 function nextOrEnd(done, nextRound){
   if(S.herm) return hermAfter();
   if(S.mix) nextRound = mixRound;
   if(S.lives<=0) gameOver();
-  else if(done) finishGame();
+  else if(goalReached()) finishGame();
   else nextRound();
 }
 function finishGame(){
@@ -83,7 +86,7 @@ function scoreRight(w, x, y, funny){
   if(S.herm){ S.herm.score[S.herm.turn]++; S.herm.correct[S.herm.turn]++; renderHud(); burst(x,y);
     const hl = funny && Math.random()<0.33 ? HIT_LINES[Math.floor(Math.random()*HIT_LINES.length)][0] : null;
     const p = hl || praise(); banner(p); return 'c|'+p; }
-  S.correct++; S.streak++;
+  S.correct++; S.streak++; S.got++;
   const pts=multiplier(); S.score+=pts; S.treats++;
   pet.xp++; store.set('pet',pet);
   setStars(S.stars+1); if(w) record(w,true);
