@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=71';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=72';
 
 // ====================================================================================
 // materials
@@ -666,8 +666,24 @@ const GEAR = {
       m(ag, box(.1, .025, .02), basic('#111111'), [0, .14, .08]); m(ag, box(.07, .05, .02), toon('#4A3A2A'), [.07, .02, .06]); }
   },
 };
+// flat top-down tower pictures (like Bloons): art/defensa/towers/<id>/0.png plain, 1-3 path A steps, 4-6 path B steps.
+// Drawn facing UP; the base circle's center sits at BASE (fraction of the picture from the left / top). A tower listed
+// here uses its pictures instead of the 3D model; the rest keep the 3D model until their pictures come.
+const SPRITES = { gato: { base: [.503, .667], size: 1.8 } };
+const spriteTex = {};
+function spriteModel(id, ua, ub){
+  const S = SPRITES[id], n = ua >= ub ? (ua ? ua : 0) : 3 + ub, url = `${ART}towers/${id}/${n}.png?v=1`;
+  const tex = spriteTex[url] || (spriteTex[url] = Object.assign(new THREE.TextureLoader().load(url), { colorSpace: THREE.SRGBColorSpace, anisotropy: 4 }));
+  const root = new THREE.Group(), turn = new THREE.Group(), pic = new THREE.Mesh(new THREE.PlaneGeometry(S.size, S.size), new THREE.MeshBasicMaterial({ map: tex, transparent: true, alphaTest: .35, depthWrite: true }));
+  pic.rotation.x = -Math.PI / 2; pic.position.set((.5 - S.base[0]) * S.size, .06, (.5 - S.base[1]) * S.size);   // base circle over the tower's spot; picture's "up" points to -z
+  const flip = new THREE.Group(); flip.rotation.y = Math.PI; flip.add(pic); turn.add(flip);                     // so a turn of 0 faces +z, like the 3D animals
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(S.size * .27, 24), new THREE.MeshBasicMaterial({ color: '#000', transparent: true, opacity: .22, depthWrite: false }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.set(.04, .02, .05); root.add(shadow); root.add(turn);
+  return { g: root, animal: turn, roles: {}, sprite: true };
+}
 const CROWN_Y = { mago: 1.25, nido: .95, huerto: 1.35, pinguino: .95, buho: .95 };
 function towerModel(i, lvl, ua = 0, ub = 0){
+  if(SPRITES[TOWERS[i].id]) return spriteModel(TOWERS[i].id, ua, ub);
   const id = TOWERS[i].id, p = proto('t' + id, () => customOr(id, () => ANIMALS[id]())), farm = TOWERS[i].farm !== undefined || !!TOWERS[i].support;
   const root = new THREE.Group(), a = cloneRoles(p), pd = farm ? { g: new THREE.Group(), roles: {} } : cloneRoles(proto('p' + lvl, () => pedestal(lvl)));
   root.add(pd.g); a.g.position.y = farm ? 0 : .44; a.g.scale.setScalar(farm ? 1.05 + (lvl - 1) * .12 : .95); root.add(a.g);
@@ -1304,6 +1320,8 @@ function start(el, host){
       const wind = busy && tw.cd > 0 && tw.cd < P.wind ? Math.pow(1 - tw.cd / P.wind, 1.6) : 0;
       const st = since < .05 ? since / .05 : since < P.hit ? Math.pow(1 - (since - .05) / (P.hit - .05), 2) : 0;
       const pitch = -wind * P.back + st * P.fwd, lunge = st * P.lunge - wind * P.lunge * .35, B = e.base, breathe = 1 + Math.sin(now * 2 + tw.id) * .015;
+      if(e.sprite){ e.animal.rotation.set(0, e.yaw, 0); e.animal.position.set(Math.sin(e.yaw) * lunge * .6, 0, Math.cos(e.yaw) * lunge * .6);
+        const sq = 1 + wind * .06 - st * .04; e.animal.scale.set(sq * breathe, 1, sq * breathe); e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(TS * (e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1)); continue; }
       e.animal.rotation.order = 'YXZ'; e.animal.rotation.set(pitch, e.yaw, P.sway ? Math.sin(now * 1.3 + tw.id) * P.sway : 0);
       e.animal.position.set(Math.sin(e.yaw) * lunge, e.y0 + st * P.hop, Math.cos(e.yaw) * lunge);
       e.animal.scale.set(B * (1 + wind * .07 - st * .05), B * (1 - wind * .11 + st * .13) * breathe, B * (1 + wind * .07 - st * .05));
@@ -1497,7 +1515,7 @@ function start(el, host){
     t.innerHTML = `<b>${title}</b>${coins ? `<span>+${coins} ${ic('coin')}</span>` : ''}${sub ? `<small>${sub}</small>` : ''}`; t.classList.add('on'); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
   const short = n => (n => n[0].toUpperCase() + n.slice(1))(n.replace(/^(El|La) /, ''));
   function bar(){
-    $('.d3bar').innerHTML = `<div class="d3hd">Torres</div><div class="d3grid">` + TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><span class="disc"><img alt="${b.name}" src="${thumb('t' + b.id, () => towerModel(i, 1).g)}"></span>${G.un[i] ? '' : ic('lock', 'lk')}<span class="c">${G.un[i] ? ic('coin') + cost(i) : 'Ronda ' + G.A.unlock[i]}</span><span class="nm">${short(b.name)}</span></button>`).join('')
+    $('.d3bar').innerHTML = `<div class="d3hd">Torres</div><div class="d3grid">` + TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><span class="disc"><img alt="${b.name}" src="${SPRITES[b.id] ? `${ART}towers/${b.id}/0.png?v=1` : thumb('t' + b.id, () => towerModel(i, 1).g)}"></span>${G.un[i] ? '' : ic('lock', 'lk')}<span class="c">${G.un[i] ? ic('coin') + cost(i) : 'Ronda ' + G.A.unlock[i]}</span><span class="nm">${short(b.name)}</span></button>`).join('')
       + `<button class="d3tw" data-i="wall"><span class="disc"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(0, 0))}"></span><span class="c">${ic('coin')}${cost('wall')}</span><span class="nm">Cerca</span></button></div>`
       + `<div class="d3foot"><button class="d3go"></button><button class="d3auto" aria-label="Auto">🔁</button></div>`;
     const fa = el.querySelector('.d3foot .d3auto'); if(fa) fa.onclick = () => el.querySelector('.d3info .d3auto').click();
@@ -1524,7 +1542,7 @@ function start(el, host){
   function powersUI(){
     const list = G.powers(), box = $('.d3pw'), key = list.map(p => p.id).join();
     if(key !== pwKey){ pwKey = key;
-      box.innerHTML = list.map(p => { const i = TOWERS.findIndex(t => t.id === p.id); return `<button class="d3p" data-id="${p.id}" aria-label="${POWERS[p.id].name}"><img alt="" src="${thumb('t' + p.id, () => towerModel(i, 1).g)}"><i></i><b>⚡</b></button>`; }).join('');
+      box.innerHTML = list.map(p => { const i = TOWERS.findIndex(t => t.id === p.id); return `<button class="d3p" data-id="${p.id}" aria-label="${POWERS[p.id].name}"><img alt="" src="${(SPRITES[p.id] ? `${ART}towers/${p.id}/0.png?v=1` : thumb('t' + p.id, () => towerModel(i, 1).g))}"><i></i><b>⚡</b></button>`; }).join('');
       box.querySelectorAll('.d3p').forEach(b => b.onclick = () => { const id = b.dataset.id;
         if(G.phase !== 'wave'){ tip(`⚡ <b>${POWERS[id].name}</b> ${POWERS[id].tip} (Úsalo cuando vengan los bichos.)`); return; }
         if(!G.usePower(id)) tip('⏳ ¡Todavía no! Espera un poquito.'); hudKey = ''; }); }
