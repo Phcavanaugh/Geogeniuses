@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>¡Defensa! — taller de torres: el gato</title>
+<style>
+  html,body{margin:0;height:100%;background:#7EC8F0;font-family:system-ui,sans-serif;overflow:hidden}
+  canvas{display:block;touch-action:none}
+  .ui{position:fixed;left:10px;top:10px;display:flex;flex-direction:column;gap:6px;background:rgba(255,255,255,.85);padding:8px 10px;border-radius:12px;font-size:14px}
+  .ui .row{display:flex;gap:4px;align-items:center}
+  .ui button{min-width:34px;height:32px;border-radius:8px;border:2px solid #333;background:#fff;font-weight:700}
+  .ui button.on{background:#FFD23F}
+  .ui small{color:#555}
+</style>
+<script type="importmap">{ "imports": { "three": "https://unpkg.com/three@0.170.0/build/three.module.js" } }</script>
+</head>
+<body>
+<div class="ui">
+  <b>El gato</b>
+  <div class="row">Camino A <span id="pa"></span></div>
+  <div class="row">Camino B <span id="pb"></span></div>
+  <div class="row"><button id="slow">🐢 Lento</button><button id="pause">⏸</button></div>
+  <small>Arrastra para girar · rueda para acercar</small>
+</div>
+<script type="module">
+import * as THREE from 'three';
+
+/* =====================================================================================
+   HOW THIS FILE WORKS (for whoever edits it)
+
+   This is a practice scene for ONE tower from the kids' game "¡Defensa!" (three.js r170).
+   Only edit the code between the two "EDIT BELOW / EDIT ABOVE" lines. Everything else is
+   the same as the real game, so what you build here can be copied straight into it.
+
+   You write two functions:
+
+   1) makeTower(a, b) → { g, parts }
+      Builds the tower animal. a = upgrade step on path A (0-3), b = upgrade step on path B (0-3).
+      - g is a THREE.Group. The animal FACES +Z and stands on y = 0 (it is placed on top of a stone base).
+      - Keep it roughly 0.5 wide and 0.8 tall.
+      - Use the helpers below (m, toon, basic, sph, cyl, cone, box, tube, eyes, cheeks): chunky, rounded,
+        cartoon look with dark outlines (the last argument of m(..., true) adds an outline).
+      - Each upgrade step must look clearly different; step 3 on each path should look special.
+      - parts is an object of anything you want to move later (head, arms, tail, ears, the ball...).
+        Optionally parts.hand = an Object3D where the thrown ball should start.
+
+   2) animateTower(parts, s)
+      Called every frame. Move/rotate/scale ONLY things inside g (never g itself: the game turns g to aim).
+      s = { now: seconds, dt: seconds since last frame,
+            wind: 0→1 during the wind-up just before a throw (0 the rest of the time),
+            strike: 1 right at the throw, fading to 0 over ~0.3 s,
+            busy: true while there are critters to shoot }
+      Make it lively like Bloons TD 6 monkeys: a clear wind-up, a snappy throw, follow-through,
+      and small idle movement (breathing, blinking, tail swish) when nothing is happening.
+
+   Rules: plain three.js only, no new files, no textures or images, keep it fast (it runs on phones,
+   up to ~30 towers on screen). Don't change anything outside the EDIT lines.
+   ===================================================================================== */
+
+// ---------- helpers (same as the game) ----------
+const GRAD = (() => { const t = new THREE.DataTexture(new Uint8Array([105, 185, 255]), 3, 1, THREE.RedFormat); t.minFilter = t.magFilter = THREE.NearestFilter; t.needsUpdate = true; return t; })();
+const MATS = {};
+const toon = (c, o = {}) => { const k = c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshToonMaterial({ color: c, gradientMap: GRAD, ...o })); };
+const basic = (c, o = {}) => { const k = 'b' + c + JSON.stringify(o); return MATS[k] || (MATS[k] = new THREE.MeshBasicMaterial({ color: c, ...o })); };
+const INK = new THREE.MeshBasicMaterial({ color: '#2B2B3A', side: THREE.BackSide });
+const GEO = {};
+const sph = (r, w = 20, h = 14) => GEO['s' + r + w] || (GEO['s' + r + w] = new THREE.SphereGeometry(r, w, h));
+const cyl = (a, b, h, n = 12) => GEO[['c', a, b, h, n].join()] || (GEO[['c', a, b, h, n].join()] = new THREE.CylinderGeometry(a, b, h, n));
+const cone = (r, h, n = 12) => GEO[['k', r, h, n].join()] || (GEO[['k', r, h, n].join()] = new THREE.ConeGeometry(r, h, n));
+const box = (x, y, z) => GEO[['b', x, y, z].join()] || (GEO[['b', x, y, z].join()] = new THREE.BoxGeometry(x, y, z));
+// put a mesh in a group: m(parent, geometry, material, [x,y,z], [sx,sy,sz] or s, [rx,ry,rz], outline)
+function m(parent, g, mat, p = [0, 0, 0], s = null, r = null, outline = false){
+  const o = new THREE.Mesh(g, mat); o.position.set(...p); if(s) o.scale.set(...(Array.isArray(s) ? s : [s, s, s])); if(r) o.rotation.set(...r);
+  o.castShadow = true; o.receiveShadow = true;
+  if(outline){ const ol = new THREE.Mesh(g, INK); ol.scale.setScalar(1.08); ol.castShadow = false; o.add(ol); }
+  parent.add(o); return o;
+}
+function tube(parent, pts, r, mat, outline = false){
+  const g = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts.map(p => new THREE.Vector3(...p))), 16, r, 8, false);
+  return m(parent, g, mat, [0, 0, 0], null, null, outline);
+}
+function eyes(parent, x, y, z, r, tilt = 0){
+  for(const sx of [-1, 1]){ const e = m(parent, sph(r, 14, 10), toon('#22222E'), [x * sx, y, z]); m(e, sph(r * .38, 8, 6), basic('#FFFFFF'), [r * .3, r * .35, r * .72]); e.rotation.y = sx * tilt; }
+}
+function cheeks(parent, x, y, z, r = .045){ for(const sx of [-1, 1]) m(parent, sph(r, 10, 8), basic('#FF8FB1', { transparent: true, opacity: .6 }), [x * sx, y, z], [1, .6, .4]); }
+const spiky = (g, r, col, pos) => { const b = m(g, sph(r, 12, 10), toon(col), pos, null, null, true);
+  for(let i = 0; i < 8; i++){ const v = new THREE.Vector3(Math.sin(i * 2.4) * Math.cos(i), Math.cos(i * 1.3), Math.cos(i * 2.4) * Math.sin(i + 1)).normalize();
+    const c = m(b, cone(r * .28, r * .7, 5), toon('#E8E8F0'), [v.x * r, v.y * r, v.z * r]); c.lookAt(v.x * 9, v.y * 9, v.z * 9); c.rotateX(Math.PI / 2); } return b; };
+const band = (g, y, r, col, tilt = 0) => m(g, new THREE.TorusGeometry(r, .035, 8, 24), toon(col), [0, y, 0], [1, 1, 1], [Math.PI / 2 + tilt, 0, 0], true);
+
+// ======================================= EDIT BELOW =======================================
+// Upgrade names (path A "Rapidez"): 1 Lanza rápido · 2 Lanza muy rápido · 3 Tres bolas
+// Upgrade names (path B "Bolas fuertes"): 1 Bola puntiaguda · 2 Bola muy puntiaguda · 3 Bola gigante
+// These pieces are all children of g. Animation never changes g, which the game rotates to aim.
+function catYarn(parent, radius, color, spikes = false){
+  const ball = new THREE.Group(); parent.add(ball);
+  m(ball, sph(radius, 14, 10), toon(color), [0, 0, 0], null, null, true);
+  const thread = toon(spikes ? '#FFD6A1' : '#FFE5EA');
+  for(let i = 0; i < 3; i++) m(ball, new THREE.TorusGeometry(radius * 1.015, .008, 5, 20), thread,
+    [0, 0, 0], null, [i * .73 + .2, i * 1.02, .33 * i]);
+  if(spikes) for(let i = 0; i < 8; i++){
+    const angle = i * Math.PI * 2 / 8, v = new THREE.Vector3(Math.cos(angle), .3 * (i % 2 ? 1 : -1), Math.sin(angle)).normalize();
+    const tip = m(ball, cone(radius * .21, radius * .52, 6), toon('#FFF1C7'),
+      [v.x * radius, v.y * radius, v.z * radius]);
+    tip.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), v);
+  }
+  return ball;
+}
+
+function makeTower(a, b){
+  const g = new THREE.Group(), parts = { a, b, floats: [], ears: [], lids: [] };
+  const fur = toon('#FFAB43'), light = toon('#FFD070'), cream = toon('#FFF4DB');
+  const stripe = toon('#DF721E'), coral = toon('#FF7187'), teal = toon('#147F91');
+  const gold = toon('#FFD04D'), dark = toon('#2B2B3A');
+
+  // Tail and cape sit behind the cat; the chunky feet and paws stay in front.
+  const tail = new THREE.Group(); tail.position.set(-.06, .16, -.21); g.add(tail); parts.tail = tail;
+  tube(tail, [[0, 0, 0], [-.09, .04, -.1], [-.13, .16, -.15], [-.08, .24, -.12]], .044, fur, true);
+  m(tail, sph(.052, 12, 8), light, [-.08, .24, -.12], null, null, true);
+  if(a >= 3){
+    // A light cloth panel slopes away from the shoulders and hangs behind the body.
+    const cape = new THREE.BufferGeometry();
+    cape.setAttribute('position', new THREE.Float32BufferAttribute([
+      -.13,.50,-.19,  .13,.50,-.19, -.17,.29,-.29,
+       .13,.50,-.19,  .17,.29,-.29, -.17,.29,-.29,
+      -.17,.29,-.29,  .17,.29,-.29, -.21,.10,-.41,
+       .17,.29,-.29,  .21,.10,-.41, -.21,.10,-.41,
+      -.21,.10,-.41,  .21,.10,-.41,  0,.075,-.44
+    ], 3));
+    cape.computeVertexNormals();
+    m(g, cape, toon('#F6B83A', { side: THREE.DoubleSide }));
+    tube(g, [[-.13,.50,-.19],[-.17,.29,-.29],[-.21,.10,-.41],[0,.075,-.44],
+      [.21,.10,-.41],[.17,.29,-.29],[.13,.50,-.19]], .009, toon('#B96A20'));
+    tube(g, [[-.09,.47,-.206],[0,.31,-.305],[0,.087,-.439]], .006, gold);
+  }
+  if(b >= 3){
+    const giant = catYarn(g, .178, '#D94D66', true); giant.position.set(0, .56, -.27);
+    m(giant, sph(.039, 10, 8), gold, [0, .06, .168]);
+    parts.giant = giant;
+  }
+
+  const body = new THREE.Group(); body.position.set(0, .255, -.015); g.add(body); parts.body = body;
+  m(body, sph(.225, 18, 14), fur, [0, 0, 0], [1.04, 1.13, 1.12], null, true);
+  m(body, sph(.16, 16, 12), cream, [0, -.034, .161], [1, 1.08, .6]);
+  for(const x of [-.105, 0, .105]) m(body, sph(.023, 8, 6), stripe, [x, .095, .193], [.8, .32, .55]);
+  for(const side of [-1, 1]){
+    m(g, sph(.07, 12, 10), fur, [side * .15, .22, .07], [1.1, 1.18, 1], null, true);
+    m(g, sph(.083, 12, 10), cream, [side * .135, .07, .145], [1.2, .66, 1.3], null, true);
+    if(a >= 2){
+      m(g, sph(.09, 12, 8), teal, [side * .135, .071, .15], [1.15, .56, 1.48], null, true);
+      m(g, sph(.06, 10, 8), cream, [side * .135, .107, .22], [1.1, .2, .55]);
+      m(g, sph(.037, 8, 6), coral, [side * .135, .088, .27], [1.3, .2, .55]);
+      m(g, cone(.055, .14, 6), gold, [side * .23, .087, -.008], [1, 1, .42], [0, 0, side * 1.08], true);
+    }
+  }
+
+  const head = new THREE.Group(); head.position.set(0, .625, .065); g.add(head); parts.head = head;
+  m(head, sph(.232, 18, 14), fur, [0, 0, 0], [1.12, 1.0, 1], null, true);
+  m(head, sph(.185, 14, 10), light, [0, -.105, .145], [1.06, .53, .62]);
+  for(const side of [-1, 1]){
+    const ear = new THREE.Group(); ear.position.set(side * .163, .153, -.005); head.add(ear); parts.ears.push(ear);
+    m(ear, cone(.105, .2, 10), fur, [0, .068, 0], null, [0, 0, -side * .24], true);
+    m(ear, cone(.061, .118, 8), coral, [0, .071, .061], null, [0, 0, -side * .24]);
+    m(head, sph(.084, 12, 8), cream, [side * .069, -.091, .269], [1, .76, .65]);
+    m(head, sph(.037, 10, 8), basic('#F48AA1', { transparent: true, opacity: .75 }), [side * .176, -.066, .237], [1, .57, .34]);
+    for(let i = 0; i < 2; i++) m(head, sph(.009, 8, 6), dark,
+      [side * (.19 + i * .017), -.106 + i * .037, .263], [1.9, .55, .6]);
+    // Independent eye groups squash into a quick blink.
+    const lid = new THREE.Group(); lid.position.set(side * .096, .043, .204); head.add(lid); parts.lids.push(lid);
+    m(lid, sph(.051, 12, 10), cream, [0, 0, 0], [.91, 1.15, .43], null, true);
+    m(lid, sph(.03, 10, 8), dark, [side * .006, -.002, .028]);
+    m(lid, sph(.012, 8, 6), basic('#FFFFFF'), [-.01, .012, .051]);
+  }
+  m(head, sph(.036, 10, 8), coral, [0, -.052, .331], [1.18, .8, .7]);
+  m(head, sph(.017, 8, 6), dark, [0, -.128, .319], [1.4, .38, .42]);
+  for(const x of [-.1, 0, .1]) m(head, sph(.022, 8, 6), stripe, [x, .184, .084], [.7, 1.15, .7]);
+
+  // Both arms have shoulder and elbow pivots; the right paw physically carries its yarn.
+  for(const side of [-1, 1]){
+    const shoulder = new THREE.Group(); shoulder.position.set(side * .206, .446, .066); g.add(shoulder);
+    m(shoulder, sph(.071, 12, 10), fur, [side * .026, -.065, .067], [.95, 1.45, .92], [side * .22, 0, side * .18], true);
+    const elbow = new THREE.Group(); elbow.position.set(side * .052, -.133, .096); shoulder.add(elbow);
+    m(elbow, sph(.064, 12, 10), fur, [0, -.042, .047], [.93, 1.13, 1.02], [-.24, 0, 0], true);
+    m(elbow, sph(.059, 12, 10), cream, [0, -.116, .095], [1.13, .78, 1.12], null, true);
+    if(b >= 2){
+      m(elbow, sph(.073, 12, 8), teal, [0, -.064, .062], [1.13, .6, 1.08], null, true);
+      m(elbow, sph(.015, 8, 6), gold, [0, -.055, .128]);
+    } else if(a >= 2) m(elbow, sph(.071, 12, 8), coral, [0, -.061, .057], [1.03, .35, 1]);
+    if(side === 1){
+      const held = catYarn(elbow, b >= 2 ? .088 : .072, b ? '#E65270' : '#F35374', b >= 1);
+      held.position.set(0, -.126, .172); parts.held = held;
+      parts.arm = shoulder; parts.elbow = elbow;
+    } else { parts.otherArm = shoulder; parts.otherElbow = elbow; }
+  }
+  // The game samples this release point immediately before calling animateTower on the throw frame.
+  const hand = new THREE.Object3D(); hand.position.set(.27, .65, .33); g.add(hand); parts.hand = hand;
+
+  if(a >= 1){
+    // Narrow forehead strip with a small tied knot behind the head.
+    tube(head, [[-.223,.144,-.04],[-.204,.155,.072],[-.12,.158,.167],
+      [0,.158,.191],[.12,.158,.167],[.204,.155,.072],[.223,.144,-.04]], .012, teal, true);
+    m(head, sph(.024, 8, 6), gold, [0,.164,.203], [.9,.75,.45]);
+    m(head, sph(.025, 8, 6), teal, [0,.142,-.219], null, null, true);
+    for(const side of [-1, 1])
+      tube(head, [[0,.14,-.219],[side*.045,.10,-.232],[side*.07,.052,-.248]], .009, teal);
+  }
+  if(a >= 3){
+    // Two floating yarn balls plus the ball in the paw: three visible at once.
+    for(const [side, col] of [[-1, '#32C2D5'], [1, '#B681F5']]){
+      const float = new THREE.Group(); float.position.set(side * .32, .74, -.035); g.add(float);
+      const orb = catYarn(float, .065, col); parts.floats.push({ float, side, orb });
+    }
+    for(const side of [-1, 1]) m(head, cone(.047, .12, 7), gold, [side * .085, .249, -.04], null, [0, 0, side * .18], true);
+    m(head, sph(.052, 10, 8), gold, [0, .249, .003], [1, 1.35, .6], null, true);
+  }
+  if(b >= 2){
+    m(head, sph(.239, 16, 10), teal, [0, .116, -.048], [1.06, .65, .84], null, true);
+    m(head, sph(.045, 8, 6), gold, [0, .2, .089], [.6, 1.9, .5]);
+    for(const side of [-1, 1]) m(head, sph(.056, 10, 8), teal, [side * .225, .003, -.006], [.62, 1.22, .8], null, true);
+  }
+  if(b >= 3){
+    m(body, sph(.19, 14, 10), teal, [0, .06, .16], [1.14, .83, .52], null, true);
+    m(body, sph(.079, 10, 8), gold, [0, .096, .247], [1.05, .84, .48], null, true);
+    m(body, sph(.025, 8, 6), dark, [0, .096, .277]);
+    for(const side of [-1, 1]){
+      m(g, sph(.104, 10, 8), teal, [side * .22, .48, -.029], [1.05, .56, 1.2], null, true);
+      m(g, sph(.035, 8, 6), gold, [side * .27, .502, .038]);
+    }
+  }
+  return { g, parts };
+}
+
+function animateTower(parts, s){
+  const t = s.now, breathe = Math.sin(t * 3.1), swish = Math.sin(t * 2.7);
+  // s.strike is a quadratic fade; recover the time since release for a held follow-through.
+  const phase = s.strike > 0 ? 1 - Math.sqrt(s.strike) : 1;
+  const settle = Math.max(0, Math.min(1, (phase - .4) / .6));
+  const follow = s.strike > 0 ? 1 - settle * settle * (3 - 2 * settle) : 0;
+  const wind = s.wind;
+  parts.body.scale.set(1 + breathe * .009, 1 + breathe * .019, 1 + breathe * .012);
+  parts.body.rotation.x = wind * .085 - follow * .10;
+  parts.head.position.y = .625 + breathe * .006 - wind * .013 + follow * .008;
+  parts.head.rotation.x = wind * .19 - follow * .19 + Math.sin(t * 1.7) * .025;
+  parts.head.rotation.z = Math.sin(t * 1.37) * .027 - wind * .04 + follow * .045;
+  parts.tail.rotation.y = swish * .42 + follow * .22;
+  parts.tail.rotation.x = Math.sin(t * 1.8) * .13;
+  const twitch = (t % 5.3) < .17 ? Math.sin((t % 5.3) / .17 * Math.PI) : 0;
+  parts.ears[0].rotation.z = -.12 * twitch + Math.sin(t * 2.1) * .018;
+  parts.ears[1].rotation.z = .09 * twitch - Math.sin(t * 1.8) * .018;
+  const blinkTime = t % 3.65;
+  const blink = blinkTime < .14 ? Math.sin(Math.PI * blinkTime / .14) : 0;
+  for(const lid of parts.lids) lid.scale.y = 1 - .91 * blink;
+
+  // The right arm draws the yarn behind the shoulder, snaps across the face,
+  // then holds its extended pose briefly before returning to its ready position.
+  parts.arm.position.x = .206 + wind * .075 - follow * .015;
+  parts.arm.position.y = .446 + wind * .22 - follow * .02;
+  parts.arm.rotation.x = -.08 + wind * .87 - follow * 1.12 + breathe * .018;
+  parts.arm.rotation.y = -.08 - wind * .20 + follow * .28;
+  parts.arm.rotation.z = -.08 + wind * .19 - follow * .18;
+  parts.elbow.rotation.x = -.05 + wind * .44 - follow * .45;
+  parts.otherArm.rotation.x = -.08 - wind * .3 + follow * .35 + breathe * .026;
+  parts.otherArm.rotation.z = .06 - wind * .13 + follow * .12;
+  parts.otherElbow.rotation.x = .09 + wind * .14 - follow * .16;
+  parts.held.rotation.z = Math.sin(t * 2.8) * .05 + wind * .3 + follow * .55;
+  if(parts.giant) parts.giant.rotation.z = Math.sin(t * 2) * .028;
+  for(const { float, side, orb } of parts.floats){
+    float.position.y = .74 + Math.sin(t * 3.2 + side) * .027 + wind * .028;
+    float.position.x = side * (.32 + Math.sin(t * 2.2 + side) * .018);
+    orb.rotation.y = t * (side < 0 ? 2.5 : -2.5);
+  }
+}
+// ======================================= EDIT ABOVE =======================================
+
+// ---------- the practice scene (same camera angle and lighting as the game) ----------
+const renderer = new THREE.WebGLRenderer({ antialias: true }); renderer.setPixelRatio(Math.min(2, devicePixelRatio)); renderer.shadowMap.enabled = true;
+document.body.appendChild(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color('#7EC8F0');
+scene.add(new THREE.HemisphereLight('#FFFFFF', '#6A8A4A', 1.6));
+const sun = new THREE.DirectionalLight('#FFFFFF', 2.4); sun.position.set(3, 6, 4); sun.castShadow = true; sun.shadow.mapSize.set(1024, 1024); scene.add(sun);
+const grass = new THREE.Mesh(new THREE.CircleGeometry(4, 48), toon('#7CC85A')); grass.rotation.x = -Math.PI / 2; grass.receiveShadow = true; scene.add(grass);
+const trail = new THREE.Mesh(new THREE.RingGeometry(1.6, 2.1, 64), toon('#B9875A')); trail.rotation.x = -Math.PI / 2; trail.position.y = .005; trail.receiveShadow = true; scene.add(trail);
+function pedestal(){ const g = new THREE.Group(), st = toon('#CFC8BC'), dk = toon('#B1A898');
+  m(g, cyl(.36, .43, .36, 8), st, [0, .18, 0]); m(g, cyl(.43, .4, .08, 8), dk, [0, .4, 0]);
+  for(let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2 + Math.PI / 8; m(g, box(.12, .1, .08), dk, [Math.sin(a) * .37, .49, Math.cos(a) * .37], null, [0, a, 0]); }
+  return g; }
+scene.add(pedestal());
+const critter = new THREE.Group(); m(critter, sph(.13), toon('#E0533D'), [0, .13, 0], null, null, true); eyes(critter, .05, .17, .1, .03); scene.add(critter);
+
+let A = 0, B = 0, tower = null;
+function build(){ if(tower) scene.remove(tower.g); tower = makeTower(A, B); tower.g.position.y = .44; tower.g.scale.setScalar(.95); scene.add(tower.g);
+  document.querySelectorAll('#pa button').forEach((b, i) => b.classList.toggle('on', i === A)); document.querySelectorAll('#pb button').forEach((b, i) => b.classList.toggle('on', i === B)); }
+for(const [id, set] of [['pa', v => A = v], ['pb', v => B = v]]) for(let i = 0; i <= 3; i++){ const b = document.createElement('button'); b.textContent = i; b.onclick = () => { set(i); build(); }; document.getElementById(id).appendChild(b); }
+build();
+
+const camera = new THREE.PerspectiveCamera(32, 1, .05, 60);
+let yaw = .3, el = 1.0, dist = 4.6;
+function placeCam(){ camera.position.set(Math.sin(yaw) * Math.cos(el) * dist, Math.sin(el) * dist + .3, Math.cos(yaw) * Math.cos(el) * dist); camera.lookAt(0, .5, 0); }
+function fit(){ renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); }
+addEventListener('resize', fit); fit(); placeCam();
+let drag = null;
+renderer.domElement.addEventListener('pointerdown', e => drag = [e.clientX, e.clientY]);
+addEventListener('pointerup', () => drag = null);
+addEventListener('pointermove', e => { if(!drag) return; yaw -= (e.clientX - drag[0]) * .008; el = Math.min(1.45, Math.max(.2, el + (e.clientY - drag[1]) * .006)); drag = [e.clientX, e.clientY]; placeCam(); });
+addEventListener('wheel', e => { dist = Math.min(9, Math.max(2, dist * Math.exp(e.deltaY * .001))); placeCam(); });
+
+let slow = false, paused = false;
+document.getElementById('slow').onclick = e => { slow = !slow; e.target.classList.toggle('on', slow); };
+document.getElementById('pause').onclick = e => { paused = !paused; e.target.classList.toggle('on', paused); };
+
+const RATE = .95, WIND = .22;          // the cat throws about once a second; the wind-up is the last 0.22 s before a throw
+let cd = RATE, since = 9, aim = 0, now = 0, last = performance.now();
+const shots = [];
+function frame(ts){
+  let dt = Math.min(.05, (ts - last) / 1000); last = ts; if(paused) dt = 0; if(slow) dt *= .25; now += dt;
+  const ca = now * .5; critter.position.set(Math.sin(ca) * 1.85, 0, Math.cos(ca) * 1.85); critter.rotation.y = ca + Math.PI / 2;
+  const want = Math.atan2(critter.position.x, critter.position.z); let d = want - aim; d = Math.atan2(Math.sin(d), Math.cos(d)); aim += d * Math.min(1, dt * 12);
+  tower.g.rotation.y = aim;                                        // the game turns the whole animal to aim
+  cd -= dt; since += dt;
+  if(cd <= 0){ cd += RATE; since = 0;
+    const from = new THREE.Vector3(); (tower.parts.hand || tower.g).getWorldPosition(from);
+    const ball = m(scene, sph(.07, 10, 8), toon('#FF5E7A'), from.toArray(), null, null, true); const to = critter.position.clone(); to.y = .15;
+    shots.push({ o: ball, from, to, t: 0 }); }
+  for(let i = shots.length - 1; i >= 0; i--){ const sh = shots[i]; sh.t += dt * 3; sh.o.position.lerpVectors(sh.from, sh.to, Math.min(1, sh.t)); sh.o.position.y += Math.sin(Math.min(1, sh.t) * Math.PI) * .25; sh.o.rotation.x += dt * 12;
+    if(sh.t >= 1){ scene.remove(sh.o); shots.splice(i, 1); } }
+  const wind = cd < WIND ? Math.pow(1 - cd / WIND, 1.6) : 0, strike = since < .3 ? Math.pow(1 - since / .3, 2) : 0;
+  animateTower(tower.parts, { now, dt, wind, strike, busy: true });
+  renderer.render(scene, camera); requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
