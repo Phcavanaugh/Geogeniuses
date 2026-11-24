@@ -237,7 +237,7 @@ function cualRound(){
   const box=$('kchoices'); box.innerHTML=''; box.className='cgrid achoices n4';
   shuffle([...c[2],c[3]]).forEach(e=>{
     const w=WORD[e]; const b=document.createElement('button'); b.className='achoice'; b._w=w;
-    b.innerHTML=`<span class="pic">${e}</span><span class="lab">${w[1]}</span>`;
+    b.innerHTML=`<span class="pic">${picHTML(e)}</span><span class="lab">${w[1]}</span>`;
     b.onclick=()=>cualPick(b,w);
     box.appendChild(b);
   });

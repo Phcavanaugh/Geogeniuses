@@ -76,14 +76,14 @@ function buildLevels(){
   JOURNEY_WORLDS.forEach((cat,wi)=>{
     const A = hasRiddles(VOCAB[cat]) ? 'adivina' : 'quees';
     const VC = wi%2 ? 'cual' : 'verdad';
-    const plan = AGE===4  ? ['donde','quees', wi%2?'feed':'bubbles', wi%2?'bubbles':'feed', 'memory', {mix:['donde','quees','feed']}]
+    const plan = AGE===4  ? ['donde','quees', A, wi%2?'feed':'bubbles', 'cual', {mix:['donde','quees',A,'feed','cual']}]
                : AGE===7  ? ['donde', A, 'ella', VC, wi%2?'memory':'bubbles', {mix:[A,'ella','quees','donde',VC]}]
                :            ['comodice','escribe', A, 'ella', VC, {mix:['escribe','comodice',A,'ella']}];
     plan.forEach((p,n)=>out.push({ i:out.length, world:wi, cat, n:n+1, mode: typeof p==='string'?p:null, mix: typeof p==='object'?p.mix:null,
                                    boss:n===5, boost:Math.min(4,Math.floor(wi/3)) }));
   });
   out.push({ i:out.length, world:JOURNEY_WORLDS.length, cat: AGE===7 ? 'todos' : 'todas', n:1, final:true, boss:true, boost:4,
-             mix: AGE===4 ? ['donde','quees','feed'] : AGE===7 ? ['adivina','ella','verdad','cual'] : ['escribe','comodice','ella','verdad','cual'] });
+             mix: AGE===4 ? ['donde','quees','feed','adivina','cual'] : AGE===7 ? ['adivina','ella','verdad','cual'] : ['escribe','comodice','ella','verdad','cual'] });
   return out;
 }
 const LEVELS = buildLevels();
