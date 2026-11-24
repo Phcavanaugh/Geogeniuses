@@ -12,7 +12,7 @@
 // Each critter knocked out pays a coin; each round you finish pays 100 + the round. The rounds are Bloons TD 6's
 // standard rounds, and Easy / Medium / Hard are Bloons' (4–5 plays Easy, 7 Medium, 10 Hard).
 
-import { BT } from './defensa-bt.js?v=69';
+import { BT } from './defensa-bt.js?v=70';
 export const U = 13.33;                                   // Bloons units per board unit
 export const bu = v => v / U;                             // Bloons units → board units
 export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 BU, landscape; the island reaches MARGIN past it
@@ -23,9 +23,9 @@ export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 
 // One winding trail per island, ending at the bowl. Its length is set so an ant (red balloon) on Easy takes about
 // 37 seconds to walk it, the time Pete measured for a red balloon on a Bloons beginner map.
 const JARDIN = {
-  bowl: [13, 11],
-  paths: [
-    [[-.6,3.8],[20.7,3.8],[20.7,8.2],[4.5,8.2],[4.5,15],[18.5,15],[18.5,11],[13.95,11]],
+  bowl: [12, 13.4],
+  paths: [   // two loops: the trail crosses itself twice, like Bloons' "In The Loop"
+    [[-.6,5],[10,5],[10,10],[5,10],[5,2.4],[16,2.4],[16,13.6],[20.7,13.6],[20.7,8.7],[12,8.7],[12,12.45]],
   ],
 };
 const flipX = m => ({ bowl: [COLS - m.bowl[0], m.bowl[1]], paths: m.paths.map(p => p.map(([x, y]) => [COLS - x, y])) });
