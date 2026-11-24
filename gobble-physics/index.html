@@ -576,8 +576,30 @@ function buildGraph(S){
     edges=edges.filter(E=>{if(!E.bridge)return true;const A=nodes[E.a],B=nodes[E.b];
       if(A.e.length<2||B.e.length<2){cut=true;return false;}
       const mx=(A.x+B.x)/2,my=(A.y+B.y)/2,o=E.w/2+18;
-      if(E.len>12&&isLand(mx-E.uy*o,my+E.ux*o)!==isLand(mx+E.uy*o,my-E.ux*o)){cut=true;return false;}
+      if(E.len>12){let rv=null,bd=170;for(const R of(CITYGEO.rivers||[]))for(let i=0;i<R.pts.length-1;i++){const q=projSeg(mx,my,R.pts[i][0],R.pts[i][1],R.pts[i+1][0],R.pts[i+1][1]);
+          if(q.d<bd){bd=q.d;const dx=R.pts[i+1][0]-R.pts[i][0],dy=R.pts[i+1][1]-R.pts[i][1],l=Math.hypot(dx,dy)||1;rv=[dx/l,dy/l];}}
+        if(rv){if(Math.abs(rv[0]*E.ux+rv[1]*E.uy)>.8){cut=true;return false;}}   // runs along the river rather than across it
+        else if(isLand(mx-E.uy*o,my+E.ux*o)!==isLand(mx+E.uy*o,my-E.ux*o)){cut=true;return false;}}
       return true;});link();if(!cut)break;}
+  if(CITYGEO){const bn=new Set();for(const E of edges)if(E.bridge){bn.add(E.a);bn.add(E.b);}
+    const ne=[],mkN=(x,y)=>{nodes.push({x,y,e:[]});return nodes.length-1;};
+    for(const E of edges){if(E.bridge){ne.push(E);continue;}
+      const A=nodes[E.a],B=nodes[E.b],r=E.w/2+SW+2,hw=E.w/2,step=4,n=Math.max(1,Math.ceil(E.len/step)),wet=[];let any=false;
+      for(let k=0;k<=n;k++){const t=Math.min(E.len,k*step),x=A.x+E.ux*t,y=A.y+E.uy*t;let w=false;
+        const nearBridge=(bn.has(E.a)&&t<r+14)||(bn.has(E.b)&&E.len-t<r+14);
+        if(!nearBridge)for(const q of[-hw,0,hw])if(!isLand(x-E.uy*q,y+E.ux*q)){w=true;break;}
+        wet.push(w);if(w)any=true;}
+      if(!any){ne.push(E);continue;}
+      for(let k=0;k<=n;){if(wet[k]){k++;continue;}let j=k;while(j<n&&!wet[j+1])j++;
+        let t0=k*step,t1=Math.min(E.len,j*step);if(k>0)t0+=r;if(j<n)t1-=r;
+        if(t1-t0>16){const a=k===0?E.a:mkN(A.x+E.ux*t0,A.y+E.uy*t0),b=j===n?E.b:mkN(A.x+E.ux*t1,A.y+E.uy*t1);ne.push({a,b,w:E.w,blvd:E.blvd,bridge:false});}
+        k=j+1;}}
+    edges=ne;link();
+    // a dead end must not put its round cap in the water: pull it back along its street
+    for(const N of nodes){if(N.e.length!==1)continue;const E=edges[N.e[0]],o=nodes[E.a]===N?nodes[E.b]:nodes[E.a],r=E.w/2+SW+2;
+      const wetCap=()=>{for(let i=0;i<12;i++){const a=i/12*TAU;if(!isLand(N.x+Math.cos(a)*r,N.y+Math.sin(a)*r))return true;}return false;};
+      let d=Math.hypot(o.x-N.x,o.y-N.y);while(wetCap()&&d>20){const ux=(o.x-N.x)/d,uy=(o.y-N.y)/d;N.x+=ux*4;N.y+=uy*4;d-=4;}}
+    link();}
   // trim short dead-end spurs: measure the whole dangling stretch (through bends), not one little edge at a time
   for(let pass=0;pass<4;pass++){const kill=new Set();
     nodes.forEach((N,n)=>{if(N.e.length!==1||gate(n))return;let cur=n,ei=N.e[0],L=0;const path=[];
