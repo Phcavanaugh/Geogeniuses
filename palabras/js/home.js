@@ -129,8 +129,9 @@ function renderMap(prevLevel){
     const pts=lv.map((l,k)=>[lv.length===1?50:NODE_X[k], 50+k*100]);
     let svg=`<svg viewBox="0 0 100 ${H}" preserveAspectRatio="none"><polyline points="${pts.map(p=>p.join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" stroke-dasharray="2 14"/></svg>`;
     // a few faded pictures from this world as scenery
-    const deco = shuffle(W.c.words).slice(0,4);
-    deco.forEach((w,k)=>{ const x = (k%2? 90 : 9), y = 70 + k*(H-120)/3; svg+=`<span class="deco" style="left:${x}%;top:${y}px">${picHTML(w[2])}</span>`; });
+    // (a one-stop box, like ¡Repaso!, has room for just two: one each side of the stop)
+    const one = lv.length===1, deco = shuffle(W.c.words).slice(0, one ? 2 : 4);
+    deco.forEach((w,k)=>{ const x = one ? (k ? 84 : 16) : (k%2? 90 : 9), y = one ? 34 : 70 + k*(H-120)/3; svg+=`<span class="deco" style="left:${x}%;top:${y}px">${picHTML(w[2])}</span>`; });
     path.innerHTML=svg;
     lv.forEach((l,k)=>{
       const st=J.stars[l.i]||0, locked=l.i>J.open, cur=l.i===J.open, info=modeInfo(l);
