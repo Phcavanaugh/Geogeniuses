@@ -221,7 +221,7 @@ const _go=gameOver;
 
 /* ======================= Album ======================= */
 function renderAlbum(){
-  const cats=Object.entries(VOCAB).filter(([k])=>k!=='todos'&&k!=='todas');
+  const cats=Object.entries(VOCAB).filter(([k,c])=>k!=='todos'&&k!=='todas'&&!c.recap);
   const total=VOCAB.todas.words.length, got=VOCAB.todas.words.filter(found).length;
   $('albumN').textContent=`${got} / ${total} estampas`;
   $('albumBody').innerHTML='';
