@@ -37,8 +37,11 @@ import * as THREE from 'three';
 
    1) makeTower(a, b) → { g, parts }
       Builds the tower animal. a = upgrade step on path A (0-3), b = upgrade step on path B (0-3).
-      - g is a THREE.Group. The animal FACES +Z and stands on y = 0 (it is placed on top of a stone base).
-      - Keep it roughly 0.5 wide and 0.8 tall.
+      - g is a THREE.Group. The animal FACES +Z. g INCLUDES THE BASE the animal sits on, standing on the
+        ground at y = 0 (there is no stone tower any more). The base should suit the creature and be fun
+        (for the gato: a cat tree with a scratching post and a round cushion, or a big basket of yarn balls, a little fish bowl...). Base about 0.85 wide; whole thing about 1.2 tall.
+      - The base usually does NOT turn when the tower aims: put it in parts.base and the game will keep
+        it still while the animal above turns. Put everything that should turn to aim in parts.turn.
       - Use the helpers below (m, toon, basic, sph, cyl, cone, box, tube, eyes, cheeks): chunky, rounded,
         cartoon look with dark outlines (the last argument of m(..., true) adds an outline).
       - Each upgrade step must look clearly different; step 3 on each path should look special.
@@ -46,7 +49,8 @@ import * as THREE from 'three';
         Optionally parts.hand = an Object3D where the thrown ball should start.
 
    2) animateTower(parts, s)
-      Called every frame. Move/rotate/scale ONLY things inside g (never g itself: the game turns g to aim).
+      Called every frame. Move/rotate/scale ONLY things inside g. Never set parts.turn.rotation.y or g's
+      rotation: the game turns parts.turn to aim (and keeps parts.base still).
       s = { now: seconds, dt: seconds since last frame,
             wind: 0→1 during the wind-up just before a throw (0 the rest of the time),
             strike: 1 right at the throw, fading to 0 over ~0.3 s,
@@ -92,7 +96,8 @@ const band = (g, y, r, col, tilt = 0) => m(g, new THREE.TorusGeometry(r, .035, 8
 // ======================================= EDIT BELOW =======================================
 // Upgrade names (path A "Rapidez"): 1 Lanza rápido · 2 Lanza muy rápido · 3 Tres bolas
 // Upgrade names (path B "Bolas fuertes"): 1 Bola puntiaguda · 2 Bola muy puntiaguda · 3 Bola gigante
-// These pieces are all children of g. Animation never changes g, which the game rotates to aim.
+// The cat is done and is in the game (makeCat and animateTower below). NEW: give it its own cat base instead of
+// the stone tower. Below, makeTower puts today's cat on a plain placeholder post: replace the base, keep the cat.
 function catYarn(parent, radius, color, spikes = false){
   const ball = new THREE.Group(); parent.add(ball);
   m(ball, sph(radius, 14, 10), toon(color), [0, 0, 0], null, null, true);
@@ -108,7 +113,7 @@ function catYarn(parent, radius, color, spikes = false){
   return ball;
 }
 
-function makeTower(a, b){
+function makeCat(a, b){
   const g = new THREE.Group(), parts = { a, b, floats: [], ears: [], lids: [] };
   const fur = toon('#FFAB43'), light = toon('#FFD070'), cream = toon('#FFF4DB');
   const stripe = toon('#DF721E'), coral = toon('#FF7187'), teal = toon('#147F91');
@@ -231,6 +236,17 @@ function makeTower(a, b){
   return { g, parts };
 }
 
+function makeTower(a, b){
+  const g = new THREE.Group();
+  const base = new THREE.Group(); g.add(base);                                    // stays still
+  m(base, cyl(.12, .14, .4, 12), toon('#C9A57A'), [0, .2, 0], null, null, true);          // a plain post
+  m(base, cyl(.4, .4, .06, 20), toon('#8C6A4A'), [0, .03, 0], null, null, true);          // its foot
+  m(base, cyl(.36, .34, .06, 20), toon('#4FA8FF'), [0, .43, 0], null, null, true);        // a cushion on top
+  const turn = new THREE.Group(); turn.position.y = .46; g.add(turn);              // turns to aim
+  const cat = makeCat(a, b); turn.add(cat.g);
+  return { g, parts: { ...cat.parts, base, turn } };
+}
+
 function animateTower(parts, s){
   const t = s.now, breathe = Math.sin(t * 3.1), swish = Math.sin(t * 2.7);
   // s.strike is a quadratic fade; recover the time since release for a held follow-through.
@@ -285,11 +301,10 @@ function pedestal(){ const g = new THREE.Group(), st = toon('#CFC8BC'), dk = too
   m(g, cyl(.36, .43, .36, 8), st, [0, .18, 0]); m(g, cyl(.43, .4, .08, 8), dk, [0, .4, 0]);
   for(let i = 0; i < 8; i++){ const a = i / 8 * Math.PI * 2 + Math.PI / 8; m(g, box(.12, .1, .08), dk, [Math.sin(a) * .37, .49, Math.cos(a) * .37], null, [0, a, 0]); }
   return g; }
-scene.add(pedestal());
 const critter = new THREE.Group(); m(critter, sph(.13), toon('#E0533D'), [0, .13, 0], null, null, true); eyes(critter, .05, .17, .1, .03); scene.add(critter);
 
 let A = 0, B = 0, tower = null;
-function build(){ if(tower) scene.remove(tower.g); tower = makeTower(A, B); tower.g.position.y = .44; tower.g.scale.setScalar(.95); scene.add(tower.g);
+function build(){ if(tower) scene.remove(tower.g); tower = makeTower(A, B); scene.add(tower.g);
   document.querySelectorAll('#pa button').forEach((b, i) => b.classList.toggle('on', i === A)); document.querySelectorAll('#pb button').forEach((b, i) => b.classList.toggle('on', i === B)); }
 for(const [id, set] of [['pa', v => A = v], ['pb', v => B = v]]) for(let i = 0; i <= 3; i++){ const b = document.createElement('button'); b.textContent = i; b.onclick = () => { set(i); build(); }; document.getElementById(id).appendChild(b); }
 build();
@@ -316,7 +331,7 @@ function frame(ts){
   let dt = Math.min(.05, (ts - last) / 1000); last = ts; if(paused) dt = 0; if(slow) dt *= .25; now += dt;
   const ca = now * .5; critter.position.set(Math.sin(ca) * 1.85, 0, Math.cos(ca) * 1.85); critter.rotation.y = ca + Math.PI / 2;
   const want = Math.atan2(critter.position.x, critter.position.z); let d = want - aim; d = Math.atan2(Math.sin(d), Math.cos(d)); aim += d * Math.min(1, dt * 12);
-  tower.g.rotation.y = aim;                                        // the game turns the whole animal to aim
+  (tower.parts.turn || tower.g).rotation.y = aim;                 // the game turns parts.turn to aim
   cd -= dt; since += dt;
   if(cd <= 0){ cd += RATE; since = 0;
     const from = new THREE.Vector3(); (tower.parts.hand || tower.g).getWorldPosition(from);
