@@ -57,7 +57,7 @@ async function start(key){
   unlockAudio();
   if(VOICE.on){
     const need = (S.mode==='verdad'||S.mode==='cual') ? [loadGroup('silly')]
-               : [loadCat(key), (BIG||S.pedorro||S.mode==='hermanos'||S.mode==='ella'||S.mode==='mix') ? loadGroup('silly') : null];
+               : [loadCat(key), loadGroup('silly')];
     await Promise.race([Promise.all(need), wait(6000)]);
   }
   document.querySelectorAll('.gtitle').forEach(t=>t.textContent=c.es);

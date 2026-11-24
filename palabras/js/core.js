@@ -220,7 +220,7 @@ async function talk(keys){
   if(tok!==VOICE.tok) return;
   return speak(keys.map(keyText).filter(Boolean).join(' '));
 }
-loadGroup('common'); if(BIG || S.pedorro) loadGroup('silly');
+loadGroup('common'); loadGroup('silly');   // silly has the miss lines and some game names, so every age needs it
 
 /* ======================= helpers ======================= */
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];} return a; }
