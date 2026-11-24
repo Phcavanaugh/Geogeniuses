@@ -12,7 +12,7 @@
 // Each critter knocked out pays a coin; each round you finish pays 100 + the round. The rounds are Bloons TD 6's
 // standard rounds, and Easy / Medium / Hard are Bloons' (4–5 plays Easy, 7 Medium, 10 Hard).
 
-import { BT } from './defensa-bt.js?v=66';
+import { BT } from './defensa-bt.js?v=67';
 export const U = 13.33;                                   // Bloons units per board unit
 export const bu = v => v / U;                             // Bloons units → board units
 export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 BU, landscape; the island reaches MARGIN past it
@@ -20,11 +20,12 @@ export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 
 // ---------- maps ----------
 // Each map has a bowl and four trails (corner points; corners get rounded). Trail 1 is open from round 1;
 // the others open in later rounds (see AGES.paths).
-// One long winding trail per island, as long as a Bloons beginner map's path (about 1,340 BU), ending at the bowl.
+// One winding trail per island, ending at the bowl. Its length is set so an ant (red balloon) on Easy takes about
+// 37 seconds to walk it, the time Pete measured for a red balloon on a Bloons beginner map.
 const JARDIN = {
-  bowl: [13, 8.5],
+  bowl: [13, 10.4],
   paths: [
-    [[-.6,2],[22,2],[22,5.1],[3,5.1],[3,8.5],[10.1,8.5],[10.1,11.9],[3,11.9],[3,15.1],[22,15.1],[22,8.5],[13.95,8.5]],
+    [[-.6,3.2],[20.7,3.2],[20.7,7.6],[4.5,7.6],[4.5,14.4],[18.5,14.4],[18.5,10.4],[13.95,10.4]],
   ],
 };
 const flipX = m => ({ bowl: [COLS - m.bowl[0], m.bowl[1]], paths: m.paths.map(p => p.map(([x, y]) => [COLS - x, y])) });
@@ -316,6 +317,13 @@ export class Game {
     Object.assign(this, { r:s.r, lives:s.lives, coins:s.coins, points:s.points || 0 });
     this.towers = (s.towers || []).map(t => ({ ...t, id:nid(), lvl:1 + Math.max(t.a, t.b), cd:0, aim:Math.PI, shotAt:-9, target:t.target || 'first' }));
     this.walls = (s.walls || []).map(w => ({ ...w, id:nid(), wall:true, cd:0, max:this.wallStat(w).max }));
+    // if the trail moved (a map was redrawn), anything that no longer fits goes back to the shop: full refund
+    const keep = [];
+    for(const t of this.towers){ const others = this.towers; this.towers = keep; const why = this.whyNot(t.x, t.y); this.towers = others;
+      if(why) this.coins += t.spent || 0; else keep.push(t); }
+    this.towers = keep;
+    const plen = P => P.reduce((t, q, k) => k ? t + Math.hypot(q[0] - P[k-1][0], q[1] - P[k-1][1]) : 0, 0);
+    this.walls = this.walls.filter(w => { const P = this.allPaths()[w.p || 0], ok = P && w.d < plen(P) - 1.4; if(!ok) this.coins += w.spent || 0; return ok; });
   }
   startRound(){
     const r = this.r;
