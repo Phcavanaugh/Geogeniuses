@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=72';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=73';
 
 // ====================================================================================
 // materials
@@ -669,7 +669,7 @@ const GEAR = {
 // flat top-down tower pictures (like Bloons): art/defensa/towers/<id>/0.png plain, 1-3 path A steps, 4-6 path B steps.
 // Drawn facing UP; the base circle's center sits at BASE (fraction of the picture from the left / top). A tower listed
 // here uses its pictures instead of the 3D model; the rest keep the 3D model until their pictures come.
-const SPRITES = { gato: { base: [.503, .667], size: 1.8 } };
+const SPRITES = {};   // e.g. gato: { base: [.503, .667], size: 1.8 } — off: Pete prefers the moving 3D animals
 const spriteTex = {};
 function spriteModel(id, ua, ub){
   const S = SPRITES[id], n = ua >= ub ? (ua ? ua : 0) : 3 + ub, url = `${ART}towers/${id}/${n}.png?v=1`;
