@@ -46,7 +46,7 @@ if('serviceWorker' in navigator && (location.protocol==='https:' || location.hos
 }
 $('saveOffline').onclick=async()=>{
   const b=$('saveOffline'), st=$('offlineStatus');
-  const groups=['common',...Object.keys(VOCAB).filter(k=>k!=='todos'&&k!=='todas')];
+  const groups=['common',...Object.keys(VOCAB).filter(k=>k!=='todos'&&k!=='todas'&&!VOCAB[k].recap)];
   b.disabled=true; let n=0;
   for(const g of groups){
     st.textContent=`Saving… ${n}/${groups.length}`;

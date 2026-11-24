@@ -56,7 +56,7 @@ function renderHud(breakIdx){
   let s=''; for(let k=0;k<LIVES;k++) s+=`<span class="${k===breakIdx?'breaking':(k>=S.lives?'lost':'')}">❤️</span>`;
   h.querySelector('.hearts').innerHTML=s;
   h.querySelector('.score').textContent=S.score;
-  h.querySelector('.bestv').textContent = S.level ? (S.level.final ? '🏆' : S.level.n===6 ? '👑' : S.level.n) : Math.max(S.best,S.score);
+  h.querySelector('.bestv').textContent = S.level ? (S.level.final ? '🏆' : S.level.recap ? '🔁' : S.level.n===6 ? '👑' : S.level.n) : Math.max(S.best,S.score);
   const st=h.querySelector('.streak'), mult=multiplier();
   st.classList.toggle('on', mult>1); st.textContent = `🔥 x${mult}`;
   const g=h.querySelector('.gprog');

@@ -33,7 +33,7 @@ document.querySelectorAll('.agesw button').forEach(b=>{
 const hasRiddles = c => c.words.filter(w=>RIDDLES[w[2]]).length >= 12;   // Adivina only asks about words that have a riddle
 function renderCats(){
   const wrap=$('cats'); wrap.innerHTML='';
-  Object.entries(VOCAB).filter(([k,c])=> (S.mode==='verdad'||S.mode==='cual') ? k==='todas' : (S.mode!=='adivina' || hasRiddles(c))).forEach(([key,c])=>{
+  Object.entries(VOCAB).filter(([k,c])=> !c.recap).filter(([k,c])=> (S.mode==='verdad'||S.mode==='cual') ? k==='todas' : (S.mode!=='adivina' || hasRiddles(c))).forEach(([key,c])=>{
     const b=document.createElement('button'); b.className='cat'+(key==='todas'?' wide':''); b.style.background=c.color;
     const got=c.words.filter(found).length;
     b.innerHTML=`<span class="e">${c.icon}</span>${c.es}<small>${c.en}</small><span class="prog">📒 ${got}/${c.words.length}</span>`;
@@ -81,21 +81,35 @@ function buildLevels(){
                :            ['comodice','escribe', A, 'ella', VC, {mix:['escribe','comodice',A,'ella']}];
     plan.forEach((p,n)=>out.push({ i:out.length, world:wi, cat, n:n+1, mode: typeof p==='string'?p:null, mix: typeof p==='object'?p.mix:null,
                                    boss:n===5, boost:Math.min(4,Math.floor(wi/3)) }));
+    // a recap stop after each world (not the last): words from every world so far
+    if(wi < JOURNEY_WORLDS.length-1){
+      const key='repaso'+wi, from=JOURNEY_WORLDS.slice(0,wi+1);
+      VOCAB[key] = { es:'¡Repaso!', en:'Review: words from every world so far', icon:'📖', color:'#FFF3D6', recap:true, from,
+                     words: uniq(from.flatMap(k=>VOCAB[k].words)) };
+      out.push({ i:out.length, world:'r'+wi, cat:key, n:1, recap:true, boost:Math.min(4,Math.floor(wi/3)),
+                 mix: AGE===4 ? ['donde','quees','adivina','feed'] : AGE===7 ? ['donde','adivina','ella','quees'] : ['escribe','comodice','adivina','ella'] });
+    }
   });
   out.push({ i:out.length, world:JOURNEY_WORLDS.length, cat: AGE===7 ? 'todos' : 'todas', n:1, final:true, boss:true, boost:4,
              mix: AGE===4 ? ['donde','quees','feed','adivina','cual'] : AGE===7 ? ['adivina','ella','verdad','cual'] : ['escribe','comodice','ella','verdad','cual'] });
   return out;
 }
 const LEVELS = buildLevels();
-let J = store.get('journey', {stars:{}, open:0});
+let J = store.get('journey', {stars:{}, open:0, v:2});
+if(!J.v){   // saved before recap stops: move each level to its new place (6 levels per world, then the recap)
+  const old=JOURNEY_WORLDS.length*6, to = i => i>=old ? LEVELS.length-1 : Math.floor(i/6)*7 + i%6;
+  const st={}; for(const k in J.stars) st[to(+k)]=J.stars[k];
+  J = { stars:st, open: J.open>=old ? LEVELS.length-1 : to(J.open), v:2 }; store.set('journey', J);
+}
 const saveJ = () => store.set('journey', J);
-const modeInfo = L => L.mix ? (L.final ? {...MIXINFO, e:'🏆', es:'¡Gran final!', en:'The final challenge: every game, every word', k:'c|¡Gran final!'} : MIXINFO) : MODES_ALL.find(m=>m.id===L.mode);
+const RECAPINFO={e:'📖', es:'¡Repaso!', en:'Review: words from every world so far', k:'c|¡Muy bien!'};
+const modeInfo = L => L.recap ? RECAPINFO : L.mix ? (L.final ? {...MIXINFO, e:'🏆', es:'¡Gran final!', en:'The final challenge: every game, every word', k:'c|¡Gran final!'} : MIXINFO) : MODES_ALL.find(m=>m.id===L.mode);
 const starStr = (n, max=3) => [0,1,2].slice(0,max).map(k=>`<span class="${k<n?'':'star-off'}">⭐</span>`).join('');
 const NODE_X=[22,50,78,64,36,50];
 // each level on the map shows a sticker from its world: the boss gets the world's own picture,
 // the others get words spread through the list (words with drawn art first)
 function levelPic(W, k, n){
-  if(k===n-1) return W.c.icon;
+  if(k===n-1 || W.c.recap) return W.c.icon;
   const ws=W.c.words.filter(w=>w[2]!==W.c.icon), art=ws.filter(w=>ART[w[2]]), pool=art.length>=n-1?art:ws;
   return pool[Math.floor(k*pool.length/(n-1))][2];
 }
@@ -103,7 +117,7 @@ function renderMap(prevLevel){
   const wrap=$('mapwrap'); wrap.innerHTML='';
   let total=0; Object.values(J.stars).forEach(v=>total+=v);
   $('mapStars').textContent=`${total} / ${LEVELS.length*3}`;
-  const worlds=[...JOURNEY_WORLDS.map((cat,wi)=>({cat, wi, c:VOCAB[cat]})), {cat:'final', wi:JOURNEY_WORLDS.length, c:{es:'¡Gran final!', en:'The last level', icon:'🏆', color:'#FFE3A3', words:VOCAB.todas.words}}];
+  const worlds=[...JOURNEY_WORLDS.flatMap((cat,wi)=>[{cat, wi, c:VOCAB[cat]}, ...(VOCAB['repaso'+wi] ? [{cat:'repaso'+wi, wi:'r'+wi, c:VOCAB['repaso'+wi]}] : [])]), {cat:'final', wi:JOURNEY_WORLDS.length, c:{es:'¡Gran final!', en:'The last level', icon:'🏆', color:'#FFE3A3', words:VOCAB.todas.words}}];
   let curEl=null, prevPos=null, curPos=null;
   worlds.forEach(W=>{
     const lv=LEVELS.filter(l=>l.world===W.wi);
@@ -125,7 +139,7 @@ function renderMap(prevLevel){
       b.style.left=pts[k][0]+'%'; b.style.top=pts[k][1]+'px';
       const pic = levelPic(W, k, lv.length);
       b.innerHTML = `<span class="npic">${picHTML(pic)}</span>`
-        + (locked ? '<span class="nlock">🔒</span>' : l.boss ? `<span class="badge">${l.final?'🏆':'👑'}</span><span class="nnum">${l.n===1&&l.final?'★':'6'}</span>` : `<span class="badge">${info.e}</span><span class="nnum">${l.n}</span>`)
+        + (locked ? '<span class="nlock">🔒</span>' : l.recap ? '<span class="badge">🔁</span>' : l.boss ? `<span class="badge">${l.final?'🏆':'👑'}</span><span class="nnum">${l.n===1&&l.final?'★':'6'}</span>` : `<span class="badge">${info.e}</span><span class="nnum">${l.n}</span>`)
         + (st?`<span class="nstars">${starStr(st)}</span>`:'');
       b.onclick=()=>{ if(locked){ b.classList.remove('wig'); void b.offsetWidth; b.classList.add('wig'); talk(['c|¿Qué será?']); return; } openLevelCard(l); };
       path.appendChild(b);
@@ -147,7 +161,7 @@ function renderMap(prevLevel){
 function openLevelCard(l){
   const info=modeInfo(l), W = l.final ? {es:'¡Gran final!'} : VOCAB[l.cat];
   $('lcEmoji').textContent = info.e;
-  $('lcWhere').textContent = l.final ? 'El último nivel' : `${W.es} · Nivel ${l.n} de 6`;
+  $('lcWhere').textContent = l.final ? 'El último nivel' : l.recap ? `Palabras de ${W.from.length===1?'1 mundo':W.from.length+' mundos'}` : `${W.es} · Nivel ${l.n} de 6`;
   $('lcName').textContent = info.es; $('lcEn').textContent = info.en;
   $('lcStars').innerHTML = starStr(J.stars[l.i]||0);
   $('lcGo').onclick=()=>startLevel(l.i);
@@ -170,7 +184,7 @@ function startMix(){ S.mode=pickMix(); newRun(); mixRound(true); }
 function mixRound(first){
   if(!first){ S.mode=pickMix(); }
   S.lastMix=S.mode;
-  document.querySelectorAll('.gtitle').forEach(t=>t.textContent = S.level&&S.level.final ? '🏆 ¡Gran final!' : '👑 ¡Desafío!');
+  document.querySelectorAll('.gtitle').forEach(t=>t.textContent = S.level&&S.level.final ? '🏆 ¡Gran final!' : S.level&&S.level.recap ? '🔁 ¡Repaso!' : '👑 ¡Desafío!');
   show(S.mode);
   sec().querySelector('.hud').innerHTML=hudHTML(); renderHud();
   ({donde:dondeRound, quees:queesRound, feed:feedRound, adivina:adivinaRound, ella:ellaRound, verdad:verdadRound, cual:cualRound, escribe:escribeRound, comodice:comodiceRound})[S.mode]();
@@ -189,7 +203,7 @@ function levelEnd(pass){
   $('overTitle').textContent = !pass ? '¡Casi! Inténtalo otra vez' : L.final ? '¡Terminaste la aventura!' : worldDone ? '¡Mundo completado!' : '¡Nivel superado!';
   $('overEmoji').textContent = !pass ? '💪' : L.final ? '🏆' : worldDone ? '👑' : '🎉';
   $('overScore').innerHTML = `<span class="stars-big">${starStr(stars)}</span>`;
-  $('overUnit').textContent = L.final ? '¡Gran final!' : `${VOCAB[L.cat].es} · Nivel ${L.n}`;
+  $('overUnit').textContent = L.final ? '¡Gran final!' : L.recap ? '¡Repaso!' : `${VOCAB[L.cat].es} · Nivel ${L.n}`;
   $('newRec').textContent = unlocked && next ? '🔓 ¡Nuevo nivel desbloqueado!' : better && pass ? '⭐ ¡Más estrellas que antes!' : '';
   $('newRec').classList.toggle('on', !!$('newRec').textContent);
   $('overBest').textContent = pass ? `${S.score} puntos` : 'Te quedaste sin corazones. ¡Tú puedes!';

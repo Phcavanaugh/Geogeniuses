@@ -157,7 +157,7 @@ function loadGroup(g){
       .catch(e=>{ VOICE.status='Could not download the recordings ('+(e&&e.message||e)+').'; delete VOICE.loading[g]; return false; });
   return VOICE.loading[g];
 }
-const groupsFor = cat => cat==='todas' ? Object.keys(VOCAB).filter(k=>k!=='todos'&&k!=='todas')
+const groupsFor = cat => VOCAB[cat] && VOCAB[cat].from ? VOCAB[cat].from : cat==='todas' ? Object.keys(VOCAB).filter(k=>k!=='todos'&&k!=='todas')
                        : cat==='todos' ? Object.keys(VOCAB).filter(k=>VOCAB[k].animal) : [cat];
 const loadCat = cat => Promise.all(groupsFor(cat).map(loadGroup));
 function keyText(k){
