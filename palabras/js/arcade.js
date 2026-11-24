@@ -69,7 +69,7 @@ function bubbleTap(b){
     const run=S.run;
     S.target=null; $('bq').innerHTML='⭐';
     const done=wordDone();
-    talk([m,'w|'+w[2]]).then(()=>{ if(run===S.run && S.lives>0){ if(done) finishGame(); else newBubbleTarget(); } });
+    talk([m,'w|'+w[2]]).then(()=>{ if(run===S.run && S.lives>0){ if(goalReached()) finishGame(); else newBubbleTarget(); } });
   } else if(S.target){
     b.el.classList.add('bad'); setTimeout(()=>b.el.remove(),500);
     scoreMiss(S.target);
@@ -84,7 +84,7 @@ function bubbleEscaped(run){
   S.target=null; $('bq').innerHTML='💨';
   talk(['c|¡Se fue!','w|'+gone[2]]).then(()=>{
     if(run!==S.run) return;
-    if(S.lives<=0) gameOver(); else if(done) finishGame(); else newBubbleTarget();
+    if(S.lives<=0) gameOver(); else if(goalReached()) finishGame(); else newBubbleTarget();
   });
 }
 
