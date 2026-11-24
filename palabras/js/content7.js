@@ -125,6 +125,8 @@ const MISS_LINES = [
   ['¡Ups! ¡Hasta el zorrillo se tapa la nariz!',2],['¡Guácala! ¡Esa respuesta tiene mocos!',2],['¡Uy! ¡Esa respuesta huele a popó!',2],
   ['¡Ay, no! ¡Esa respuesta se tiró un pedo!',3],['¡Pum! ¡Se me salió un pedo de la sorpresa!',3],
 ];
+// Kind words after a miss (the 7-year-old hears these instead of the funny miss lines)
+const CHEER_LINES = ["¡Casi! ¡Tú puedes!", "¡Buen intento! ¡Sigue así!", "¡No pasa nada! ¡Aprendemos juntos!", "¡Ánimo! ¡Lo vas a lograr!", "¡Muy cerca! ¡Inténtalo otra vez!", "¡Equivocarse es parte de aprender!"];
 const HIT_LINES = [['¡Excelente! ¡Hueles a rosas!',1],['¡Bravo! ¡Le ganaste al zorrillo!',2],['¡Genial! ¡Ni un pedo te gana!',3]];
 const SILLY_CLIPS = ['¡Es verdad!','¡Es mentira!','¡Te toca!','¡Felicidades!','¡Empate!','¡Te ganó un pedo!','¿El o la?','¿Verdad o mentira?','¿Cuál no va?','¡Hermanos!'];
 

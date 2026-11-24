@@ -95,7 +95,7 @@ function scoreRight(w, x, y, funny){
   const p=praise(); banner(p); return 'c|'+p;
 }
 function fartPuff(){
-  if(!S.pedorro) return;
+  if(!S.pedorro || AGE===7) return;   // the 7-year-old gets encouragement, not fart noises, when she misses
   S.fartNext=true;
   const f=document.createElement('div'); f.className='fartpuff'; f.textContent='💨';
   f.style.left=(innerWidth/2-20)+'px'; f.style.top=(innerHeight/2)+'px';
@@ -103,7 +103,10 @@ function fartPuff(){
 }
 // Questions are read automatically unless Read aloud is off. In ¡Hermanos! the little kid's turns are always read.
 function autoAsk(){ if(S.ask && (S.readAloud || (S.herm && S.herm.turn===1))) S.ask(); }
-const funnyMiss = () => 'c|'+MISS_LINES[Math.floor(Math.random()*MISS_LINES.length)][0];
+const funnyMiss = () => {
+  if(AGE===7){ const t=CHEER_LINES[Math.floor(Math.random()*CHEER_LINES.length)]; banner(t,'kind'); return 'c|'+t; }
+  return 'c|'+MISS_LINES[Math.floor(Math.random()*MISS_LINES.length)][0];
+};
 function scoreMiss(target){
   fartPuff();
   if(S.herm){ renderHud(); return; }

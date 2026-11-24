@@ -222,3 +222,5 @@ select{border:2px solid var(--ink)}
 .node.n-done,.node.n-cur{background:var(--card)}
 .node.n-done{box-shadow:var(--lift),inset 0 0 0 4px var(--sun)}
 .node.n-cur .npic{animation:none}
+/* a kind word after a miss (7-year-old) */
+.cheer.kind .b{font-size:30px;color:var(--sun);max-width:88vw;text-align:center;line-height:1.15}
