@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=67';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=68';
 
 // ====================================================================================
 // materials
@@ -875,19 +875,19 @@ const CSS = `
 .d3.land .d3stats{margin-left:0;order:-1;gap:14px}
 .d3.land .d3pill{background:none;border:0;box-shadow:none;margin:0;padding:0;height:auto;font-size:26px;color:#fff;-webkit-text-stroke:5px #1B2B3A;paint-order:stroke fill}
 .d3.land .d3pill .ic{width:34px;height:34px;margin:0 4px 0 0;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
-.d3.land .d3top .ib{margin-left:auto;width:44px;height:44px;border-radius:12px}
+.d3.land .d3top .ib{margin-left:auto;width:40px;height:40px;border-radius:12px}
 .d3.land .d3top .ib .ic{width:30px;height:30px}
 /* round, top-right of the map */
-.d3.land .d3info{left:auto;right:calc(var(--pw) + 66px);transform:none;top:calc(env(safe-area-inset-top) + 6px);flex-direction:column;align-items:flex-end;gap:2px}
+.d3.land .d3info{left:auto;right:calc(var(--pw) + 60px);transform:none;top:calc(env(safe-area-inset-top) + 4px);flex-direction:column;align-items:flex-end;gap:0}
 .d3.land .d3info .tt{background:none;border:0;box-shadow:none;padding:0;text-align:right;color:#fff;-webkit-text-stroke:4px #1B2B3A;paint-order:stroke fill}
-.d3.land .d3info .tt b{font-size:24px}
+.d3.land .d3info .tt b{font-size:21px}
 .d3.land .d3info .tt small{font-size:12px;-webkit-text-stroke:3px #1B2B3A;opacity:1}
-.d3.land .d3left{height:24px;border:0;border-radius:999px;background:rgba(27,43,58,.55);color:#fff;font-size:13px;padding:0 9px;box-shadow:none}
+.d3.land .d3left{height:auto;border:0;background:none;box-shadow:none;padding:0;color:#fff;font-size:13px;-webkit-text-stroke:3px #1B2B3A;paint-order:stroke fill}
 .d3.land .d3info:has(.d3left:empty) .tt{border-radius:0}
 .d3.land .d3info>.d3auto{display:none}
 .d3.land .d3pw{right:calc(var(--pw) + 12px)}
 .d3.land .d3tip{right:calc(var(--pw) + 12px)}
-.d3.land .d3test{right:calc(var(--pw) + 12px);top:calc(env(safe-area-inset-top) + 74px)}
+.d3.land .d3test{right:auto;left:10px;top:auto;bottom:calc(env(safe-area-inset-bottom) + 8px);justify-content:flex-start;opacity:.8}
 .d3.land .d3banner,.d3.land .d3toast{left:calc(50% - var(--pw) / 2)}
 @media (max-height:430px){ .d3.land .d3go .ic{width:24px;height:24px;margin:0} .d3.land .d3tw .disc{width:100%;height:100%} .d3.land .d3tw .disc img{width:100%;height:100%} .d3.land .d3go,.d3.land .d3foot .d3auto{height:48px} .d3.land .d3bar{top:0} }
 `;
