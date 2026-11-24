@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=65';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=66';
 
 // ====================================================================================
 // materials
@@ -843,6 +843,53 @@ const CSS = `
 .d3intro img{width:min(80%,390px);filter:drop-shadow(0 6px 10px rgba(20,60,70,.3))}
 .d3intro .r{margin-top:2px;border-radius:999px;padding:4px 16px;font-weight:700;font-size:18px}
 .d3.intro .d3info,.d3.intro .d3tip{opacity:0}
+/* ===== clean landscape layout (like Bloons): the map fills the screen, numbers float on it, the shop is a side panel ===== */
+.d3hd{display:none}
+.d3grid,.d3foot{display:contents}
+.d3:not(.land) .d3foot .d3auto{display:none}
+.d3.land{--pw:clamp(150px,20vw,200px)}
+.d3.land .d3bar{display:flex;flex-direction:column;align-items:stretch;top:0;bottom:0;right:0;left:auto;width:var(--pw);padding:calc(env(safe-area-inset-top) + 8px) calc(env(safe-area-inset-right) + 8px) calc(env(safe-area-inset-bottom) + 8px) 8px;gap:6px;border:0;border-left:4px solid #7A4B22;border-radius:0;
+  background:#B8834B repeating-linear-gradient(90deg,rgba(0,0,0,.035) 0 3px,transparent 3px 11px);box-shadow:-3px 0 10px rgba(0,0,0,.25)}
+.d3.land .d3hd{display:block;flex:none;text-align:center;font-weight:700;font-size:15px;color:#FFF8E6;background:#8E5B2C;border-radius:10px;padding:4px 6px;box-shadow:inset 0 -2px 0 rgba(0,0,0,.2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.d3.land .d3grid{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:calc((var(--pw) - 32px) / 2);gap:6px;flex:1;min-height:0;overflow-y:auto;align-content:start;padding:2px;border-radius:10px;background:rgba(80,45,15,.25)}
+.d3.land .d3tw{height:100%;min-height:0;border-radius:10px;overflow:hidden;background:linear-gradient(#7CCBF7,#3E95DB);box-shadow:inset 0 0 0 2px rgba(255,255,255,.35),0 2px 0 rgba(0,0,0,.25);display:block;padding:0}
+.d3.land .d3tw .disc{width:100%;height:100%;border:0;border-radius:0;background:none;box-shadow:none;display:block}
+.d3.land .d3tw .disc img{width:100%;height:100%;margin:0;object-fit:contain;transform:translateY(-6%) scale(1.05)}
+.d3.land .d3tw .c{position:absolute;left:0;right:0;bottom:2px;margin:0;justify-content:center;background:none;border:0;height:auto;padding:0;color:#fff;font-size:15px;-webkit-text-stroke:3px #1B2B3A;paint-order:stroke fill}
+.d3.land .d3tw .c .ic{display:none}
+.d3.land .d3tw .nm{display:none}
+.d3.land .d3tw.sel{box-shadow:inset 0 0 0 3px #FFE14D,0 0 0 2px #FFE14D}
+.d3.land .d3tw.sel .disc{transform:none;box-shadow:none}
+.d3.land .d3tw.poor .c{color:#FF6B5E;background:none}
+.d3.land .d3tw.poor .disc img{opacity:.55}
+.d3.land .d3tw.lock{background:linear-gradient(#9AA5AE,#6E7881)}
+.d3.land .d3tw.lock .c{font-size:11px}
+.d3.land .d3tw .lk{top:30%;left:50%;transform:translate(-50%,-50%)}
+.d3.land .d3tw[data-i=wall]{background:linear-gradient(#9BE07A,#4FAE45)}
+.d3.land .d3foot{display:flex;flex:none;gap:6px}
+.d3.land .d3go{flex:1;width:auto;height:58px;margin:0;border-radius:12px;font-size:12px;overflow:hidden;border:0;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2),0 2px 0 rgba(0,0,0,.25)}
+.d3.land .d3foot .d3auto{margin:0;height:58px;width:46px;padding:0;border:0;border-radius:12px;font-size:20px;background:#FFF3D6;color:#7A4B22;box-shadow:inset 0 -4px 0 rgba(0,0,0,.15),0 2px 0 rgba(0,0,0,.25)}
+.d3.land .d3foot .d3auto.on{background:#FFD23F}
+/* floating numbers, top-left: no boxes */
+.d3.land .d3top{right:var(--pw);padding-left:calc(env(safe-area-inset-left) + 12px)}
+.d3.land .d3stats{margin-left:0;order:-1;gap:14px}
+.d3.land .d3pill{background:none;border:0;box-shadow:none;margin:0;padding:0;height:auto;font-size:26px;color:#fff;-webkit-text-stroke:5px #1B2B3A;paint-order:stroke fill}
+.d3.land .d3pill .ic{width:34px;height:34px;margin:0 4px 0 0;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
+.d3.land .d3top .ib{margin-left:auto;width:44px;height:44px;border-radius:12px}
+.d3.land .d3top .ib .ic{width:30px;height:30px}
+/* round, top-right of the map */
+.d3.land .d3info{left:auto;right:calc(var(--pw) + 66px);transform:none;top:calc(env(safe-area-inset-top) + 6px);flex-direction:column;align-items:flex-end;gap:2px}
+.d3.land .d3info .tt{background:none;border:0;box-shadow:none;padding:0;text-align:right;color:#fff;-webkit-text-stroke:4px #1B2B3A;paint-order:stroke fill}
+.d3.land .d3info .tt b{font-size:24px}
+.d3.land .d3info .tt small{font-size:12px;-webkit-text-stroke:3px #1B2B3A;opacity:1}
+.d3.land .d3left{height:24px;border:0;border-radius:999px;background:rgba(27,43,58,.55);color:#fff;font-size:13px;padding:0 9px;box-shadow:none}
+.d3.land .d3info:has(.d3left:empty) .tt{border-radius:0}
+.d3.land .d3info>.d3auto{display:none}
+.d3.land .d3pw{right:calc(var(--pw) + 12px)}
+.d3.land .d3tip{right:calc(var(--pw) + 12px)}
+.d3.land .d3test{right:calc(var(--pw) + 12px);top:calc(env(safe-area-inset-top) + 74px)}
+.d3.land .d3banner,.d3.land .d3toast{left:calc(50% - var(--pw) / 2)}
+@media (max-height:430px){ .d3.land .d3go .ic{width:24px;height:24px;margin:0} .d3.land .d3tw .disc{width:100%;height:100%} .d3.land .d3tw .disc img{width:100%;height:100%} .d3.land .d3go,.d3.land .d3foot .d3auto{height:48px} .d3.land .d3bar{top:0} }
 `;
 
 function start(el, host){
@@ -1064,15 +1111,15 @@ function start(el, host){
   function fit(){
     const w = stage.clientWidth || 360, h = stage.clientHeight || 600, land = w > h * 1.05; root.classList.toggle('land', land);
     const rr = stage.getBoundingClientRect(), barR = $('.d3bar').getBoundingClientRect();
-    const topPx = Math.max(60, ($('.d3info').getBoundingClientRect().bottom || 110) - rr.top + 4);
+    const topPx = land ? 6 : Math.max(60, ($('.d3info').getBoundingClientRect().bottom || 110) - rr.top + 4);
     const botPx = land ? 10 : Math.max(60, rr.bottom - (barR.top || h - 110) + 6), rightPx = land ? Math.max(10, rr.right - (barR.left || w - 160) + 6) : 0;
     const yTop = 1 - 2 * topPx / h, yBot = -1 + 2 * botPx / h, xL = -1.02, xR = 1 - 2 * rightPx / w + .02;
     if(!land) root.style.setProperty('--tray', Math.round((barR.height || 100) + 18) + 'px');
     renderer.setSize(w, h, false); camera.aspect = w / h;
     camera.fov = 32; camera.updateProjectionMatrix();
-    const yaw = land ? 0 : -Math.PI / 2, el = .9;
+    const yaw = land ? 0 : -Math.PI / 2, el = land ? 1.18 : .9;
     const target = new THREE.Vector3(0, 0, 0), dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(el), Math.sin(el), Math.cos(yaw) * Math.cos(el));
-    const corners = []; for(const x of [-COLS / 2 - .6, COLS / 2 + .6]) for(const z of [-ROWS / 2 - .6, ROWS / 2 + .6]) for(const y of [0, .2]) corners.push(new THREE.Vector3(x, y, z));
+    const corners = []; for(const x of [-COLS / 2 - .1, COLS / 2 + .1]) for(const z of [-ROWS / 2 - .1, ROWS / 2 + .1]) for(const y of [0, .2]) corners.push(new THREE.Vector3(x, y, z));
     const put = d => { camera.position.copy(target).addScaledVector(dir, d); camera.up.set(0, 1, 0); camera.lookAt(target); camera.clearViewOffset(); camera.updateMatrixWorld(); };
     // how far away so it fits (ignoring where it sits), then shift it to the middle of the free space
     const span = () => { let x0 = 9, x1 = -9, y0 = 9, y1 = -9; for(const p of corners){ const q = p.clone().project(camera); x0 = Math.min(x0, q.x); x1 = Math.max(x1, q.x); y0 = Math.min(y0, q.y); y1 = Math.max(y1, q.y); } return { x0, x1, y0, y1 }; };
@@ -1105,9 +1152,10 @@ function start(el, host){
   }
 
   // ---------- keep the 3D objects in step with the game ----------
+  const TS = 1.6;    // towers and critters are drawn a bit bigger than their footprint, like Bloons
   const tmpV = new THREE.Vector3();
   function addTower(t){
-    const md = towerModel(t.i, look(t), t.a, t.b), h = hAt(t.x, t.y); md.g.position.set(wx(t.x), h, wz(t.y)); world.add(md.g);
+    const md = towerModel(t.i, look(t), t.a, t.b), h = hAt(t.x, t.y); md.g.position.set(wx(t.x), h, wz(t.y)); md.g.scale.setScalar(TS); world.add(md.g);
     const e = { ...md, t, lvl: `${t.a}${t.b}`, born: G.time, kick: 0, yaw: Math.PI, h, base: md.animal.scale.x, y0: md.animal.position.y }; stuff.towers.set(t.id, e);
     md.g.traverse(o => { if(o.isMesh && o.material !== INK) o.castShadow = true; });
     return e;
@@ -1129,7 +1177,7 @@ function start(el, host){
   function ghostMat(mat){ let g = ghostOf.get(mat); if(!g){ g = mat.clone(); g.transparent = true; g.opacity = mat === INK ? .12 : .3; g.depthWrite = false; ghostOf.set(mat, g); } return g; }
   function ghost(e, on){ e.ghost = on; e.g.traverse(o => { if(!o.isMesh) return; if(on){ o.userData.mat0 = o.material; o.material = ghostMat(o.material); o.castShadow = false; } else if(o.userData.mat0){ o.material = o.userData.mat0; o.castShadow = o.material !== INK; } }); }
   function addFoe(f){
-    const md = critterModel(f.k), s = f.size * 1.35; md.g.scale.setScalar(s);
+    const md = critterModel(f.k), s = f.size * 1.35 * TS; md.g.scale.setScalar(s);
     const holder = new THREE.Group(); holder.add(md.g); world.add(holder);
     const bar = hpBar(); bar.position.y = (f.fly ? .95 : .6) * s + .15; holder.add(bar);
     const ink = new THREE.Mesh(new THREE.CircleGeometry(.28, 16), basic('#5B3D9A', { transparent: true, opacity: .5, depthWrite: false })); ink.rotation.x = -Math.PI / 2; ink.position.y = .03; ink.visible = false; holder.add(ink);
@@ -1248,7 +1296,7 @@ function start(el, host){
       e.animal.rotation.order = 'YXZ'; e.animal.rotation.set(pitch, e.yaw, P.sway ? Math.sin(now * 1.3 + tw.id) * P.sway : 0);
       e.animal.position.set(Math.sin(e.yaw) * lunge, e.y0 + st * P.hop, Math.cos(e.yaw) * lunge);
       e.animal.scale.set(B * (1 + wind * .07 - st * .05), B * (1 - wind * .11 + st * .13) * breathe, B * (1 + wind * .07 - st * .05));
-      e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1);
+      e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(TS * (e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1));
       for(const w of e.roles.wing || []) w.rotation.z = Math.sin(now * (w.userData.fast ? 42 : 4) + w.userData.sx) * (w.userData.fast ? .5 : .25) * w.userData.sx;
       for(const h of e.roles.hover || []) h.position.y = .42 + Math.sin(now * 3 + tw.id) * .05;
       for(const tl of e.roles.tail || []) tl.rotation.y = Math.sin(now * 2.5 + tw.id) * .35 + st * .8;
@@ -1419,7 +1467,8 @@ function start(el, host){
     const go = $('.d3go'); go.disabled = G.phase !== 'build' && G.phase !== 'wave';
     go.innerHTML = G.phase === 'build' ? `${ic('play')}¡Empieza!` : speed === 1 ? `${ic('fast')}Rápido` : speed === 2 ? `${ic('fast')}¡x3!` : `${ic('slow')}Normal`;
     go.classList.toggle('fast', G.phase === 'wave' && speed < 3); go.classList.toggle('slow', G.phase === 'wave' && speed >= 3);
-    $('.d3auto').classList.toggle('on', auto);
+    el.querySelectorAll('.d3auto').forEach(a => a.classList.toggle('on', auto));
+    const hd = $('.d3hd'); if(hd) hd.textContent = sel === 'wall' ? WALL.name : sel >= 0 ? TOWERS[sel].name : 'Torres';
     powersUI();
     if(menuFor) showMenu(menuFor);
   }
@@ -1430,9 +1479,10 @@ function start(el, host){
     t.innerHTML = `<b>${title}</b>${coins ? `<span>+${coins} ${ic('coin')}</span>` : ''}${sub ? `<small>${sub}</small>` : ''}`; t.classList.add('on'); toastT = setTimeout(() => t.classList.remove('on'), 2200); }
   const short = n => (n => n[0].toUpperCase() + n.slice(1))(n.replace(/^(El|La) /, ''));
   function bar(){
-    $('.d3bar').innerHTML = TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><span class="disc"><img alt="${b.name}" src="${thumb('t' + b.id, () => towerModel(i, 1).g)}"></span>${G.un[i] ? '' : ic('lock', 'lk')}<span class="c">${G.un[i] ? ic('coin') + cost(i) : 'Ronda ' + G.A.unlock[i]}</span><span class="nm">${short(b.name)}</span></button>`).join('')
-      + `<button class="d3tw" data-i="wall"><span class="disc"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(0, 0))}"></span><span class="c">${ic('coin')}${cost('wall')}</span><span class="nm">Cerca</span></button>`
-      + `<button class="d3go"></button>`;
+    $('.d3bar').innerHTML = `<div class="d3hd">Torres</div><div class="d3grid">` + TOWERS.map((b, i) => `<button class="d3tw${G.un[i] ? '' : ' lock'}" data-i="${i}"><span class="disc"><img alt="${b.name}" src="${thumb('t' + b.id, () => towerModel(i, 1).g)}"></span>${G.un[i] ? '' : ic('lock', 'lk')}<span class="c">${G.un[i] ? ic('coin') + cost(i) : 'Ronda ' + G.A.unlock[i]}</span><span class="nm">${short(b.name)}</span></button>`).join('')
+      + `<button class="d3tw" data-i="wall"><span class="disc"><img alt="${WALL.name}" src="${thumb('wall1', () => wallModel(0, 0))}"></span><span class="c">${ic('coin')}${cost('wall')}</span><span class="nm">Cerca</span></button></div>`
+      + `<div class="d3foot"><button class="d3go"></button><button class="d3auto" aria-label="Auto">🔁</button></div>`;
+    const fa = el.querySelector('.d3foot .d3auto'); if(fa) fa.onclick = () => el.querySelector('.d3info .d3auto').click();
     el.querySelectorAll('.d3tw').forEach(btn => btn.onclick = () => {
       if(btn.dataset.i === 'wall'){ hideMenu(); sel = sel === 'wall' ? -1 : 'wall'; if(sel === 'wall'){ tip(`<b>${WALL.name}</b>: ${WALL.tip} Toca el camino.`); say([WALL.word]); } else tip(''); hudKey = ''; return; }
       const i = +btn.dataset.i, b = TOWERS[i]; hideMenu();
