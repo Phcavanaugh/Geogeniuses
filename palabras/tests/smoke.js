@@ -50,7 +50,10 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
     log.push(`${age} defensa -> ${await onView()} trails:${await p.evaluate(() => TD._t.G.np)}`);
     await p.click('.d3tw[data-i="0"]');
     const box = await p.locator('.d3stage canvas').boundingBox();
-    for (const [fx, fy] of [[.3, .35], [.7, .45], [.35, .65], [.65, .7]]) await p.mouse.click(box.x + box.width * fx, box.y + box.height * fy);
+    await p.evaluate(() => { const c = document.querySelector('.d3stage canvas'), r = c.getBoundingClientRect(); c.dispatchEvent(new PointerEvent('pointerdown', { clientX: r.x + 5, clientY: r.y + 5, pointerId: 9, bubbles: true })); c.dispatchEvent(new PointerEvent('pointerup', { clientX: r.x + 5, clientY: r.y + 5, pointerId: 9, bubbles: true })); });   // skip the opening shot
+    let nb = 0;   // tap the grass until two spots are picked, pressing ✔ each time
+    for (const fy of [.25, .4, .55, .7, .85]) for (const fx of [.15, .3, .5, .7, .85]) { if (nb >= 2) break; await p.mouse.click(box.x + box.width * fx, box.y + box.height * fy); await p.waitForTimeout(400);
+      if (await p.evaluate(() => document.querySelector('.d3ok').classList.contains('on'))) { await p.evaluate(() => document.querySelector('.d3ok .yes').click()); nb++; await p.waitForTimeout(300); } }
     const built = await p.evaluate(() => { const g = TD._t.G, T = g.paths[0], [x, y] = g.posAt(0, T.len * .5); g.coins += 100; const w = g.placeWall(x, y); return g.towers.length + ' towers, wall:' + !!w; });
     await p.click('.d3go'); await p.waitForTimeout(1500);
     await p.evaluate(() => TD._t.api.step(240)); await p.waitForTimeout(1200);

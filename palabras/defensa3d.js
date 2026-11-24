@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=69';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=70';
 
 // ====================================================================================
 // materials
@@ -843,6 +843,12 @@ const CSS = `
 .d3intro img{width:min(80%,390px);filter:drop-shadow(0 6px 10px rgba(20,60,70,.3))}
 .d3intro .r{margin-top:2px;border-radius:999px;padding:4px 16px;font-weight:700;font-size:18px}
 .d3.intro .d3info,.d3.intro .d3tip{opacity:0}
+/* confirm before building: ✔ builds, ✖ cancels (like Bloons) */
+.d3ok{position:absolute;z-index:6;display:none;gap:10px;transform:translate(-50%,0);pointer-events:auto}
+.d3ok.on{display:flex}
+.d3ok button{width:48px;height:48px;border-radius:14px;border:3px solid #fff;font-size:24px;font-weight:900;color:#fff;box-shadow:0 3px 0 rgba(0,0,0,.3),0 4px 10px rgba(0,0,0,.25);touch-action:manipulation}
+.d3ok .yes{background:#3DBE4E}.d3ok .no{background:#E5483B}
+.d3ok .yes:disabled{background:#8C9AA3}
 /* ===== clean landscape layout (like Bloons): the map fills the screen, numbers float on it, the shop is a side panel ===== */
 .d3hd{display:none}
 .d3grid,.d3foot{display:contents}
@@ -904,6 +910,7 @@ function start(el, host){
     <div class="d3info"><div class="tt"><b></b><small></small></div><div class="d3left"></div><button class="d3auto" aria-label="Auto">🔁 Auto</button></div><div class="d3pw"></div>
     ${host.test ? '<div class="d3test"><button data-t="win">✅ Ganar</button><button data-t="x4">⏩ x4</button><button data-t="cash">🪙 +1000</button><button data-t="lose">💥 Perder</button></div>' : ''}
     <div class="d3tip"></div>
+    <div class="d3ok"><button class="no" aria-label="No">✖</button><button class="yes" aria-label="Sí">✔</button></div>
     <div class="d3bar"></div></div>`;
   const $ = s => el.querySelector(s);
   const root = $('.d3'), stage = $('.d3stage'), canvas = $('canvas'), menu = $('.d3menu');
@@ -923,6 +930,7 @@ function start(el, host){
   const W = (c) => c + .5 - COLS / 2, Z = (r) => r + .5 - ROWS / 2;      // tile → world
   const wx = x => x - COLS / 2, wz = y => y - ROWS / 2;                    // rules position → world
 
+  let pending = null;   // a spot picked for a new tower or fence, waiting for ✔
   let G, world, stuff, th, sel = -1, menuFor = null, speed = 1, raf = 0, last = 0, alive = true, ended = false, shownR = 0;
   const ui = { lives: null, coins: null };
 
@@ -1435,8 +1443,15 @@ function start(el, host){
     const on = (sel === 'wall' || sel >= 0) && (G.phase === 'build' || G.phase === 'wave'), O = stuff.okMap, gh = stuff.ghost;
     O.mesh.visible = on && sel !== 'wall';
     if(O.mesh.visible){ const key = G.towers.map(t => t.id).join(); if(key !== O.key){ O.key = key; paintOk(); } }
-    const pt = on && aim ? pointAt(aim.cx, aim.cy - (aim.touch ? LIFT : 0)) : null;
+    if(pending && (!on || pending.sel !== sel)) pending = null;
+    const okb = $('.d3ok');
+    const dragging = on && aim && ptrs.size > 0;     // finger / button down: the footprint follows it
+    const pt = dragging || (on && aim && !pending) ? pointAt(aim.cx, aim.cy - (aim.touch ? LIFT : 0)) : pending ? [pending.x, pending.y] : null;
+    okb.classList.toggle('on', !!pending && !dragging);
     gh.g.visible = !!pt; if(!pt) return;
+    if(pending && !dragging){ const v = new THREE.Vector3(wx(pending.x), hAt(pending.x, pending.y) + .2, wz(pending.y)).project(camera), r = canvas.getBoundingClientRect(), er = el.getBoundingClientRect();
+      okb.style.left = (r.left - er.left + (v.x + 1) / 2 * r.width) + 'px'; okb.style.top = (r.top - er.top + (1 - v.y) / 2 * r.height + 34) + 'px';
+      okb.querySelector('.yes').disabled = G.coins < cost(sel); }
     const [x, y] = pt, C = good => good ? '#3DDC6A' : '#FF4D4D';
     if(sel === 'wall'){ const sp = G.wallSpot(x, y), good = !sp.why && G.coins >= cost('wall');
       gh.foot.visible = gh.edge.visible = gh.reach.visible = gh.area.visible = false; gh.bar.visible = true; gh.bar.material.color.set(C(good));
@@ -1622,18 +1637,28 @@ function start(el, host){
   // let go of the footprint after sliding it: build where it is
   function build(cx, cy){ if(!G || (G.phase !== 'build' && G.phase !== 'wave')) return; const pt = pointAt(cx, cy); if(pt) placeAt(pt[0], pt[1]); else hudKey = ''; }
   function placeAt(x, y){
+    pending = null;
     if(sel === 'wall'){
       const sp = G.wallSpot(x, y);
       if(sp.why){ noHere(x, y); tip({ offpath: 'La cerca va en un camino abierto. 🛤️', ends: 'Muy cerca de la cueva o de la comida.', wall: 'Ya hay una cerca muy cerca.' }[sp.why]); }
       else if(G.coins < cost('wall')){ tip('🪙 ¡No tienes monedas!'); say(['c|¡No tienes monedas!']); }
-      else { G.placeWall(x, y); say([WALL.word]); if(G.coins < cost('wall')) sel = -1; }
+      else { pending = { x, y, sel }; sfx && sfx('tink'); }
     } else if(sel >= 0){
       if(!G.canBuild(x, y)){ noHere(x, y); const why = G.whyNot(x, y); tip({ path: 'En el camino no. ¡Ponlo en el pasto! 🌱 (En el camino va la cerca.)', bowl: 'Muy cerca de la comida.', tower: 'Muy cerca de otro animal. Un poquito más lejos.', edge: 'Muy cerca de la orilla. 🌊', thing: 'Ahí hay algo. Prueba otro lugar.' }[why]); }
       else if(G.coins < cost(sel)){ tip('🪙 ¡No tienes monedas!'); say(['c|¡No tienes monedas!']); }
-      else { G.place(x, y, sel); say([TOWERS[sel].word]); if(G.coins < cost(sel)) sel = -1; }
+      else { pending = { x, y, sel }; sfx && sfx('tink'); }
     } else tip(`Primero toca un animal ${root.classList.contains('land') ? 'a la derecha. 👉' : 'abajo. 👇'}`);
     hudKey = '';
   }
+
+  function confirmBuild(){
+    if(!pending || pending.sel !== sel) return; const { x, y } = pending; pending = null;
+    if(sel === 'wall'){ if(!G.wallSpot(x, y).why && G.coins >= cost('wall')){ G.placeWall(x, y); say([WALL.word]); if(G.coins < cost('wall')) sel = -1; } }
+    else if(sel >= 0 && G.canBuild(x, y) && G.coins >= cost(sel)){ G.place(x, y, sel); say([TOWERS[sel].word]); if(G.coins < cost(sel)) sel = -1; }
+    hudKey = '';
+  }
+  $('.d3ok .yes').onclick = e => { e.stopPropagation(); confirmBuild(); };
+  $('.d3ok .no').onclick = e => { e.stopPropagation(); pending = null; hudKey = ''; };
 
   // ---------- between rounds ----------
   function roundDone(ev){
@@ -1652,7 +1677,7 @@ function start(el, host){
     host.onSave && host.onSave(G.save());
     if(host.canPlay && !host.canPlay(G.r)){ gate(); return; }
     if(newPath(G.r, age) && !first) tip('¡Ojo! Se abrió un camino nuevo. 👀');
-    else if(first && G.r === 1) tip('Toca un animal y luego el pasto. La cerca va en el camino. ¡Protege la comida!');
+    else if(first && G.r === 1) tip('Toca un animal, luego el pasto, y ✔ para ponerlo. La cerca va en el camino. ¡Protege la comida!');
     if(firstHidden(G.r, age)) setTimeout(() => { tip('👀 ¡Ojo! Algunos bichos vienen escondidos. Solo el búho los ve.'); say(['c|¡Cuidado!', TOWERS.find(t => t.sees).word]); }, 900);
     if(auto && !first){ const r = G.r; setTimeout(() => { if(alive && G.r === r && G.phase === 'build' && !ended){ G.go(); const nf = newFoes(G.r, age); if(nf.length) warn(nf); hudKey = ''; } }, 2200); }
     hud();
