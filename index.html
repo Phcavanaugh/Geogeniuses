@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="vendor/maplibre-gl.css">
-<link rel="stylesheet" href="style.css?v=44">
+<link rel="stylesheet" href="style.css?v=46">
 </head>
 <body>
 <div id="app">
@@ -78,19 +78,17 @@
     <div id="winners" class="winners"></div>
     <section id="grabCard" class="grab-card" hidden aria-labelledby="grabTitle">
       <div class="gc-top">
-        <img class="gc-art" src="geograbber/painter.jpg" width="124" height="124" alt="The GeoGenius guy painting a spinning globe">
+        <img class="gc-art" src="img/gobble-promo.webp" width="124" height="124" alt="A city at night with a glowing hole swallowing the streets">
         <div class="gc-txt">
-          <div id="grabEyebrow" class="gc-eyebrow">New daily game</div>
+          <div id="grabEyebrow" class="gc-eyebrow">Another game to try</div>
           <div id="grabNew">
-            <h2 id="grabTitle" class="gc-title">GeoGrabber</h2>
-            <p class="gc-desc">Paint the map. Steal your friends' turf. One run a day.</p>
+            <h2 id="grabTitle" class="gc-title">Gobble Town</h2>
+            <p class="gc-desc">Swallow the city. Get huge. Be the biggest hole!</p>
           </div>
-          <div id="grabMine" class="gc-mine" hidden><div><strong id="grabPct"></strong><span>of the map</span></div><p id="grabRank"></p></div>
-          <div id="grabMeta" class="gc-meta"></div>
+          <div id="grabMeta" class="gc-meta">Play as much as you like</div>
         </div>
       </div>
-      <a id="grabBtn" class="gc-btn" href="geograbber/">Play today's GeoGrabber<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
-      <div id="grabWho" class="gc-who" hidden></div>
+      <a id="grabBtn" class="gc-btn" href="gobble-physics/">Play Gobble Town<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
     </section>
     <div id="badgeWrap" class="badge-wrap" hidden>
       <div id="badgeNew" class="earned" hidden><h3 id="badgeNewTitle">New badges!</h3><div id="badgeNewList" class="bn-list"></div></div>
@@ -161,12 +159,11 @@
   </div>
   <div id="gpDim" class="gp-dim" hidden></div>
   <div id="grabPop" class="gp" hidden role="dialog" aria-modal="true" aria-labelledby="gpTitle" aria-describedby="gpBody">
-    <img class="gp-art" src="geograbber/painter.jpg" width="168" height="168" alt="The GeoGenius guy painting a spinning globe">
-    <div id="gpEyebrow" class="gc-eyebrow">New daily game</div>
+    <img class="gp-art" src="img/gobble-promo.webp" width="168" height="168" alt="A city at night with a glowing hole swallowing the streets">
+    <div id="gpEyebrow" class="gc-eyebrow">Another game to try</div>
     <h2 id="gpTitle" class="gp-title">Got 3 more minutes?</h2>
-    <p id="gpBody" class="gp-body">Try <b>GeoGrabber</b>: paint the map and steal your friends' turf. One run a day.</p>
-    <div id="gpWho" class="gc-who gp-who" hidden></div>
-    <a id="gpGo" class="gc-btn" href="geograbber/">Play GeoGrabber<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
+    <p id="gpBody" class="gp-body">Try <b>Gobble Town</b>: swallow the city, get huge, and be the biggest hole.</p>
+    <a id="gpGo" class="gc-btn" href="gobble-physics/">Play Gobble Town<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
     <button id="gpLater" class="gp-later" type="button">Maybe later</button>
   </div>
   <div id="toast" class="toast" hidden role="status"></div>
@@ -178,6 +175,6 @@
 <script src="vendor/topojson-client.min.js"></script>
 <script src="vendor/maplibre-gl.js"></script>
 <script src="badge-art.js?v=44"></script>
-<script src="app.js?v=44"></script>
+<script src="app.js?v=46"></script>
 </body>
 </html>
