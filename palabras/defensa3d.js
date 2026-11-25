@@ -8,7 +8,7 @@
 // Graphics are easy to swap: pictures live in art/defensa/ (by name), and a model listed in art/defensa/models/models.json
 // (e.g. { "gato": "gato.glb" }) replaces the built-in model of that tower or critter.
 import * as THREE from './lib/three.module.min.js';
-import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=75';
+import { Game, TOWERS, WALL, FOES, COLS, ROWS, MARGIN, newFoes, newPath, distToPaths, AGES, bu, SIZE, POWERS, firstHidden } from './defensa-rules.js?v=76';
 
 // ====================================================================================
 // materials
@@ -853,7 +853,194 @@ function gatoAnimate(parts, s){
   }
 }
 
-const KIT = { gato: { make: gatoMake, animate: gatoAnimate } };
+// ---------- the bee (from tools/towers/defensa-torre-abeja.html): brings its own beehive base ----------
+// The bee is the game's twin of Bloons' Tack Shooter: every shot fires 8 stingers out in a ring, all directions at once.
+// Upgrade names (path A "Más aguijones"): 1 Más aguijones · 2 Muchos aguijones · 3 Lluvia de aguijones (fires 16, then 32 stingers)
+// Upgrade names (path B "Más rápida"):   1 Más rápida · 2 Muy rápida · 3 Aguijones de fuego (flaming stingers)
+// The base is never animated or aimed. The flying bee and its upgrades belong to turn.
+function abejaMake(a, b){
+  const g = new THREE.Group();
+  const parts = { base: null, turn: null, wings: [], antennae: [], eyes: [], arms: [], flames: [] };
+  const yellow = toon('#FFD24A'), sun = toon('#FFE27A'), honey = toon('#F3AB36');
+  const gold = toon('#FFC238'), ink = toon('#343241'), brown = toon('#9D602A');
+  const red = toon('#F45447'), blue = toon('#A8E9F5', { transparent: true, opacity: .82 });
+
+  const base = new THREE.Group(); g.add(base); parts.base = base;
+  // Squat skep hive, staggered straw ridges, and an overhanging lip.
+  m(base, cyl(.43, .46, .045, 20), brown, [0, .028, 0], null, null, true);
+  m(base, sph(.34, 20, 12), honey, [0, .225, 0], [1.13, .72, 1.13], null, true);
+  m(base, sph(.29, 18, 12), yellow, [0, .365, 0], [1.02, .43, 1.02], null, true);
+  for(let i = 0; i < 3; i++){
+    const y = .13 + i * .115, radius = [.375, .355, .285][i];
+    m(base, new THREE.TorusGeometry(radius, .018, 6, 24), toon(i === 1 ? '#CB842C' : '#EAA437'),
+      [0, y, 0], null, [Math.PI / 2, 0, 0]);
+  }
+  m(base, sph(.11, 12, 10), ink, [0, .17, .355], [.91, 1.1, .28], null, true);
+  m(base, sph(.073, 12, 8), toon('#573C36'), [0, .17, .384], [1, 1.12, .31]);
+  m(base, sph(.014, 8, 6), gold, [.047, .17, .408]);
+  // Honey drips hang over the rim, and tiny flowers frame the doorway.
+  for(const [x, z, len] of [[-.25,.34,.1],[.27,.33,.075],[.17,-.36,.09]]){
+    m(base, sph(.035, 8, 6), gold, [x, .26, z], [.85, len / .035, .75]);
+    m(base, sph(.027, 8, 6), gold, [x, .26 - len, z]);
+  }
+  const flowers = [[-.39,.23],[.4,.19],[-.3,-.32]];
+  const petals = new THREE.InstancedMesh(sph(.025,8,6), toon('#FFFFFF'), flowers.length*5);
+  const petalMatrix = new THREE.Matrix4(), petalRotation = new THREE.Quaternion();
+  let petalIndex = 0;
+  for(const [x,z] of flowers){
+    m(base, sph(.018, 8, 6), toon('#548A44'), [x, .055, z], [1, 2, 1]);
+    for(let j=0;j<5;j++){
+      const angle=j*Math.PI*2/5;
+      petalMatrix.compose(new THREE.Vector3(x+Math.cos(angle)*.033,.085,z+Math.sin(angle)*.033),
+        petalRotation, new THREE.Vector3(1,.5,1));
+      petals.setMatrixAt(petalIndex,petalMatrix);
+      petals.setColorAt(petalIndex++,new THREE.Color(x<0?'#FFFFFF':'#FF98B5'));
+    }
+    m(base, sph(.022, 8, 6), gold, [x,.09,z]);
+  }
+  petals.castShadow = true; base.add(petals);
+  // A few six-sided cells, applied to the upper front of the hive.
+  for(const [x,y,z] of [[-.17,.325,.29],[0,.37,.295],[.17,.325,.29]]){
+    m(base, cyl(.043,.043,.009,6), toon('#E8952A'), [x,y,z], null, [Math.PI/2,0,0]);
+    m(base, cyl(.028,.028,.011,6), sun, [x,y,z+.009], null, [Math.PI/2,0,0]);
+  }
+
+  const turn = new THREE.Group(); turn.position.y = .77; g.add(turn); parts.turn = turn;
+  const fly = new THREE.Group(); turn.add(fly); parts.fly = fly;
+  const torso = new THREE.Group(); fly.add(torso); parts.torso = torso;
+  m(torso, sph(.205, 18, 12), yellow, [0, 0, -.055], [1, .83, 1.29], null, true);
+  m(torso, sph(.175, 16, 10), sun, [0, .115, -.045], [1, .38, 1.2]); // fuzzy collar
+  for(const [z,r] of [[-.09,.207],[-.205,.18]])
+    m(torso, new THREE.TorusGeometry(r, .021, 7, 22), ink, [0, 0, z], [1,.82,1]);
+  for(const side of [-1,1]) for(const z of [-.15,.03])
+    m(torso, sph(.027, 8, 6), sun, [side*.19,.067,z], [1,.7,1.1]); // tufts
+  m(torso, cone(.047,.13,8), ink, [0,-.02,-.327], null, [-Math.PI/2,0,0]);
+  for(const side of [-1,1]){
+    const leg = new THREE.Group(); leg.position.set(side*.113,-.125,-.095); fly.add(leg);
+    m(leg, sph(.03, 8, 6), ink, [side*.014,-.05,.002], [.7,1.4,.7]);
+    m(leg, sph(.045, 8, 6), yellow, [side*.025,-.1,.045], [1.1,.55,1.25], null, true);
+    const arm = new THREE.Group(); arm.position.set(side*.178,.01,.09); fly.add(arm); parts.arms.push({arm,side});
+    m(arm, sph(.043, 10, 8), yellow, [side*.057,-.042,.05], [1.55,.8,1], [0,0,side*.3], true);
+    m(arm, sph(.044, 10, 8), sun, [side*.105,-.07,.104], null, null, true);
+  }
+
+  const head = new THREE.Group(); head.position.set(0,.07,.187); fly.add(head); parts.head = head;
+  m(head, sph(.17, 16, 12), yellow, [0,0,0], [1.08,1.04,1], null, true);
+  m(head, sph(.067, 12, 8), sun, [0,-.065,.143], [1.45,.75,.55]);
+  for(const side of [-1,1]){
+    const eye = new THREE.Group(); eye.position.set(side*.078,.032,.143); head.add(eye); parts.eyes.push(eye);
+    m(eye, sph(.044, 12, 8), ink, [0,0,0], [1,1.15,.55]);
+    m(eye, sph(.012, 8, 6), basic('#FFFFFF'), [-.01,.013,.023]);
+    m(head, sph(.033, 10, 8), toon('#F58AA0'), [side*.128,-.046,.119], [1,.58,.43]);
+    const antenna = new THREE.Group(); antenna.position.set(side*.075,.148,.025); head.add(antenna);
+    parts.antennae.push({antenna,side});
+    tube(antenna, [[0,0,0],[side*.025,.08,.015],[side*.047,.117,.025]], .011, ink);
+    m(antenna, sph(.026, 8, 6), ink, [side*.047,.117,.025]);
+  }
+  tube(head, [[-.042,-.081,.158],[0,-.101,.174],[.042,-.081,.158]], .009, ink);
+
+  for(const side of [-1,1]){
+    const wing = new THREE.Group(); wing.position.set(side*.12,.15,-.085); torso.add(wing);
+    parts.wings.push({wing,side});
+    m(wing, sph(.135, 14, 8), blue, [side*.12,.035,-.015], [1.3,.22,.85], [0,0,side*.19], true);
+    m(wing, sph(.095, 12, 8), blue, [side*.105,.02,-.11], [1.1,.2,.8]);
+  }
+  const hand = new THREE.Object3D(); hand.position.set(0,.04,0); turn.add(hand); parts.hand = hand;
+
+  // More stingers occupy the rotating bee, never the fixed hive.
+  const count = [0,4,8,16][a];
+  if(count){
+    const pins = new THREE.InstancedMesh(cone(a===3?.022:.026,a===3?.115:.105,5),
+      toon(a===3?'#574251':'#4B4651'),count);
+    const pinMatrix = new THREE.Matrix4();
+    for(let i=0;i<count;i++){
+      const theta = i * Math.PI * 2 / count + (a===3 && i%2 ? .08 : 0);
+      const radial = new THREE.Vector3(Math.sin(theta),a===3 && i%2 ? .25 : 0,Math.cos(theta)).normalize();
+      pinMatrix.compose(new THREE.Vector3(radial.x*.21,a===3 && i%2 ? .12 : .045,-.055+radial.z*.265),
+        new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),radial),
+        new THREE.Vector3(1,1,1));
+      pins.setMatrixAt(i,pinMatrix);
+    }
+    pins.castShadow=true; torso.add(pins);
+  }
+  if(a>=2){
+    m(torso, new THREE.TorusGeometry(.202,.018,6,24), gold, [0,.038,-.055], [1,.8,1], [Math.PI/2,0,0]);
+    for(const side of [-1,1]) m(head, sph(.039,10,8), gold, [side*.15,.14,-.013], [.8,1.15,.9], null, true);
+  }
+  if(a>=3){
+    m(head, cone(.066,.12,7), gold, [0,.202,.015], null, null, true);
+    m(head, sph(.033,8,6), red, [0,.268,.015]);
+    for(const side of [-1,1])
+      m(torso, cone(.037,.13,6), gold, [side*.23,.025,-.16], null, [0,0,-side*.85], true);
+  }
+
+  if(b>=1){
+    // Two compact goggles sit in front of the eyes; their strap wraps the sides.
+    for(const side of [-1,1]){
+      m(head, new THREE.TorusGeometry(.053,.012,6,16), red, [side*.08,.036,.167], null, null, true);
+      m(head, sph(.043,10,8), toon('#BFEFFF',{transparent:true,opacity:.85}),
+        [side*.08,.036,.176], [1,1,.19]);
+    }
+    m(head, sph(.02,8,6), red, [0,.035,.177], [.9,.55,.6]);
+    for(const side of [-1,1]) m(head, sph(.018,8,6), red, [side*.162,.047,.038], [.7,.8,2.6]);
+  }
+  if(b>=2){
+    for(const [z,r] of [[.025,.2],[-.155,.195]]){
+      m(torso, new THREE.TorusGeometry(r,.014,6,20), red, [0,.012,z], [1,.83,1]);
+    }
+    for(const {wing,side} of parts.wings)
+      m(wing, sph(.043,8,6), red, [side*.26,.038,-.013], [1.3,.36,.6]);
+  }
+  if(b>=3){
+    const flame = toon('#FF7A1A',{emissive:'#EF4B08',emissiveIntensity:.5});
+    for(const side of [-1,0,1]){
+      const f = new THREE.Group(); f.position.set(side*.09,-.008,-.34); turn.add(f); parts.flames.push({f,side});
+      m(f, cone(.055,.22,8), flame, [0,0,-.08], null, [-Math.PI/2,0,0], true);
+      m(f, cone(.027,.14,7), basic('#FFE278'), [0,0,-.11], null, [-Math.PI/2,0,0]);
+    }
+    // A crown of fire-tipped darts makes the final speed step read even when idle.
+    for(let i=0;i<6;i++){
+      const theta=i*Math.PI/3, v=new THREE.Vector3(Math.sin(theta),.2,Math.cos(theta)).normalize();
+      const dart=m(torso,cone(.027,.115,6),ink,[v.x*.21,.035,-.05+v.z*.18]);
+      dart.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),v);
+      m(dart,cone(.014,.055,6),flame,[0,.085,0]);
+    }
+  }
+  return {g,parts};
+}
+
+function abejaAnimate(parts,s){
+  const t=s.now, wind=s.wind;
+  // The incoming strike signal fades quadratically over .3 s. Use its phase to
+  // spin once quickly, hold the expanded burst, then ease back to hovering.
+  const phase=s.strike>0?1-Math.sqrt(s.strike):1;
+  const settle=Math.max(0,Math.min(1,(phase-.35)/.65));
+  const follow=s.strike>0?1-settle*settle*(3-2*settle):0;
+  const buzz=Math.sin(t*5.5)*.03;
+  parts.fly.position.y=buzz-wind*.065+follow*.075;
+  parts.fly.rotation.y=s.strike>0?Math.PI*2*Math.min(1,phase/.38):0;
+  parts.fly.rotation.z=Math.sin(t*3)*.025+follow*Math.sin(phase*25)*.13;
+  parts.fly.scale.set(1+wind*.13+follow*.18,1+wind*.13-follow*.1,1+wind*.13+follow*.18);
+  parts.torso.rotation.x=wind*.18-follow*.1;
+  parts.head.rotation.x=-wind*.14+follow*.13+Math.sin(t*2)*.025;
+  for(const {arm,side} of parts.arms)
+    arm.rotation.z=side*(-wind*.55+follow*.95+Math.sin(t*3+side)*.07);
+  for(const {wing,side} of parts.wings){
+    wing.rotation.z=side*(.25+Math.sin(t*54+side)*(.5-wind*.25+follow*.13));
+    wing.rotation.x=Math.sin(t*47+side)*.15;
+  }
+  for(const {antenna,side} of parts.antennae)
+    antenna.rotation.z=side*(Math.sin(t*4+side)*.17-wind*.2+follow*.27);
+  const p=t%3.8, blink=p<.14?Math.sin(Math.PI*p/.14):0;
+  for(const eye of parts.eyes) eye.scale.y=1-blink*.92;
+  for(const {f,side} of parts.flames){
+    f.scale.z=.8+.25*Math.sin(t*20+side*2)+follow*.35;
+    f.rotation.y=side*.17+Math.sin(t*10+side)*.12;
+  }
+}
+
+// finished towers from the practice files. ownBase: the tower brings its own base (no stone pedestal); the game turns parts.turn to aim
+const KIT = { gato: { make: gatoMake, animate: gatoAnimate }, abeja: { make: abejaMake, animate: abejaAnimate, ownBase: true } };
 
 // flat top-down tower pictures (like Bloons): art/defensa/towers/<id>/0.png plain, 1-3 path A steps, 4-6 path B steps.
 // Drawn facing UP; the base circle's center sits at BASE (fraction of the picture from the left / top). A tower listed
@@ -873,6 +1060,8 @@ function spriteModel(id, ua, ub){
 const CROWN_Y = { mago: 1.25, nido: .95, huerto: 1.35, pinguino: .95, buho: .95 };
 function towerModel(i, lvl, ua = 0, ub = 0){
   if(SPRITES[TOWERS[i].id]) return spriteModel(TOWERS[i].id, ua, ub);
+  if(KIT[TOWERS[i].id] && KIT[TOWERS[i].id].ownBase){ const k = KIT[TOWERS[i].id], root = new THREE.Group(), a = k.make(ua, ub); root.add(a.g);
+    return { g: root, animal: a.parts.turn || a.g, roles: {}, kit: k, parts: a.parts }; }
   if(KIT[TOWERS[i].id]){ const k = KIT[TOWERS[i].id], pd = cloneRoles(proto('p' + lvl, () => pedestal(lvl))), root = new THREE.Group(), a = k.make(ua, ub);
     a.g.position.y = .44; a.g.scale.setScalar(.95); root.add(pd.g); root.add(a.g);
     return { g: root, animal: a.g, roles: { flag: pd.roles.flag || [] }, kit: k, parts: a.parts }; }
@@ -1513,7 +1702,7 @@ function start(el, host){
       const st = since < .05 ? since / .05 : since < P.hit ? Math.pow(1 - (since - .05) / (P.hit - .05), 2) : 0;
       const pitch = -wind * P.back + st * P.fwd, lunge = st * P.lunge - wind * P.lunge * .35, B = e.base, breathe = 1 + Math.sin(now * 2 + tw.id) * .015;
       if(e.kit){ e.animal.rotation.set(0, e.yaw, 0);
-        const sinceK = G.time - tw.shotAt, strike = busy && sinceK < .3 ? Math.pow(1 - sinceK / .3, 2) : 0, windK = busy && tw.cd > 0 && tw.cd < .22 ? Math.pow(1 - tw.cd / .22, 1.6) : 0;
+        const sinceK = G.time - tw.shotAt, strike = busy && sinceK < .3 ? Math.pow(1 - sinceK / .3, 2) : 0, windK = busy && tw.cd > 0 && tw.cd < P.wind ? Math.pow(1 - tw.cd / P.wind, 1.6) : 0;
         e.kit.animate(e.parts, { now, dt, wind: windK, strike, busy });
         for(const f2 of e.roles.flag || []) f2.rotation.y = Math.sin(now * 5 + tw.id) * .4;
         e.kick = Math.max(0, e.kick - dt); e.g.scale.setScalar(TS * (e.kick > 0 ? 1 + Math.sin(e.kick * 20) * e.kick * .4 : 1)); continue; }
