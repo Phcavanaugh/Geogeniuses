@@ -1530,76 +1530,22 @@
 
   // ---------- Leaderboard ----------
   let board = null, tab = "today";
-  // ---------- GeoGrabber card: the other daily game, one tap away ----------
-  const GRAB_START = String(window.GRAB_START_DATE || "");
-  async function renderGrab() {
-    const card = $("grabCard");
-    const today = todayCentral();
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(GRAB_START) || today < GRAB_START) { card.hidden = true; return; }
-    const plat = daysBetween(GRAB_START, today) + 1;
-    const set = (mine, rows) => {
-      const played = !!mine;
-      card.classList.toggle("played", played);
-      $("grabNew").hidden = played; $("grabMine").hidden = !played;
-      $("grabEyebrow").textContent = played ? "GeoGrabber · Day " + plat : (plat <= 7 ? "New daily game" : "Today's GeoGrabber");
-      $("grabMeta").textContent = played ? "" : "Day " + plat + " · one run a day";
-      $("grabMeta").hidden = played;
-      const btn = $("grabBtn");
-      btn.firstChild.textContent = played ? "See the GeoGrabber board" : "Play today's GeoGrabber";
-      btn.classList.toggle("quiet", played);
-      if (played) {
-        $("grabPct").textContent = (Math.round((mine.pct || 0) * 10) / 10).toFixed(1) + "%";
-        const rank = rows.indexOf(mine) + 1, cut = mine.kills || 0;
-        const r = $("grabRank"); r.textContent = "";
-        if (mine.status !== "done") r.append("Run interrupted · this score stands");
-        else { r.append("Rank "); const b = document.createElement("b"); b.textContent = rank; r.append(b, " of " + rows.length + (cut ? " · " + cut + (cut === 1 ? " rival" : " rivals") + " cut off" : "")); }
-      }
-      const others = rows.filter((r) => r !== mine).map((r) => r.player);
-      const who = $("grabWho");
-      who.hidden = !others.length || played; who.innerHTML = "";
-      if (others.length && !played) {
-        const stack = document.createElement("span"); stack.className = "stack";
-        others.slice(0, 3).forEach((n) => stack.appendChild(avatar(n)));
-        const t = document.createElement("span");
-        const names = others.slice(0, 2), more = others.length - names.length;
-        t.textContent = (more > 0 ? names.join(", ") + " and " + more + (more === 1 ? " other" : " others") : names.join(" and ")) + (others.length === 1 ? " has" : " have") + " played today";
-        who.append(stack, t);
-      }
-      card.hidden = false;
-    };
-    set(null, []);
-    let mine = null, rows = [];
-    if (API) {
-      try {
-        const res = await (await fetch(API + "?action=grabBoard")).json();
-        rows = (res.rows || []).filter((r) => r.date === today)
-          .sort((a, b) => (b.pct || 0) - (a.pct || 0) || (b.kills || 0) - (a.kills || 0) || (a.at || 0) - (b.at || 0));
-        mine = rows.find((r) => r.player === player) || null;
-        set(mine, rows);
-      } catch (e) { /* the card still links to the game */ }
-    }
-    if (!mine) askGrab(plat, rows.map((r) => r.player));
+  // ---------- "Another game to try" card: Gobble Town, one tap away ----------
+  // (GeoGrabber still lives at geogeniuses.win/geograbber; it's just no longer promoted here.)
+  function renderGrab() {
+    $("grabCard").hidden = false;
+    askGrab();
   }
 
-  // Once a day, after today's score, invite people who haven't played GeoGrabber yet.
-  const GRAB_ASK_KEY = "ggg:grabAsk";
-  function askGrab(day, others) {
+  // Once a day, after today's score, suggest Gobble Town in a pop-up.
+  const GRAB_ASK_KEY = "ggg:gobbleAsk";
+  function askGrab() {
     const today = todayCentral();
     if (!session || session.practice || session.date !== today) return;
     if (store.get(GRAB_ASK_KEY) === today) return;
     setTimeout(() => {
       if ($("doneScreen").hidden || !$("sheet").hidden || !$("grabPop").hidden) return;
       store.set(GRAB_ASK_KEY, today);
-      $("gpEyebrow").textContent = day <= 7 ? "New daily game · Day " + day : "GeoGrabber · Day " + day;
-      const who = $("gpWho"); who.innerHTML = "";
-      who.hidden = !others.length;
-      if (others.length) {
-        const stack = document.createElement("span"); stack.className = "stack";
-        others.slice(0, 3).forEach((n) => stack.appendChild(avatar(n)));
-        const t = document.createElement("span"), names = others.slice(0, 2), more = others.length - names.length;
-        t.textContent = (more > 0 ? names.join(", ") + " and " + more + (more === 1 ? " other" : " others") : names.join(" and ")) + (others.length === 1 ? " has" : " have") + " played today";
-        who.append(stack, t);
-      }
       const pop = $("grabPop"), dim = $("gpDim");
       pop.hidden = false; dim.hidden = false;
       requestAnimationFrame(() => { pop.classList.add("show"); dim.classList.add("show"); });
