@@ -137,6 +137,8 @@ const ART = {
 const ART_V = 2;
 function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
 function setPic(el, e){ el.innerHTML = picHTML(e); }
+// words whose picture is drawn art only ("@name") wait until their picture is in ART; a world of them opens when all are in
+for(const c of Object.values(VOCAB)){ const all=c.words.length; c.words=c.words.filter(w=>w[2][0]!=='@' || ART[w[2]]); if(c.more) c.ready = all>0 && c.words.length===all; }
 const WORD = {}; Object.values(VOCAB).forEach(c=>c.words.forEach(w=>WORD[w[2]]=w));
 for(const e in EXTRA_WORDS){ const [a,w,en]=EXTRA_WORDS[e]; WORD[e]=[a,w,e,en]; }
 // One normal <audio> element plays everything: unlike Web Audio it still plays when an iPhone is on silent.

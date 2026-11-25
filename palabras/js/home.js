@@ -33,7 +33,7 @@ document.querySelectorAll('.agesw button').forEach(b=>{
 const hasRiddles = c => c.words.filter(w=>RIDDLES[w[2]]).length >= 12;   // Adivina only asks about words that have a riddle
 function renderCats(){
   const wrap=$('cats'); wrap.innerHTML='';
-  Object.entries(VOCAB).filter(([k,c])=> !c.recap).filter(([k,c])=> (S.mode==='verdad'||S.mode==='cual') ? k==='todas' : (S.mode!=='adivina' || hasRiddles(c))).forEach(([key,c])=>{
+  Object.entries(VOCAB).filter(([k,c])=> !c.recap && c.words.length).filter(([k,c])=> (S.mode==='verdad'||S.mode==='cual') ? k==='todas' : (S.mode!=='adivina' || hasRiddles(c))).forEach(([key,c])=>{
     const b=document.createElement('button'); b.className='cat'+(key==='todas'?' wide':''); b.style.background=c.color;
     const got=c.words.filter(found).length;
     b.innerHTML=`<span class="e">${c.icon}</span>${c.es}<small>${c.en}</small><span class="prog">📒 ${got}/${c.words.length}</span>`;
@@ -69,18 +69,20 @@ async function start(key){
 }
 
 /* ======================= the journey (map + levels) ======================= */
-const JOURNEY_WORLDS=['granja','zoo','mar','bosque','bichos','aves','comida','casa','juguetes','ropa','cuerpo','afuera','vehiculos'];
+const JOURNEY_WORLDS=['granja','zoo','mar','bosque','bichos','aves','comida','casa','juguetes','ropa','cuerpo','afuera','vehiculos',
+  // second part of the map (each opens once all its pictures are in)
+  'colores','numeros','familia','escuela','sentimientos','acciones1','frutas','cocina','bano','fiesta','deportes','acciones2','oficios','ciudad','tiempo','mundo','herramientas'];
 const MIXINFO={e:'👑', es:'¡Desafío!', en:'Boss level: a mix of games', k:'c|¡Desafío!'};
 function buildLevels(){
   const out=[];
   JOURNEY_WORLDS.forEach((cat,wi)=>{
     const A = hasRiddles(VOCAB[cat]) ? 'adivina' : 'quees';
-    const VC = wi%2 ? 'cual' : 'verdad';
+    const VC = wi%2 ? 'cual' : 'verdad', EL = VOCAB[cat].words.filter(w=>(w[0]==='el'||w[0]==='la') && w[4]!=='f').length >= 6 || !VOCAB[cat].words.length && !/^acciones/.test(cat) ? 'ella' : 'quees';   // action words have no el / la
     const plan = AGE===4  ? ['donde','quees', A, wi%2?'feed':'bubbles', 'cual', {mix:['donde','quees',A,'feed','cual']}]
-               : AGE===7  ? ['donde', A, 'ella', VC, wi%2?'memory':'bubbles', {mix:[A,'ella','quees','donde',VC]}]
-               :            ['comodice','escribe', A, 'ella', VC, {mix:['escribe','comodice',A,'ella']}];
+               : AGE===7  ? ['donde', A, EL, VC, wi%2?'memory':'bubbles', {mix:[A,EL,'quees','donde',VC]}]
+               :            ['comodice','escribe', A, EL, VC, {mix:['escribe','comodice',A,EL]}];
     plan.forEach((p,n)=>out.push({ i:out.length, world:wi, cat, n:n+1, mode: typeof p==='string'?p:null, mix: typeof p==='object'?p.mix:null,
-                                   boss:n===5, boost:Math.min(4,Math.floor(wi/3)) }));
+                                   boss:n===5, boost:Math.min(4,Math.floor(wi/3)), soon: VOCAB[cat].more && !VOCAB[cat].ready }));
     // a recap stop after each world (not the last): words from every world so far
     if(wi < JOURNEY_WORLDS.length-1){
       const key='repaso'+wi, from=JOURNEY_WORLDS.slice(0,wi+1);
@@ -95,11 +97,15 @@ function buildLevels(){
   return out;
 }
 const LEVELS = buildLevels();
-let J = store.get('journey', {stars:{}, open:0, v:2});
+let J = store.get('journey', {stars:{}, open:0, v:3});
 if(!J.v){   // saved before recap stops: move each level to its new place (6 levels per world, then the recap)
   const old=JOURNEY_WORLDS.length*6, to = i => i>=old ? LEVELS.length-1 : Math.floor(i/6)*7 + i%6;
   const st={}; for(const k in J.stars) st[to(+k)]=J.stars[k];
   J = { stars:st, open: J.open>=old ? LEVELS.length-1 : to(J.open), v:2 }; store.set('journey', J);
+}
+if(J.v===2){   // saved before the second part of the map: the old final level (index 90) is now the last level
+  const OLDF=90, st={}; for(const k in J.stars){ const i=+k; st[i===OLDF ? LEVELS.length-1 : i]=J.stars[k]; }
+  J = { stars:st, open: Math.min(J.open, OLDF), v:3 }; store.set('journey', J);
 }
 const saveJ = () => store.set('journey', J);
 const RECAPINFO={e:'📖', es:'¡Repaso!', en:'Review: words from every world so far', k:'c|¡Muy bien!'};
@@ -109,7 +115,7 @@ const NODE_X=[22,50,78,64,36,50];
 // each level on the map shows a sticker from its world: the boss gets the world's own picture,
 // the others get words spread through the list (words with drawn art first)
 function levelPic(W, k, n){
-  if(k===n-1 || W.c.recap) return W.c.icon;
+  if(k===n-1 || W.c.recap || !W.c.words.length) return W.c.icon;
   const ws=W.c.words.filter(w=>w[2]!==W.c.icon), art=ws.filter(w=>ART[w[2]]), pool=art.length>=n-1?art:ws;
   return pool[Math.floor(k*pool.length/(n-1))][2];
 }
@@ -123,7 +129,7 @@ function renderMap(prevLevel){
     const lv=LEVELS.filter(l=>l.world===W.wi);
     const got=lv.reduce((t,l)=>t+(J.stars[l.i]||0),0);
     const box=document.createElement('div'); box.className='world'+(lv[0].i>J.open?' locked':''); box.style.background=W.c.color;
-    box.innerHTML=`<div class="wtitle"><span class="we">${picHTML(W.c.icon)}</span>${W.c.es}<small>${got}/${lv.length*3} ⭐</small></div>`;
+    box.innerHTML=`<div class="wtitle"><span class="we">${picHTML(W.c.icon)}</span>${W.c.es}<small>${W.c.more && !W.c.ready ? '🎨 ¡Pronto!' : got+'/'+(lv.length*3)+' ⭐'}</small></div>`;
     const path=document.createElement('div'); path.className='wpath';
     const H=lv.length*100+30; path.style.height=H+'px';
     const pts=lv.map((l,k)=>[lv.length===1?50:NODE_X[k], 50+k*100]);
@@ -134,7 +140,7 @@ function renderMap(prevLevel){
     deco.forEach((w,k)=>{ const x = one ? (k ? 84 : 16) : (k%2? 90 : 9), y = one ? 34 : 70 + k*(H-120)/3; svg+=`<span class="deco" style="left:${x}%;top:${y}px">${picHTML(w[2])}</span>`; });
     path.innerHTML=svg;
     lv.forEach((l,k)=>{
-      const st=J.stars[l.i]||0, locked=l.i>J.open, cur=l.i===J.open, info=modeInfo(l);
+      const st=J.stars[l.i]||0, locked=l.i>J.open || l.soon, cur=l.i===J.open, info=modeInfo(l);
       const b=document.createElement('button');
       b.className='node'+(locked?' n-lock':cur?' n-cur':' n-done')+(l.boss?' boss':'');
       b.style.left=pts[k][0]+'%'; b.style.top=pts[k][1]+'px';
@@ -174,6 +180,7 @@ $('freeBtn').onclick=()=>{ S.from='free'; renderCats(); show('home'); talk(['c|H
 $('toMap').onclick=()=>{ S.from='map'; goHome(); };
 async function startLevel(i){
   const L=LEVELS[i];
+  if(L.soon){ toast('🎨 ¡Pronto! Este mundo está esperando sus dibujos.'); return; }
   S.level=L; S.from='map'; S.mix = L.mix ? L.mix.slice() : null;
   S.mode = L.mix ? 'mix' : L.mode;
   ['lvlCard','over'].forEach(id=>$(id).classList.remove('on'));
