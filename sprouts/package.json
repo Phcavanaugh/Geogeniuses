@@ -1,0 +1,13 @@
+{
+  "name": "sprout-pals",
+  "private": true,
+  "type": "module",
+  "description": "Sprout Pals — a pet-care and farming game for kids. Static site, no build step.",
+  "scripts": {
+    "serve": "node tests/serve.mjs",
+    "test": "node --test tests/unit/*.test.mjs",
+    "e2e": "node tests/e2e/play.mjs",
+    "assets-doc": "node tools/asset-doc.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}

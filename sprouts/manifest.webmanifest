@@ -1,0 +1,16 @@
+{
+  "name": "Sprout Pals",
+  "short_name": "Sprout Pals",
+  "description": "Hatch a pet, grow food on your farm, and see what your pal becomes.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fdf6e3",
+  "theme_color": "#8fd16a",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
