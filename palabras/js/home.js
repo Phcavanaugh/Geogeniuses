@@ -33,7 +33,7 @@ document.querySelectorAll('.agesw button').forEach(b=>{
 const hasRiddles = c => c.words.filter(w=>RIDDLES[w[2]]).length >= 12;   // Adivina only asks about words that have a riddle
 function renderCats(){
   const wrap=$('cats'); wrap.innerHTML='';
-  Object.entries(VOCAB).filter(([k,c])=> !c.recap && c.words.length).filter(([k,c])=> (S.mode==='verdad'||S.mode==='cual') ? k==='todas' : (S.mode!=='adivina' || hasRiddles(c))).forEach(([key,c])=>{
+  Object.entries(VOCAB).filter(([k,c])=> !c.recap && c.words.length).filter(([k,c])=> (S.mode==='verdad'||S.mode==='cual') ? k==='todas' : (S.mode!=='adivina' || hasRiddles(c))).filter(([k,c])=> S.mode!=='ella' || c.words.filter(w=>(w[0]==='el'||w[0]==='la') && w[4]!=='f').length >= 6).forEach(([key,c])=>{
     const b=document.createElement('button'); b.className='cat'+(key==='todas'?' wide':''); b.style.background=c.color;
     const got=c.words.filter(found).length;
     b.innerHTML=`<span class="e">${c.icon}</span>${c.es}<small>${c.en}</small><span class="prog">📒 ${got}/${c.words.length}</span>`;

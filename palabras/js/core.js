@@ -96,6 +96,8 @@ const phrase = w => S.sayArt ? `${w[0]} ${w[1]}` : w[1];
 const plural = w => w[0]==='los'||w[0]==='las';
 const fem = w => w[4]==='f' || w[0]==='la' || w[0]==='las';
 const esta = w => plural(w) ? 'están' : 'está';
+const isAction = w => (WORD_BY_PIC[w[2]]||{}).kind==='action';   // verbs: "¿Cuál es saltar?", "¡A saltar!"
+const dondeText = (w, html) => isAction(w) ? `¿Cuál es ${String(html).trim()}?` : `¿Dónde ${esta(w)} ${html}?`;
 const thatIs = w => plural(w) ? (fem(w)?'Esas son':'Esos son') : (fem(w)?'Esa es':'Ese es');
 const wordHTML = w => `<span class="art">${w[0]}</span> ${w[1]}`;
 
@@ -141,6 +143,12 @@ const ART = {
   '@hermano':'hermano', '@hermana':'hermana', '@tio':'tio', '@tia':'tia', '@primo':'primo', '@prima':'prima', '@hijo':'hijo', '@hija':'hija', '@nieto':'nieto', '@nieta':'nieta', '@bisabuelo':'bisabuelo', '@bisabuela':'bisabuela', '@sobrino':'sobrino', '@sobrina':'sobrina', '@esposo':'esposo', '@esposa':'esposa', '@padrino':'padrino', '@madrina':'madrina', '@gemelos':'gemelos', '@gemelas':'gemelas', '@padrastro':'padrastro', '@madrastra':'madrastra', '@cunyado':'cunyado', '@cunyada':'cunyada', '@padres':'padres',
   // En la escuela
   '@pizarron':'pizarron', '@borrador':'borrador', '@regla':'regla', '@sacapuntas':'sacapuntas', '@pegamento':'pegamento', '@cartulina':'cartulina', '@escritorio':'escritorio', '@pupitre':'pupitre', '@marcador':'marcador', '@lonchera':'lonchera', '@uniforme':'uniforme', '@biblioteca':'biblioteca', '@salon-de-clases':'salon-de-clases', '@recreo':'recreo', '@tarea':'tarea', '@examen':'examen', '@diploma':'diploma', '@medalla':'medalla', '@calculadora':'calculadora', '@globo-terraqueo':'globo-terraqueo', '@proyector':'proyector', '@plastilina':'plastilina', '@pincel':'pincel', '@acuarela':'acuarela', '@sello':'sello', '@grapadora':'grapadora', '@libro-de-texto':'libro-de-texto', '@estuche':'estuche', '@pizarra-blanca':'pizarra-blanca', '@portapapeles':'portapapeles',
+  // Los sentimientos
+  '@alegria':'alegria', '@tristeza':'tristeza', '@miedo':'miedo', '@enojo':'enojo', '@sorpresa':'sorpresa', '@calma':'calma', '@amor':'amor', '@verguenza':'verguenza', '@orgullo':'orgullo', '@asco':'asco', '@emocion':'emocion', '@aburrimiento':'aburrimiento', '@curiosidad':'curiosidad', '@timidez':'timidez', '@paciencia':'paciencia', '@frustracion':'frustracion', '@confianza':'confianza', '@celos':'celos', '@soledad':'soledad', '@gratitud':'gratitud',
+  // ¡A moverse!
+  '@correr':'correr', '@saltar':'saltar', '@caminar':'caminar', '@bailar':'bailar', '@cantar':'cantar', '@reir':'reir', '@llorar':'llorar', '@dormir':'dormir', '@despertar':'despertar', '@comer':'comer', '@beber':'beber', '@nadar':'nadar', '@volar':'volar', '@trepar':'trepar', '@gatear':'gatear', '@rodar':'rodar', '@girar':'girar', '@aplaudir':'aplaudir', '@saludar':'saludar', '@abrazar':'abrazar', '@besar':'besar', '@sonreir':'sonreir', '@guinyar':'guinyar', '@escuchar':'escuchar', '@mirar':'mirar', '@oler':'oler', '@probar':'probar', '@tocar':'tocar', '@senyalar':'senyalar', '@esconderse':'esconderse',
+  // Frutas y verduras
+  '@mandarina':'mandarina', '@toronja':'toronja', '@lima':'lima', '@papaya':'papaya', '@guayaba':'guayaba', '@granada':'granada', '@higo':'higo', '@ciruela':'ciruela',
 };
 const ART_V = 2;
 function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
@@ -175,10 +183,10 @@ function keyText(k){
   switch(t){
     case 'c': return v;
     case 'w': return phrase(w)+'.';
-    case 'd': return `¿Dónde ${esta(w)} ${phrase(w)}?`;
+    case 'd': return dondeText(w, phrase(w));
     case 'b': return `¡Busca ${phrase(w)}!`;
     case 'q': return `¡Quiero ${phrase(w)}!`;
-    case 'e': return `${plural(w)?'Son':'Es'} ${phrase(w)}.`;
+    case 'e': return isAction(w) ? `¡A ${w[1]}!` : `${plural(w)?'Son':'Es'} ${phrase(w)}.`;
     case 'a': return RIDDLES[v][0]+' '+riddleQ(v)[0];
     case 'v': return VERDAD[+v][1];
     case 'k': return CUAL[+v][0];
