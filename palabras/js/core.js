@@ -160,7 +160,9 @@ const ART = {
   // Los deportes
   '@futbol':'futbol', '@baloncesto':'baloncesto', '@tenis':'tenis', '@natacion':'natacion', '@gimnasia':'gimnasia', '@ciclismo':'ciclismo', '@golf':'golf', '@hockey':'hockey', '@badminton':'badminton', '@boxeo':'boxeo', '@karate':'karate', '@yoga':'yoga', '@surf':'surf', '@esqui':'esqui', '@patinaje-sobre-hielo':'patinaje-sobre-hielo', '@remo':'remo', '@esgrima':'esgrima', '@escalada':'escalada', '@arco':'arco', '@rugby':'rugby', '@raqueta':'raqueta', '@porteria':'porteria', '@aro-de-basquetbol':'aro-de-basquetbol', '@red':'red', '@silbato':'silbato', '@arbitro':'arbitro', '@cronometro':'cronometro', '@meta':'meta', '@valla':'valla', '@guante-de-beisbol':'guante-de-beisbol',
   // Los oficios
-  '@enfermera':'enfermera', '@dentista':'dentista', '@veterinaria':'veterinaria', '@panadero':'panadero', '@carpintera':'carpintera', '@mecanico':'mecanico', '@electricista':'electricista', '@plomero':'plomero',
+  '@enfermera':'enfermera', '@dentista':'dentista', '@veterinaria':'veterinaria', '@panadero':'panadero', '@carpintera':'carpintera', '@mecanico':'mecanico', '@electricista':'electricista', '@plomero':'plomero', '@pintora':'pintora', '@jardinero':'jardinero', '@conductora-de-autobus':'conductora-de-autobus', '@piloto':'piloto', '@marinera':'marinera', '@pescador':'pescador', '@fotografa':'fotografa', '@artista':'artista', '@cantante':'cantante', '@bailarin':'bailarin', '@actriz':'actriz', '@cientifico':'cientifico', '@bibliotecaria':'bibliotecaria', '@vendedor':'vendedor', '@cartero':'cartero', '@peluquero':'peluquero', '@costurera':'costurera', '@zapatero':'zapatero', '@albanyil':'albanyil', '@arquitecto':'arquitecto', '@jueza':'jueza', '@periodista':'periodista',
+  // La ciudad
+  '@calle':'calle', '@acera':'acera', '@cruce-peatonal':'cruce-peatonal', '@tunel':'tunel', '@rotonda':'rotonda', '@plaza':'plaza', '@parque':'parque', '@banco-de-plaza':'banco-de-plaza',
 };
 const ART_V = 2;
 function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
