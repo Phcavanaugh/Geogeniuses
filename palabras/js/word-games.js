@@ -8,7 +8,7 @@ function dondeRound(){
   const n=Math.min(Math.max(S.nChoices, START.donde[LV()]), START.donde[LV()]+Math.floor(S.correct/2), words.length);
   const opts=shuffle([target,...distractors(words,target,n-1)]);
   S.target=target; S.locked=false;
-  $('dq').innerHTML=`¿Dónde ${esta(target)} ${wordHTML(target)}?`;
+  $('dq').innerHTML=dondeText(target, wordHTML(target));
   const box=$('choices'); box.innerHTML=''; box.className='choices n'+opts.length;
   opts.forEach(w=>{
     const b=document.createElement('button'); b.className='choice'; b.innerHTML=`<span class="pic">${picHTML(w[2])}</span>`; b.setAttribute('aria-label',w[3]); b._w=w;
