@@ -55,7 +55,7 @@ def main():
         rim = True
     alpha = a[..., 3]
     # find one seed per sticker; stickers whose borders touch are pulled apart by shrinking first
-    for t, shrink in ((40, 0), (128, 0), (200, 4), (250, 4), (250, 10), (250, 16), (250, 24)):
+    for t, shrink in ((40, 0), (128, 0), (200, 4), (250, 4), (250, 10), (250, 16), (250, 24), (128, 10), (128, 18), (128, 26), (128, 34)):
         m = alpha > t
         if shrink:
             m = ndimage.binary_erosion(m, disk(shrink))
