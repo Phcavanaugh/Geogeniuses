@@ -165,3 +165,6 @@ function moveAge_(from, to, prefix, toAge, fromAge) {
     lock.releaseLock();
   }
 }
+
+// One-time fix: give Cora the 7-year-old progress saved under Warren
+function fixCora() { moveAge_('Warren', 'Cora', 'hp7_', '7', null); }
