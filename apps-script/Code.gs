@@ -12,14 +12,23 @@
 var TZ = 'America/Chicago';
 var MAX_TOTAL = 1000;
 
+// GeoGeniuses Kids (geogeniuses.win/kids) sends game=kids. It uses its own tabs —
+// Kids Players, Kids Scores, Kids Shares, Kids Rounds — so kids never land on the grown-ups' board.
+var KIDS = false;
+var KIDS_TABS = { Players: 1, Scores: 1, Shares: 1, Rounds: 1 };
+function tabName_(name) { return KIDS && KIDS_TABS[name] ? 'Kids ' + name : name; }
+function ck_(key) { return (KIDS ? 'kids:' : '') + key; }
+
 function doGet(e) {
   var action = (e && e.parameter && e.parameter.action) || '';
+  KIDS = !!(e && e.parameter && e.parameter.game === 'kids');
+  if (action === 'ping') return json_({ ok: true, kids: true });
   // Answers come from a cache that's cleared whenever a score, share or player is saved,
   // so the Sheet is only read again after something changes.
-  if (action === 'players') return raw_(cached_('players', function () { return { players: getPlayers_() }; }, 600));
-  if (action === 'board') return raw_(cached_('board:' + today_(), function () { return computeBoard_(getRows_(), today_()); }));
+  if (action === 'players') return raw_(cached_(ck_('players'), function () { return { players: getPlayers_() }; }, 600));
+  if (action === 'board') return raw_(cached_(ck_('board:' + today_()), function () { return computeBoard_(getRows_(), today_()); }));
   // Every saved day and share, for working out badges in the game.
-  if (action === 'history') return raw_(cached_('history', function () { return { ok: true, rows: getRows_(), shares: getShares_() }; }));
+  if (action === 'history') return raw_(cached_(ck_('history'), function () { return { ok: true, rows: getRows_(), shares: getShares_() }; }));
   // One player's game for one day, including where they tapped (for their profile).
   if (action === 'day') return json_(getDay_(String(e.parameter.player || ''), String(e.parameter.date || '')));
   // GeoGrabber: the last 60 days of daily runs, and one player's coins/skins/badges.
@@ -33,6 +42,7 @@ function doPost(e) {
   lock.waitLock(10000);
   try {
     var body = JSON.parse(e.postData.contents || '{}');
+    KIDS = body.game === 'kids';
     if (body.action === 'share') return json_(saveShare_(body));
     if (body.action === 'addPlayer') return json_(addPlayer_(body));
     if (body.action === 'grabSubmit') return json_(grabSubmit_(body));
@@ -156,7 +166,8 @@ function cached_(key, build, ttl) {
 // Clear the cache after anything is saved (the pieces left behind are simply ignored).
 function bust_() {
   var cache = CacheService.getScriptCache();
-  cache.removeAll(['players:n', 'history:n', 'board:' + today_() + ':n', 'grab:' + today_() + ':n']);
+  cache.removeAll(['players:n', 'history:n', 'board:' + today_() + ':n', 'grab:' + today_() + ':n',
+    'kids:players:n', 'kids:history:n', 'kids:board:' + today_() + ':n']);
 }
 // Editing the Sheet by hand (adding a player, fixing a score) clears the cache too.
 function onEdit(e) { bust_(); }
@@ -205,9 +216,9 @@ function computeBoard_(rows, today) {
 // ---------- Sheet helpers ----------
 function sheet_(name) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sh = ss.getSheetByName(name);
+  var sh = ss.getSheetByName(tabName_(name));
   if (!sh) {
-    sh = ss.insertSheet(name);
+    sh = ss.insertSheet(tabName_(name));
     if (name === 'Players') { sh.appendRow(['Name']); sh.appendRow(['Pete']); }
     if (name === 'Shares') sh.appendRow(['Saved at', 'Date', 'Player']);
     if (name === ROUNDS) sh.appendRow(['Date', 'Player', 'Started', 'Last activity', 'Answered', 'Score so far', 'Q1', 'Q2', 'Q3', 'Q4', 'Q5', 'Finished']);

@@ -3,8 +3,12 @@
   "use strict";
 
   // ---------- Settings ----------
+  // GeoGeniuses Kids (geogeniuses.win/kids) runs this same file with window.GGG_KIDS = true:
+  // its own questions, its own scoreboard tabs, and a tap anywhere inside the state or country is perfect.
+  const KIDS = !!window.GGG_KIDS;
+  const ROOT = KIDS ? "../" : "";
   const API = (window.GGG_API_URL || "").trim();
-  const START = window.GGG_START_DATE || "2026-09-28";
+  const START = KIDS ? (window.GGK_START_DATE || "2026-11-27") : (window.GGG_START_DATE || "2026-09-28");
   const TZ = "America/Chicago";
   const MAX_PTS = [100, 100, 200, 300, 300];
   const DAY_MAX = MAX_PTS.reduce((a, b) => a + b, 0);
@@ -13,9 +17,11 @@
   // ---------- Small helpers ----------
   const $ = (id) => document.getElementById(id);
   const store = {
-    get(k) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
-    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} },
-    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+    // Kids keeps its own player, progress and shares on the same phone ("ggk:" instead of "ggg:").
+    key(k) { return KIDS ? k.replace(/^ggg:/, "ggk:") : k; },
+    get(k) { try { const v = localStorage.getItem(this.key(k)); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(this.key(k), JSON.stringify(v)); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(this.key(k)); } catch (e) {} },
   };
   function todayCentral() {
     return new Intl.DateTimeFormat("en-CA", { timeZone: TZ, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -80,26 +86,29 @@
   }
 
   // ---------- Backend: Google Sheet, or demo mode on this device ----------
-  const api = API ? {
-    async players() { const r = await fetch(API + "?action=players"); return (await r.json()).players; },
-    async board() { const r = await fetch(API + "?action=board"); return r.json(); },
+  const GQ = KIDS ? "?game=kids&" : "?";
+  const post = (body) => JSON.stringify(KIDS ? Object.assign({ game: "kids" }, body) : body);
+  const remoteApi = {
+    async players() { const r = await fetch(API + GQ + "action=players"); return (await r.json()).players; },
+    async board() { const r = await fetch(API + GQ + "action=board"); return r.json(); },
     async submit(payload) {
-      const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "submit" }, payload)) });
+      const r = await fetch(API, { method: "POST", body: post(Object.assign({ action: "submit" }, payload)) });
       return r.json();
     },
     async addPlayer(name) {
-      const r = await fetch(API, { method: "POST", body: JSON.stringify({ action: "addPlayer", name }) });
+      const r = await fetch(API, { method: "POST", body: post({ action: "addPlayer", name }) });
       return r.json();
     },
     // Quiet progress note for the Sheet's Rounds tab. Fire and forget; keepalive lets it finish if the page closes.
-    progress(p) { try { fetch(API, { method: "POST", keepalive: true, body: JSON.stringify(Object.assign({ action: "progress" }, p)) }).catch(() => {}); } catch (e) {} },
-    async history() { const r = await fetch(API + "?action=history"); return r.json(); },
-    async day(who, date) { const r = await fetch(API + "?action=day&player=" + encodeURIComponent(who) + "&date=" + encodeURIComponent(date)); return r.json(); },
+    progress(p) { try { fetch(API, { method: "POST", keepalive: true, body: post(Object.assign({ action: "progress" }, p)) }).catch(() => {}); } catch (e) {} },
+    async history() { const r = await fetch(API + GQ + "action=history"); return r.json(); },
+    async day(who, date) { const r = await fetch(API + GQ + "action=day&player=" + encodeURIComponent(who) + "&date=" + encodeURIComponent(date)); return r.json(); },
     async share(p) {
-      const r = await fetch(API, { method: "POST", body: JSON.stringify(Object.assign({ action: "share" }, p)) });
+      const r = await fetch(API, { method: "POST", body: post(Object.assign({ action: "share" }, p)) });
       return r.json();
     },
-  } : {
+  };
+  const demoApi = {
     async players() { return ["Pete", "Guest"].concat(store.get("ggg:demo:players") || []); },
     async addPlayer(name) {
       const list = store.get("ggg:demo:players") || [];
@@ -125,6 +134,7 @@
       return r ? { ok: true, player: who, date, scores: r.scores, total: r.total, miles: r.miles || [], guesses: r.guesses || null } : { ok: false };
     },
   };
+  let api = API ? remoteApi : demoApi;
 
   // ---------- Globe (MapLibre, static NASA Blue Marble imagery bundled with the game) ----------
   const Globe = (function () {
@@ -136,7 +146,8 @@
       ? "https://ibasemaps-api.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}?token=" + encodeURIComponent(ESRI_KEY)
       : "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}";
     const US_CENTER = [-98.5, 39.5];
-    let map = null, pin = null, answer = null, locked = false, onPin = () => {};
+    let map = null, pin = null, answer = null, locked = false, onPin = () => {}, topo = null;
+    const EMPTY = { type: "FeatureCollection", features: [] };
     let pinMarker = null, ansMarker = null, anim = null, placed = false;
     let topPad = 0, restBottom = 0; // screen space covered by the floating clue card and Confirm button
 
@@ -161,11 +172,11 @@
       const [z, x, y] = params.url.replace("bm://", "").split("/").map(Number);
       let im, sx, sy, size;
       if (z <= 2) {
-        im = await loadImage("imagery/world-1024.jpg");
+        im = await loadImage(ROOT + "imagery/world-1024.jpg");
         size = 1024 / Math.pow(2, z); sx = x * size; sy = y * size;
       } else {
         const shift = z - 1, qx = x >> shift, qy = y >> shift;
-        im = await loadImage("imagery/q" + qx + qy + ".jpg");
+        im = await loadImage(ROOT + "imagery/q" + qx + qy + ".jpg");
         size = 2048 / Math.pow(2, shift);
         sx = (x - (qx << shift)) * size; sy = (y - (qy << shift)) * size;
       }
@@ -233,7 +244,8 @@
 
     return {
       async load() {
-        const [w50, us] = await Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())));
+        const [w50, us] = await Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(ROOT + u).then((r) => r.json())));
+        topo = { w50, us };
         const borders = topojson.mesh(w50, w50.objects.countries, (a, b) => a !== b);
         const states = topojson.mesh(us, us.objects.states, (a, b) => a !== b);
         map = new maplibregl.Map({
@@ -249,11 +261,15 @@
               borders: { type: "geojson", data: borders },
               states: { type: "geojson", data: states },
               guessline: { type: "geojson", data: { type: "Feature", geometry: { type: "LineString", coordinates: [] } } },
+              target: { type: "geojson", data: EMPTY },
             },
             layers: [
               // No background layer: space around the globe stays see-through so the starfield shows.
               { id: "earth", type: "raster", source: "earth", paint: { "raster-fade-duration": 0 } },
               { id: "esri", type: "raster", source: "esri", paint: { "raster-fade-duration": 200 } },
+              // Kids: the answer's state or country, lit up when the answer is revealed.
+              { id: "target-fill", type: "fill", source: "target", paint: { "fill-color": "#3ecf7a", "fill-opacity": 0.32 } },
+              { id: "target-line", type: "line", source: "target", paint: { "line-color": "#3ecf7a", "line-width": 2.4 } },
               { id: "states", type: "line", source: "states", paint: { "line-color": "rgba(255,255,255,0.35)", "line-width": 0.6 } },
               { id: "borders", type: "line", source: "borders", paint: { "line-color": "rgba(255,255,255,0.7)", "line-width": 0.9 } },
               { id: "guessline", type: "line", source: "guessline", layout: { "line-cap": "round" },
@@ -298,6 +314,7 @@
         if (pinMarker) pinMarker.remove();
         if (ansMarker) { ansMarker.remove(); ansMarker = null; }
         setLine(null); drawing = null; drawOverlay();
+        const tgt = map.getSource("target"); if (tgt) tgt.setData(EMPTY);
         if (!placed) {
           map.jumpTo({ center: US_CENTER, zoom: fitZoom(), padding: { top: topPad, bottom: restBottom, left: 0, right: 0 } });
           placed = true;
@@ -308,6 +325,7 @@
       // How much of the screen the clue card (top) and the Confirm button (bottom) cover.
       setInsets(top, bottom) { topPad = top || 0; restBottom = bottom || 0; },
       onPin(fn) { onPin = fn; },
+      topo() { return topo; },
       tileTemplate() { return ESRI_TILES; },
       getPin() { return pin; },
       resize() { if (map) map.resize(); },
@@ -326,6 +344,7 @@
         const zEnd = zoomToFit(angle / 2, padEnd);
         const duration = Math.min(3200, 1100 + miles * 0.35);
         const t0 = performance.now();
+        if (hooks.target) { const tgt = map.getSource("target"); if (tgt) tgt.setData(hooks.target); }
         if (hooks.onStart) hooks.onStart(duration);
         return new Promise((done) => {
           const step = (now) => {
@@ -348,12 +367,86 @@
             setLine(unwrap(full));
             ansMarker = new maplibregl.Marker({ element: pinEl("#3ecf7a", true), anchor: "bottom" }).setLngLat(ans).addTo(map);
             if (hooks.onLand) setTimeout(hooks.onLand, 330); // as the flag hits the ground
-            setTimeout(done, 550);
+            // Kids: then pull back to show the whole state or country (and the guess).
+            if (hooks.fit) {
+              setTimeout(() => {
+                try {
+                  map.fitBounds(hooks.fit, { padding: { top: topPad + 24, bottom: padEnd + 24, left: 28, right: 28 }, maxZoom: 6.5, duration: 900 });
+                } catch (e) {}
+              }, 450);
+              setTimeout(done, 1300);
+            } else setTimeout(done, 550);
           };
           anim = requestAnimationFrame(step);
         });
       },
     };
+  })();
+
+  // ---------- Kids: whole states and countries as answers ----------
+  // A tap anywhere inside the place is a perfect score. Otherwise distance is measured
+  // to the nearest point on its border, and that's where the answer flag lands.
+  const Place = (function () {
+    let feats = null;
+    function build() {
+      const t = Globe.topo(); feats = new Map();
+      if (!t) return;
+      topojson.feature(t.us, t.us.objects.states).features.forEach((f) => feats.set("state:" + f.properties.name, f));
+      const geoms = t.w50.objects.countries.geometries;
+      const extra = { "Somalia": "Somaliland", "Cyprus": "N. Cyprus" };
+      geoms.forEach((g) => {
+        const n = g.properties.name;
+        if (n === "Somaliland" || n === "N. Cyprus") return;
+        const e = extra[n] && geoms.find((x) => x.properties.name === extra[n]);
+        const f = e ? { type: "Feature", properties: { name: n }, geometry: topojson.merge(t.w50, [g, e]) } : topojson.feature(t.w50, g);
+        feats.set("country:" + n, f);
+      });
+    }
+    function get(q) { if (!feats || !feats.size) build(); return (q && q.kind && feats.get(q.kind + ":" + q.key)) || null; }
+    function polys(f) { const g = f.geometry; return g.type === "MultiPolygon" ? g.coordinates : g.type === "Polygon" ? [g.coordinates] : []; }
+    // Bounds of one polygon plus the guess, as [[west, south], [east, north]] for fitting a map.
+    function frame(poly, p) {
+      const b = d3.geoBounds({ type: "Polygon", coordinates: poly });
+      let w = b[0][0], e = b[1][0], s = b[0][1], n = b[1][1];
+      if (e < w) e += 360;
+      if (p) {
+        const mid = (w + e) / 2; let x = p[0];
+        while (x - mid > 180) x -= 360; while (x - mid < -180) x += 360;
+        w = Math.min(w, x); e = Math.max(e, x); s = Math.min(s, p[1]); n = Math.max(n, p[1]);
+      }
+      return [[w, s], [e, n]];
+    }
+    // { pt, miles, inside, fit } for a guess p = [lon, lat].
+    function locate(q, p) {
+      const f = get(q);
+      if (!f) { const a = [q.lon, q.lat]; return { pt: a, miles: milesBetween(p, a), inside: false, fit: null }; }
+      const ps = polys(f);
+      if (d3.geoContains(f, p)) {
+        const home = ps.find((c) => d3.geoContains({ type: "Polygon", coordinates: c }, p)) || ps[0];
+        return { pt: p, miles: 0, inside: true, fit: frame(home, null) };
+      }
+      let best = Infinity, bp = null, bpoly = ps[0];
+      const STEP = 0.002; // about 8 miles: long straight borders get extra points so nothing is skipped
+      ps.forEach((poly) => poly.forEach((ring) => {
+        for (let i = 0; i < ring.length; i++) {
+          const a = ring[i], b = ring[(i + 1) % ring.length];
+          const len = d3.geoDistance(a, b), n = Math.max(1, Math.ceil(len / STEP));
+          const it = n > 1 ? d3.geoInterpolate(a, b) : null;
+          for (let k = 0; k < n; k++) {
+            const c = k === 0 ? a : it(k / n), d = d3.geoDistance(p, c);
+            if (d < best) { best = d; bp = c; bpoly = poly; }
+          }
+        }
+      }));
+      return { pt: bp, miles: best * 3958.8, inside: false, fit: frame(bpoly, p) };
+    }
+    // Bounds of the biggest piece (the mainland), for a map with no guess on it.
+    function mainFrame(f) {
+      let best = null, ba = -1;
+      polys(f).forEach((c) => { const a = d3.geoArea({ type: "Polygon", coordinates: c }); if (a < 2 * Math.PI && a > ba) { ba = a; best = c; } });
+      return best ? frame(best, null) : null;
+    }
+    return { get, locate, mainFrame };
   })();
 
   // ---------- Starfield behind the globe (Milky Way) ----------
@@ -757,8 +850,9 @@
   $("confirmBtn").onclick = async () => {
     const p = Globe.getPin(); if (!p) return;
     const i = session.progress.guesses.length, q = session.qs[i];
-    const ans = [q.lon, q.lat];
-    const miles = milesBetween(p, ans), pts = pointsFor(miles, MAX_PTS[i]);
+    const spot = KIDS ? Place.locate(q, p) : null;
+    const ans = spot ? spot.pt : [q.lon, q.lat];
+    const miles = spot ? spot.miles : milesBetween(p, ans), pts = pointsFor(miles, MAX_PTS[i]);
     session.progress.guesses.push({ lon: +p[0].toFixed(4), lat: +p[1].toFixed(4), miles: Math.round(miles), pts });
     store.set(session.key, session.progress);
     if (session.progress.guesses.length < 5) reportProgress(); // the final answer is recorded when the score saves
@@ -768,7 +862,8 @@
     const card = $("result");
     $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
     $("rAnswer").textContent = q.answer;
-    $("rDist").textContent = pts === MAX_PTS[i] ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
+    $("rDist").textContent = spot && spot.inside ? "Inside " + q.answer.replace(/^The /, "the ") + "!"
+      : pts === MAX_PTS[i] ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
     $("rPts").textContent = "+" + pts;
     $("rFact").textContent = q.fact;
     card.classList.remove("show"); card.style.visibility = "hidden"; card.hidden = false;
@@ -778,6 +873,8 @@
     chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
     await Globe.reveal(p, ans, {
       padBottom: cardH,
+      target: spot ? Place.get(q) : null,
+      fit: spot ? spot.fit : null,
       onStart(duration) { Feedback.lineStart(duration); },
       onProgress(t) { chip.textContent = fmt(Math.round(total * t)) + " mi"; Feedback.lineProgress(t); },
       onLand() { renderProgress(-1); chip.textContent = fmt(total) + (total === 1 ? " mile" : " miles"); chip.classList.add("done"); Feedback.land(tier); },
@@ -854,7 +951,7 @@
   let bordersP = null;
   function loadBorders() {
     if (!bordersP) {
-      bordersP = Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(u).then((r) => r.json())))
+      bordersP = Promise.all(["data/countries-50m.json", "data/states-10m.json"].map((u) => fetch(ROOT + u).then((r) => r.json())))
         .then(([w, us]) => ({
           countries: topojson.mesh(w, w.objects.countries, (a, b) => a !== b),
           coast: topojson.mesh(w, w.objects.countries, (a, b) => a === b),
@@ -867,15 +964,23 @@
     fill + '" stroke="#fff" stroke-width="2.5"/><circle cx="14" cy="13.5" r="4.5" fill="#fff"/></svg>';
 
   // A still satellite map framing the answer (and your guess, if we have it), built from image tiles.
-  async function miniMap(box, ans, guess) {
+  async function miniMap(box, ans, guess, opts) {
+    opts = opts || {};
     const w = box.clientWidth || 320, h = box.clientHeight || 200;
     const mercY = (lat) => { const r = Math.max(-85, Math.min(85, lat)) * Math.PI / 180; return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2; };
     // Take the short way around the globe between the two points.
     let g = guess ? [guess[0], guess[1]] : null;
     if (g) { while (g[0] - ans[0] > 180) g[0] -= 360; while (g[0] - ans[0] < -180) g[0] += 360; }
-    const cLon = g ? (g[0] + ans[0]) / 2 : ans[0];
-    const yA = mercY(ans[1]), yG = g ? mercY(g[1]) : yA, cY = (yA + yG) / 2;
-    const dLon = g ? Math.abs(g[0] - ans[0]) / 360 : 0, dY = Math.abs(yA - yG);
+    let cLon = g ? (g[0] + ans[0]) / 2 : ans[0];
+    const yA = mercY(ans[1]), yG = g ? mercY(g[1]) : yA;
+    let cY = (yA + yG) / 2, dLon = g ? Math.abs(g[0] - ans[0]) / 360 : 0, dY = Math.abs(yA - yG);
+    // Kids: frame the whole state or country (plus the guess).
+    const fr = opts.region ? (opts.frame || Place.mainFrame(opts.region)) : null;
+    if (fr) {
+      const yN = mercY(fr[1][1]), yS = mercY(fr[0][1]);
+      cLon = (fr[0][0] + fr[1][0]) / 2; cY = (yN + yS) / 2; dLon = (fr[1][0] - fr[0][0]) / 360; dY = Math.abs(yS - yN);
+      if (g) { while (g[0] - cLon > 180) g[0] -= 360; while (g[0] - cLon < -180) g[0] += 360; }
+    }
     let z = 10;
     while (z > 1 && (dLon * 256 * Math.pow(2, z) > w * 0.72 || dY * 256 * Math.pow(2, z) > h * 0.62)) z--;
     const W = 256 * Math.pow(2, z);
@@ -899,6 +1004,7 @@
     const svg = d3.select(box).append("svg").attr("class", "mm-lines").attr("viewBox", "0 0 " + w + " " + h);
     const path = d3.geoPath(proj);
     const b = await loadBorders();
+    if (opts.region) svg.append("path").attr("d", path(opts.region)).attr("class", "mm-target");
     if (b) {
       if (z >= 4) svg.append("path").attr("d", path(b.states)).attr("class", "mm-state");
       svg.append("path").attr("d", path(b.coast)).attr("class", "mm-coast");
@@ -914,9 +1020,10 @@
       el.style.left = p[0] + "px"; el.style.top = p[1] + "px";
       box.appendChild(el);
     };
-    if (g) {
+    const gd = g || opts.guessDot;
+    if (gd) {
       // Your guess: a white dot with an orange ring, so the answer pin can never hide it.
-      const p = proj(g), dot = document.createElement("div");
+      const p = proj(gd), dot = document.createElement("div");
       dot.className = "mm-guess"; dot.style.left = p[0] + "px"; dot.style.top = p[1] + "px";
       dot.title = "Your guess";
       box.appendChild(dot);
@@ -953,7 +1060,9 @@
       card.querySelector(".rev-ans").textContent = q.answer;
       const dist = card.querySelector(".rev-dist");
       const hasPin = x && x.lon != null && x.lat != null;
-      if (x && x.miles != null) {
+      if (KIDS && x && x.miles === 0) {
+        dist.textContent = (opts.who ? opts.who + " tapped" : "You tapped") + " inside " + q.answer.replace(/^The /, "the ") + "!";
+      } else if (x && x.miles != null) {
         dist.innerHTML = (opts.who ? "<span></span> was " : "You were ") + "<b></b> from the answer." + (hasPin ? "" : " <i>(Guess location wasn't saved.)</i>");
         if (opts.who) dist.querySelector("span").textContent = opts.who;
         dist.querySelector("b").textContent = fmt(x.miles) + (x.miles === 1 ? " mile" : " miles");
@@ -962,7 +1071,10 @@
       const mm = card.querySelector(".mm");
       mm.setAttribute("aria-label", "Map of " + q.answer + (hasPin ? " with the guess" : ""));
       wrap.appendChild(card);
-      miniMap(mm, [q.lon, q.lat], hasPin ? [x.lon, x.lat] : null).catch(() => {});
+      if (KIDS) {
+        const f = Place.get(q), spot = hasPin ? Place.locate(q, [x.lon, x.lat]) : null;
+        miniMap(mm, spot ? spot.pt : [q.lon, q.lat], hasPin && !spot.inside ? [x.lon, x.lat] : null, { region: f, frame: spot ? spot.fit : null, guessDot: hasPin ? [x.lon, x.lat] : null }).catch(() => {});
+      } else miniMap(mm, [q.lon, q.lat], hasPin ? [x.lon, x.lat] : null).catch(() => {});
     });
   }
 
@@ -1030,7 +1142,7 @@
 
   function buildShare() {
     const b = session.shareBase;
-    session.share = "GeoGeniuses · " + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
+    session.share = (KIDS ? "GeoGeniuses Kids · " : "GeoGeniuses · ") + prettyDate(session.date, false) + (session.practice ? " (practice)" : "") +
       "\n" + b.emojis + " · " + fmt(b.total) + "/" + fmt(DAY_MAX) +
       "\n" + location.origin + location.pathname;
   }
@@ -1046,7 +1158,7 @@
       names: ["Economy", "Premium", "Business", "First Class", "Private Jet"],
       how: "Play the daily puzzle. Every day counts, in a row or not." },
     { id: "bullseye", icon: "🎯", name: "Bullseye",      levels: [1, 10, 50, 100, 250], unit: ["perfect answer", "perfect answers"],
-      how: "Score a perfect 100 on a question by landing within about 10 miles." },
+      how: KIDS ? "Score a perfect 100 on a question by tapping inside the state or country." : "Score a perfect 100 on a question by landing within about 10 miles." },
     { id: "pb",       icon: "📈", name: "Personal Best", levels: [1, 3, 5, 10, 25], unit: ["new best day", "new best days"],
       names: ["Base Camp", "Ridge", "Summit", "Above the Clouds", "Everest"],
       how: "Beat your best score from the previous 30 days. Great days roll off after a month, so there's always a new target." },
@@ -1678,7 +1790,14 @@
 
   // ---------- Start ----------
   (async function init() {
-    $("demo").hidden = !!API;
+    // Kids only uses the Sheet once its script knows about the Kids tabs. An older script would
+    // put kids' scores on the grown-ups' board, so until then scores stay on this device.
+    if (KIDS && API) {
+      let ok = false;
+      try { const r = await fetch(API + GQ + "action=ping"); ok = !!(await r.json()).kids; } catch (e) {}
+      if (!ok) api = demoApi;
+    }
+    $("demo").hidden = api !== demoApi;
     $("dateLabel").textContent = prettyDate(todayCentral(), true);
     setWho();
     try {
@@ -1691,5 +1810,5 @@
   })();
 
   // Exposed for testing only.
-  window.__ggg = { pointsFor, baseScore, emojiFor, computeBoard, milesBetween, globe: Globe };
+  window.__ggg = { pointsFor, baseScore, emojiFor, computeBoard, milesBetween, globe: Globe, place: Place, kids: KIDS };
 })();
