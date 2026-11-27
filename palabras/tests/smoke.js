@@ -10,6 +10,7 @@ const MODES = ['cards','donde','quees','adivina','verdad','ella','cual','escribe
   const errors = [], log = [];
   for (const age of [4, 7, 10]) {
     const ctx = await browser.newContext({ viewport:{ width:390, height:844 }, serviceWorkers:'block' });
+    await ctx.route('**/palabras/config.js*', r => r.fulfill({ contentType:'application/javascript', body:'window.PALABRAS_API="";' }));   // games only; saving to the Sheet is off here
     await ctx.addInitScript(a => { localStorage.setItem('hp_age', String(a)); localStorage.setItem('hp_stars','500'); localStorage.setItem('hp7_stars','500'); localStorage.setItem('hp10_stars','500'); }, age);
     const p = await ctx.newPage();
     p.on('pageerror', e => errors.push(`[age ${age}] ${e.message}`));
