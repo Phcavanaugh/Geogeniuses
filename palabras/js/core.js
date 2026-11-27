@@ -171,7 +171,8 @@ const ART = {
   '@pala':'pala', '@rastrillo':'rastrillo', '@azada':'azada', '@regadera':'regadera', '@manguera':'manguera', '@tijeras-de-podar':'tijeras-de-podar', '@carretilla':'carretilla', '@maceta':'maceta', '@semilla':'semilla', '@abono':'abono', '@pala-de-mano':'pala-de-mano', '@sierra':'sierra', '@taladro':'taladro', '@llave-inglesa':'llave-inglesa', '@alicates':'alicates', '@cinta-metrica':'cinta-metrica', '@nivel':'nivel', '@tornillo':'tornillo', '@clavo':'clavo', '@tuerca':'tuerca', '@arandela':'arandela', '@lija':'lija', '@cinta-adhesiva':'cinta-adhesiva', '@brocha':'brocha', '@rama':'rama', '@raiz':'raiz', '@tallo':'tallo', '@petalo':'petalo', '@espina':'espina', '@maleza':'maleza',
 };
 const ART_V = 2;
-function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_V}" alt="${e}" draggable="false">` : e; }
+const ART_REDO = { plomero:3, jardinero:3, bailarin:3, cartero:3, 'conductora-de-autobus':3 };   // redrawn stickers: a new version just for these, so devices fetch the new picture
+function picHTML(e){ const f = ART[e]; return f ? `<img class="wart" src="art/words/${f}.png?v=${ART_REDO[f]||ART_V}" alt="${e}" draggable="false">` : e; }
 function setPic(el, e){ el.innerHTML = picHTML(e); }
 // words whose picture is drawn art only ("@name") wait until their picture is in ART; a world of them opens when all are in
 for(const c of Object.values(VOCAB)){ const all=c.words.length; c.words=c.words.filter(w=>w[2][0]!=='@' || ART[w[2]]); if(c.more) c.ready = all>0 && c.words.length===all; }
