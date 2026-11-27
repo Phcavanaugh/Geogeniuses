@@ -1652,6 +1652,7 @@
   // Once a day, after today's score, suggest Gobble Town in a pop-up.
   const GRAB_ASK_KEY = "ggg:gobbleAsk";
   function askGrab() {
+    if (KIDS) return; // no Gobble Town pop-up in the kids game
     const today = todayCentral();
     if (!session || session.practice || session.date !== today) return;
     if (store.get(GRAB_ASK_KEY) === today) return;
