@@ -14,7 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@400;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="../vendor/maplibre-gl.css">
-<link rel="stylesheet" href="../style.css?v=47">
+<link rel="stylesheet" href="../style.css?v=48">
 </head>
 <body>
 <div id="app">
@@ -76,6 +76,14 @@
       <div id="sNote" class="muted small"></div>
     </div>
     <div id="winners" class="winners"></div>
+    <section id="pracCard" class="grab-card prac-card" hidden aria-labelledby="pracTitle">
+      <div class="gc-txt">
+        <div class="gc-eyebrow">Keep playing</div>
+        <h2 id="pracTitle" class="gc-title">Unlimited practice</h2>
+        <p class="gc-desc">Pick a map and find as many states or countries as you want. Not scored.</p>
+      </div>
+      <button id="pracBtn" class="gc-btn" type="button">Practice 🎯</button>
+    </section>
     <section id="grabCard" class="grab-card" hidden aria-labelledby="grabTitle">
       <div class="gc-top">
         <img class="gc-art" src="../img/gobble-promo.webp" width="124" height="124" alt="A city at night with a glowing hole swallowing the streets">
@@ -166,6 +174,13 @@
     <a id="gpGo" class="gc-btn" href="../gobble-physics/">Play Gobble Town<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg></a>
     <button id="gpLater" class="gp-later" type="button">Maybe later</button>
   </div>
+  <div id="pracPop" class="gp prac-pop" hidden role="dialog" aria-modal="true" aria-labelledby="ppTitle">
+    <div class="gc-eyebrow">Unlimited practice</div>
+    <h2 id="ppTitle" class="gp-title">Want to keep going?</h2>
+    <p class="gp-body">Pick a map and find as many as you like. Practice isn't scored.</p>
+    <div id="ppMaps" class="pp-maps"></div>
+    <button id="ppLater" class="gp-later" type="button">Maybe later</button>
+  </div>
   <div id="toast" class="toast" hidden role="status"></div>
 
   <div id="demo" class="demo" hidden>Demo mode — scores are only saved on this device.</div>
@@ -176,6 +191,7 @@
 <script src="../vendor/topojson-client.min.js"></script>
 <script src="../vendor/maplibre-gl.js"></script>
 <script src="../badge-art.js?v=44"></script>
-<script src="../app.js?v=48"></script>
+<script src="practice-data.js?v=1"></script>
+<script src="../app.js?v=49"></script>
 </body>
 </html>
