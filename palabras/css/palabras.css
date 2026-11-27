@@ -451,3 +451,16 @@
   .whobox.cover .whocard{width:auto;padding:22px 30px}
   .whochip{display:block;margin:0 auto 8px;background:var(--card);box-shadow:var(--shadow);border-radius:16px;padding:7px 14px;font-size:16px}
   .whochip span{color:var(--muted)}
+
+  /* definition card after a missed family word (js/run.js showDef) */
+  .defcard{position:fixed;inset:0;z-index:150;background:rgba(43,43,58,.45);display:none;place-items:center;padding:18px}
+  .defcard.on{display:grid}
+  .defcard .dbox{background:var(--bg);border-radius:26px;box-shadow:var(--shadow);padding:20px 18px 16px;width:min(380px,100%);text-align:center;animation:pop .25s ease-out}
+  .defcard .dpic{height:150px;display:grid;place-items:center;font-size:110px}
+  .defcard .dpic img{max-height:150px;max-width:100%}
+  .defcard .dword{font-size:30px;font-weight:700;margin:6px 0 8px}
+  .defcard .des{font-size:21px;line-height:1.3}
+  .defcard .den{font-size:15px;color:var(--muted);margin-top:6px}
+  .defcard .dbtns{display:flex;gap:10px;margin-top:16px}
+  .defcard .dsay{width:56px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);font-size:24px}
+  .defcard .dok{flex:1;border-radius:16px;background:var(--ink);color:#fff;font-size:20px;font-weight:700;padding:13px}
