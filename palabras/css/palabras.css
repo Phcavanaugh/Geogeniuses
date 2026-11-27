@@ -430,3 +430,24 @@
   .mapbar .shopbtn,.mapbar .freebtn{display:flex;flex-direction:column;align-items:center;line-height:1;padding:4px 9px;font-size:20px}
   .mapbar .shopbtn small,.mapbar .freebtn small{font-size:10px;font-weight:700;margin-top:2px}
   @media (max-width:350px){ .mapbar .tot{font-size:15px;padding-left:8px;padding-right:8px} .mapbar .tdbtn,.mapbar .shopbtn,.mapbar .freebtn{padding:4px 6px} .mapbtns{gap:4px} }
+
+  /* ¿Quién juega? — name picker for saving across devices (js/sync.js) */
+  .whobox{position:fixed;inset:0;z-index:200;background:rgba(43,43,58,.45);display:grid;place-items:center;padding:18px}
+  .whobox[hidden]{display:none}
+  .whocard{background:var(--bg);border-radius:26px;box-shadow:var(--shadow);padding:22px 18px 18px;width:min(420px,100%);max-height:90vh;overflow:auto;text-align:center}
+  .whot{margin:0;font-size:26px}
+  .whosub{color:var(--muted);font-size:15px;margin:4px 0 14px}
+  .whonames{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .whoname{background:var(--card);box-shadow:var(--shadow);border-radius:18px;padding:16px 8px;font-size:21px;font-weight:700}
+  .whoname.on{outline:3px solid var(--ink)}
+  .whoname.alt{grid-column:1/-1;font-size:16px;color:var(--muted);padding:11px}
+  .whoadd{display:flex;gap:8px;margin-top:16px}
+  .whoadd[hidden]{display:none}
+  .whoadd input{flex:1;min-width:0;border:2px solid #E4DCCB;border-radius:14px;padding:10px 12px;font:inherit;font-size:17px;background:#fff}
+  .whoaddbtn{background:var(--ink);color:#fff;border-radius:14px;padding:0 14px;font-weight:700;font-size:16px}
+  .whomsg{color:var(--muted);font-size:14px;margin-top:10px;min-height:1em}
+  .wholater{margin-top:12px;color:var(--muted);font-size:15px;text-decoration:underline}
+  .wholater[hidden]{display:none}
+  .whobox.cover .whocard{width:auto;padding:22px 30px}
+  .whochip{display:block;margin:0 auto 8px;background:var(--card);box-shadow:var(--shadow);border-radius:16px;padding:7px 14px;font-size:16px}
+  .whochip span{color:var(--muted)}
