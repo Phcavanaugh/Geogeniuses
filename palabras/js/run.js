@@ -33,6 +33,7 @@ const sec = () => $(S.mode);
 const bestKey = () => `best_${S.mode}_${S.cat}` + (S.mode==='donde' ? '_'+S.nChoices : '') + (S.mode==='memory' ? '' : '_L'+S.len);
 function newRun(){
   S.herm=null;
+  S.defPending=null; closeDef();
   S.run++; S.score=0; S.lives=LIVES; S.correct=0; S.streak=0; S.treats=0; S.recent=[]; S.locked=false; S.asked=0; S.got=0;
   S.lvlBefore=petLevel().level;
   S.best=store.get(bestKey(),0);
@@ -69,6 +70,10 @@ const goalReached = () => !!S.runLen && (S.herm ? S.asked : S.got)>=S.runLen;
 function wordDone(){ S.asked++; renderHud(); return goalReached(); }
 // What to do after a word's feedback has played
 function nextOrEnd(done, nextRound){
+  if(S.defPending){                     // a missed family word: explain it first, then carry on
+    const w=S.defPending, run=S.run; S.defPending=null;
+    return showDef(w).then(()=>{ if(run===S.run) nextOrEnd(done, nextRound); });
+  }
   if(S.herm) return hermAfter();
   if(S.mix) nextRound = mixRound;
   if(S.lives<=0) gameOver();
@@ -111,6 +116,7 @@ const funnyMiss = () => {
   return 'c|'+MISS_LINES[Math.floor(Math.random()*MISS_LINES.length)][0];
 };
 function scoreMiss(target){
+  if(target && DEFS[target[2]]) S.defPending=target;   // family words get a definition card before the next question
   fartPuff();
   if(S.herm){ renderHud(); return; }
   S.streak=0; S.lives--; if(target) record(target,false); renderHud(S.lives);
@@ -150,3 +156,24 @@ function petPanel(L, grew, newHat){
 $('again').onclick=()=>{ if(S.level) startLevel(S.level.i); else start(S.cat); };
 $('nextLvl').onclick=()=>{ const nx=S.level && LEVELS[S.level.i+1]; if(nx) startLevel(nx.i); };
 
+
+/* ======================= definition card (family words) ======================= */
+// Shown after a miss on a word that has a definition in DEFS. Dora reads the word and the Spanish;
+// the English is underneath. The game waits until the card is closed.
+function showDef(w){
+  const [es,en]=DEFS[w[2]];
+  const box=$('defcard');
+  box.querySelector('.dpic').innerHTML=picHTML(w[2]);
+  box.querySelector('.dword').innerHTML=wordHTML(w);
+  box.querySelector('.des').textContent=es;
+  box.querySelector('.den').textContent=en;
+  box.classList.add('on');
+  const say=()=>talk(['w|'+w[2],'f|'+w[2]]);
+  box.querySelector('.dsay').onclick=say;
+  say();
+  return new Promise(res=>{
+    box.querySelector('.dok').onclick=()=>{ closeDef(); stopClips(); res(); };
+  });
+}
+// close it if the game is left or restarted (the game it belonged to won't continue)
+function closeDef(){ const d=document.getElementById('defcard'); if(d) d.classList.remove('on'); }

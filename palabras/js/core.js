@@ -209,6 +209,7 @@ function keyText(k){
     case 'q': return `¡Quiero ${phrase(w)}!`;
     case 'e': return isAction(w) ? `¡A ${w[1]}!` : `${plural(w)?'Son':'Es'} ${phrase(w)}.`;
     case 'a': return RIDDLES[v][0]+' '+riddleQ(v)[0];
+    case 'f': return DEFS[v][0];
     case 'v': return VERDAD[+v][1];
     case 'k': return CUAL[+v][0];
     case 'x': return '';

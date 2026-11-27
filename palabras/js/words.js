@@ -2043,3 +2043,33 @@ for (const x of WORDS) {
 function uniq(ws){ const seen=new Set(); return ws.filter(w=>!seen.has(w[2]) && seen.add(w[2])); }
 VOCAB.todos.words = uniq(Object.values(VOCAB).filter(c=>c.animal).flatMap(c=>c.words));
 VOCAB.todas.words = uniq(Object.entries(VOCAB).filter(([k])=>k!=='todos'&&k!=='todas').flatMap(([,c])=>c.words));
+
+// Family definitions: when a kid misses one of these words, a card explains it (Dora reads the Spanish).
+// pic → [Spanish, English]
+const DEFS = {
+  '@hermano':   ['Un niño que tiene la misma mamá y el mismo papá que tú.', 'A boy who has the same mom and dad as you.'],
+  '@hermana':   ['Una niña que tiene la misma mamá y el mismo papá que tú.', 'A girl who has the same mom and dad as you.'],
+  '@tio':       ['El hermano de tu mamá o de tu papá.', 'Your mom’s or dad’s brother.'],
+  '@tia':       ['La hermana de tu mamá o de tu papá.', 'Your mom’s or dad’s sister.'],
+  '@primo':     ['El hijo de tu tío o de tu tía.', 'Your uncle’s or aunt’s son.'],
+  '@prima':     ['La hija de tu tío o de tu tía.', 'Your uncle’s or aunt’s daughter.'],
+  '@hijo':      ['Un niño es el hijo de su mamá y de su papá.', 'A boy is his mom and dad’s son.'],
+  '@hija':      ['Una niña es la hija de su mamá y de su papá.', 'A girl is her mom and dad’s daughter.'],
+  '@nieto':     ['Un niño es el nieto de sus abuelos.', 'A boy is his grandparents’ grandson.'],
+  '@nieta':     ['Una niña es la nieta de sus abuelos.', 'A girl is her grandparents’ granddaughter.'],
+  '@bisabuelo': ['El papá de tu abuelo o de tu abuela.', 'Your grandpa’s or grandma’s dad.'],
+  '@bisabuela': ['La mamá de tu abuelo o de tu abuela.', 'Your grandpa’s or grandma’s mom.'],
+  '@sobrino':   ['El hijo de tu hermano o de tu hermana.', 'Your brother’s or sister’s son.'],
+  '@sobrina':   ['La hija de tu hermano o de tu hermana.', 'Your brother’s or sister’s daughter.'],
+  '@esposo':    ['El hombre con el que alguien está casado.', 'The man someone is married to.'],
+  '@esposa':    ['La mujer con la que alguien está casado.', 'The woman someone is married to.'],
+  '@padrino':   ['Un hombre especial que tus papás eligen para quererte y cuidarte.', 'A special man your parents choose to love and look after you.'],
+  '@madrina':   ['Una mujer especial que tus papás eligen para quererte y cuidarte.', 'A special woman your parents choose to love and look after you.'],
+  '@gemelos':   ['Dos hermanos que nacieron el mismo día.', 'Two brothers born on the same day.'],
+  '@gemelas':   ['Dos hermanas que nacieron el mismo día.', 'Two sisters born on the same day.'],
+  '@padrastro': ['El esposo de tu mamá que no es tu papá.', 'Your mom’s husband who isn’t your dad.'],
+  '@madrastra': ['La esposa de tu papá que no es tu mamá.', 'Your dad’s wife who isn’t your mom.'],
+  '@cunyado':   ['El hermano de tu esposo o de tu esposa.', 'Your husband’s or wife’s brother.'],
+  '@cunyada':   ['La hermana de tu esposo o de tu esposa.', 'Your husband’s or wife’s sister.'],
+  '@padres':    ['Tu mamá y tu papá.', 'Your mom and dad.'],
+};

@@ -44,7 +44,7 @@ function renderCats(){
 function show(id){ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id===id)); window.scrollTo(0,0); }
 function goHome(){
   synth&&synth.cancel(); stopClips(); S.run++; S.herm=null; S.mix=null;
-  ['turnOv','over','lvlCard'].forEach(id=>$(id).classList.remove('on'));
+  ['turnOv','over','lvlCard','defcard'].forEach(id=>$(id).classList.remove('on'));
   renderHomePet();
   if(S.from==='free'){ S.level=null; renderCats(); show('home'); }
   else { const last=S.level; S.level=null; renderMap(last); show('map'); }

@@ -12,8 +12,8 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <title>¡Hola, Palabras!</title>
-<link rel="stylesheet" href="css/palabras.css?v=92">
-<link rel="stylesheet" href="css/scrapbook.css?v=92">
+<link rel="stylesheet" href="css/palabras.css?v=93">
+<link rel="stylesheet" href="css/scrapbook.css?v=93">
 </head>
 <body>
 <header>
@@ -400,6 +400,17 @@
   </div>
 </div>
 
+<!-- definition card: pops up after a missed family word (js/run.js showDef) -->
+<div class="defcard" id="defcard">
+  <div class="dbox">
+    <div class="dpic"></div>
+    <div class="dword"></div>
+    <div class="des"></div>
+    <div class="den"></div>
+    <div class="dbtns"><button class="dsay" aria-label="Say it again">🔊</button><button class="dok">👍 ¡Entendido!</button></div>
+  </div>
+</div>
+
 <div class="sheet" id="sheet">
   <div class="panel">
     <h2>For grown-ups</h2>
@@ -433,24 +444,24 @@
 </div>
 
 <!-- Game code, in load order. Each file can use what the files above it define. -->
-<script src="config.js?v=92"></script>
-<script src="js/sync.js?v=92"></script>
-<script src="js/words.js?v=92"></script>
-<script src="js/riddles.js?v=92"></script>
-<script src="js/content7.js?v=92"></script>
-<script src="js/units.js?v=92"></script>
-<script src="js/core.js?v=92"></script>
-<script src="js/pet.js?v=92"></script>
-<script src="js/home.js?v=92"></script>
-<script src="js/tarea.js?v=92"></script>
-<script src="js/run.js?v=92"></script>
-<script src="js/word-games.js?v=92"></script>
-<script src="js/arcade.js?v=92"></script>
-<script src="js/defensa.js?v=92"></script>
-<script src="js/app.js?v=92"></script>
-<script src="js/test.js?v=92"></script>
-<script type="module" src="monster3d.js?v=92"></script>
-<script type="module" src="lolo3d.js?v=92"></script>
-<script type="module" src="defensa3d.js?v=92"></script>
+<script src="config.js?v=93"></script>
+<script src="js/sync.js?v=93"></script>
+<script src="js/words.js?v=93"></script>
+<script src="js/riddles.js?v=93"></script>
+<script src="js/content7.js?v=93"></script>
+<script src="js/units.js?v=93"></script>
+<script src="js/core.js?v=93"></script>
+<script src="js/pet.js?v=93"></script>
+<script src="js/home.js?v=93"></script>
+<script src="js/tarea.js?v=93"></script>
+<script src="js/run.js?v=93"></script>
+<script src="js/word-games.js?v=93"></script>
+<script src="js/arcade.js?v=93"></script>
+<script src="js/defensa.js?v=93"></script>
+<script src="js/app.js?v=93"></script>
+<script src="js/test.js?v=93"></script>
+<script type="module" src="monster3d.js?v=93"></script>
+<script type="module" src="lolo3d.js?v=93"></script>
+<script type="module" src="defensa3d.js?v=93"></script>
 </body>
 </html>
