@@ -33,7 +33,7 @@ const sec = () => $(S.mode);
 const bestKey = () => `best_${S.mode}_${S.cat}` + (S.mode==='donde' ? '_'+S.nChoices : '') + (S.mode==='memory' ? '' : '_L'+S.len);
 function newRun(){
   S.herm=null;
-  S.defPending=null; closeDef();
+  S.defPending=null; closeDef(); S.listening=false; S.listenId=(S.listenId||0)+1;
   S.run++; S.score=0; S.lives=LIVES; S.correct=0; S.streak=0; S.treats=0; S.recent=[]; S.locked=false; S.asked=0; S.got=0;
   S.lvlBefore=petLevel().level;
   S.best=store.get(bestKey(),0);
@@ -168,12 +168,24 @@ function showDef(w){
   box.querySelector('.des').textContent=es;
   box.querySelector('.den').textContent=en;
   box.classList.add('on');
-  const say=()=>talk(['w|'+w[2],'f|'+w[2]]);
+  // ¡Entendido! stays locked until Dora has read the whole definition (again after 🔊)
+  const ok=box.querySelector('.dok');
+  const say=()=>listenFirst(['w|'+w[2],'f|'+w[2]], [ok]);
   box.querySelector('.dsay').onclick=say;
   say();
   return new Promise(res=>{
-    box.querySelector('.dok').onclick=()=>{ closeDef(); stopClips(); res(); };
+    ok.onclick=()=>{ if(S.listening) return; closeDef(); stopClips(); res(); };
   });
 }
 // close it if the game is left or restarted (the game it belonged to won't continue)
 function closeDef(){ const d=document.getElementById('defcard'); if(d) d.classList.remove('on'); }
+
+// Dora reads something the kid has to hear in full first: the answer buttons (els) are locked
+// until she's done. Ends early only if she's cut off or the audio fails, so nothing stays stuck.
+async function listenFirst(keys, els){
+  const id=S.listenId=(S.listenId||0)+1; S.listening=true;
+  els.forEach(e=>e&&e.classList.add('listen'));
+  try{ await talk(keys); }catch(e){}
+  if(id!==S.listenId) return;
+  S.listening=false; els.forEach(e=>e&&e.classList.remove('listen'));
+}

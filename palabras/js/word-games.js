@@ -349,12 +349,14 @@ function adivinaRound(){
     b.onclick=()=>adivinaPick(b,w);
     box.appendChild(b);
   });
-  S.ask=()=>talk(['a|'+S.target[2]]); autoAsk();
+  S.listening=false; $('achoices').classList.remove('listen');
+  // the choices stay locked until Dora has read the whole riddle
+  S.ask=()=>listenFirst(['a|'+S.target[2]], [$('achoices')]); autoAsk();
 }
 $('rsay').onclick=()=>{ if(S.ask) S.ask(); };
 $('rhelp').onclick=()=>$('ren').classList.toggle('on');
 async function adivinaPick(b,w){
-  if(S.locked) return; S.locked=true; const run=S.run;
+  if(S.locked || S.listening) return; S.locked=true; const run=S.run;
   const box=$('achoices'); box.classList.add('answered');
   const done = wordDone();
   if(w===S.target){

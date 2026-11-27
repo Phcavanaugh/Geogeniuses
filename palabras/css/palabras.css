@@ -464,3 +464,8 @@
   .defcard .dbtns{display:flex;gap:10px;margin-top:16px}
   .defcard .dsay{width:56px;border-radius:16px;background:var(--card);box-shadow:var(--shadow);font-size:24px}
   .defcard .dok{flex:1;border-radius:16px;background:var(--ink);color:#fff;font-size:20px;font-weight:700;padding:13px}
+
+  /* locked while Dora reads (listenFirst in js/run.js) */
+  .achoices.listen .achoice{opacity:.45;filter:grayscale(.4);pointer-events:none;transition:opacity .2s}
+  .defcard .dok.listen{opacity:.4;pointer-events:none}
+  .defcard .dok.listen::before{content:'👂 '}
