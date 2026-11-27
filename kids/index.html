@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1e88e5">
+<title>GeoGeniuses Kids</title>
+<link rel="icon" type="image/svg+xml" href="../icon.svg">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="kids.css?v=1">
+</head>
+<body>
+<div id="app">
+
+  <!-- HOME -->
+  <section id="home" class="screen">
+    <header class="home-top">
+      <div class="logo">Geo<b>Geniuses</b> <span class="kidtag">Kids</span></div>
+      <button id="voiceBtn" class="round" type="button" aria-label="Voice on or off">🔊</button>
+    </header>
+
+    <div class="home-scroll">
+
+      <h2>Pick a map</h2>
+      <div id="maps" class="maps"></div>
+
+      <h2>How to play</h2>
+      <div id="modes" class="modes">
+        <button class="mode" data-mode="quick"><span>⚡</span><b>Quick 10</b><small>Find 10 places</small></button>
+        <button class="mode" data-mode="full"><span>🧩</span><b>Fill the map</b><small>Find them all</small></button>
+        <button class="mode" data-mode="explore"><span>👆</span><b>Explore</b><small>Tap to hear names</small></button>
+      </div>
+
+      <button id="goBtn" class="go" type="button">Let's go! 🚀</button>
+      <p id="trophies" class="trophies"></p>
+      <p class="foot"><a href="../">← Back to GeoGeniuses</a></p>
+    </div>
+  </section>
+
+  <!-- PLAY -->
+  <section id="play" class="screen hidden">
+    <header class="play-top">
+      <button id="homeBtn" class="round" type="button" aria-label="Home">🏠</button>
+      <div id="prompt" class="prompt" role="status" aria-live="polite"></div>
+      <button id="sayBtn" class="round" type="button" aria-label="Say it again">🔊</button>
+    </header>
+    <div class="subbar">
+      <div id="progress" class="progress"></div>
+      <div id="stars" class="starcount"></div>
+    </div>
+    <div id="mapWrap" class="mapwrap">
+      <svg id="map" role="img" aria-label="Map"></svg>
+      <div id="toast" class="toast hidden"></div>
+      <div class="zoomctl">
+        <button id="zin" class="round sm" type="button" aria-label="Zoom in">＋</button>
+        <button id="zout" class="round sm" type="button" aria-label="Zoom out">－</button>
+        <button id="zreset" class="round sm" type="button" aria-label="Reset map">⟲</button>
+      </div>
+      <button id="skipBtn" class="skip hidden" type="button">Show me 🙈</button>
+    </div>
+  </section>
+
+  <!-- DONE -->
+  <section id="done" class="screen hidden">
+    <div class="done-card">
+      <div id="doneEmoji" class="done-emoji">🏆</div>
+      <h1 id="doneTitle">Great job!</h1>
+      <div id="doneStars" class="done-stars"></div>
+      <p id="doneMsg"></p>
+      <button id="againBtn" class="go" type="button">Play again 🔁</button>
+      <button id="doneHome" class="ghost" type="button">Pick another map</button>
+    </div>
+  </section>
+
+  <canvas id="confetti"></canvas>
+</div>
+<script src="../vendor/d3.min.js"></script>
+<script src="../vendor/topojson-client.min.js"></script>
+<script src="kids.js?v=1"></script>
+</body>
+</html>
