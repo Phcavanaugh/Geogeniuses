@@ -130,3 +130,38 @@ function json_(obj) {
 
 /** Run this once from the editor (pick "setup" in the menu at the top, then press Run) to make the tabs. */
 function setup() { sheet_('Players'); sheet_('Saves'); }
+
+// ---------- One-time fix: give Griffin the 10-year-old progress that was saved under Warren ----------
+// Pick "fixGriffin" in the menu at the top of the editor and press Run. Safe to run more than once.
+function fixGriffin() { moveAge_('Warren', 'Griffin', 'hp10_', '10', '4'); }
+
+function moveAge_(from, to, prefix, toAge, fromAge) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    if (getPlayers_().indexOf(to) === -1) sheet_('Players').appendRow([to]);
+    var src = readSave_(from), dst = readSave_(to) || { v: {}, t: {} };
+    if (!src) throw new Error('No save found for ' + from + '.');
+    // keep copies of both saves first, in a Backup tab
+    var bk = sheet_('Backup');
+    [[from, src], [to, dst]].forEach(function (p) {
+      var s = JSON.stringify(p[1]), parts = [];
+      for (var i = 0; i < s.length; i += CHUNK) parts.push('~' + s.slice(i, i + CHUNK));
+      bk.appendRow([p[0], new Date(), parts.length].concat(parts));
+    });
+    var now = Date.now(), moved = [];
+    Object.keys(src.v).forEach(function (k) {
+      if (k.indexOf(prefix) !== 0 || src.v[k] === null) return;
+      dst.v[k] = src.v[k]; dst.t[k] = now;        // Griffin gets it, marked as the newest copy
+      src.v[k] = null; src.t[k] = now;            // Warren's copy is removed (his devices drop it too)
+      moved.push(k);
+    });
+    if (toAge) { dst.v.hp_age = toAge; dst.t.hp_age = now; }
+    if (fromAge) { src.v.hp_age = fromAge; src.t.hp_age = now; }
+    writeSave_(from, src);
+    writeSave_(to, dst);
+    Logger.log('Moved ' + moved.length + ' items from ' + from + ' to ' + to + ': ' + moved.join(', '));
+  } finally {
+    lock.releaseLock();
+  }
+}
