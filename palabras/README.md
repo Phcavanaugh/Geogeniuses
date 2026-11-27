@@ -39,3 +39,15 @@ add its voice lines to `tools/voice/clips.json`, run the voice tool, then `node 
 
 **Test before shipping:** `node palabras/tests/check-words.js` checks every word is complete and its recordings match. Then serve the repo (`python3 -m http.server 8770`) and run
 `node palabras/tests/smoke.js` (needs Playwright). It plays every mode at every age and fails on any error.
+
+## Playing on more than one device (the Palabras Google Sheet)
+
+Each kid picks their name ("¿Quién juega?") and their progress follows them to any device.
+Saves go to the Palabras Google Sheet, which is its own sheet, separate from GeoGeniuses. The code is in `apps-script/Code.gs`.
+
+- **Turned off** until `config.js` has the Sheet's web app URL. While it's off, the game saves on each device only, like before.
+- **Players tab:** one name per row. Add kids there or with "＋ Añadir" in the game.
+- **First time on a device that already has progress:** the game asks whose each age's progress is, so nothing is lost. A backup copy of that old progress also stays on the device (`hpx_legacy`).
+- **How saving works:** changes are sent a few seconds after they happen and when the game closes. On start, anything newer in the Sheet is pulled in. For each saved item, the newest copy wins. With no internet the game keeps playing and sends everything later.
+- **Switching kids:** tap "👤 Name · Cambiar" above the age buttons.
+- **Changing the Apps Script later:** Deploy → Manage deployments → pencil → Version: New version → Deploy. The URL stays the same.
