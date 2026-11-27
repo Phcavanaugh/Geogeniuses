@@ -447,3 +447,13 @@ p.muted{margin:0 16px 16px}
 .yw-right span.plain{letter-spacing:0;color:var(--muted);font-size:12px}
 .mm-target{fill:rgba(62,207,122,.3);stroke:#3ecf7a;stroke-width:1.6}
 .kids-tag{display:inline-block;margin-left:4px;padding:2px 7px 3px;border-radius:999px;background:var(--perfect);color:#3a2a00;font:800 10.5px/1 var(--body);letter-spacing:.04em;text-transform:uppercase;vertical-align:3px}
+/* Kids: unlimited practice */
+.prac-card{margin-bottom:12px}
+.pp-maps{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}
+.pp-map{display:flex;align-items:center;gap:8px;height:50px;padding:0 12px;border-radius:16px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:#fff;font:700 14.5px/1.1 var(--body);text-align:left}
+.pp-map span{font-size:22px;line-height:1}
+.pp-map:hover,.pp-map:focus-visible{border-color:var(--perfect);background:rgba(255,201,77,.14)}
+.pp-map:active{transform:scale(.97)}
+.prac-bar{display:flex;align-items:center;justify-content:center;gap:10px;padding:5px 10px}
+.prac-bar button{border:0;border-radius:999px;background:#fff;color:#12305a;font:800 12px/1 var(--body);padding:6px 12px}
+.prac-card .gc-btn{display:flex;align-items:center;justify-content:center;width:100%;border:0}

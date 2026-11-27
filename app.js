@@ -326,6 +326,11 @@
       setInsets(top, bottom) { topPad = top || 0; restBottom = bottom || 0; },
       onPin(fn) { onPin = fn; },
       topo() { return topo; },
+      // Kids practice: turn the globe to face the chosen map.
+      face(center) {
+        if (!map) return;
+        map.easeTo({ center, zoom: fitZoom(), padding: { top: topPad, bottom: restBottom, left: 0, right: 0 }, duration: 700 });
+      },
       tileTemplate() { return ESRI_TILES; },
       getPin() { return pin; },
       resize() { if (map) map.resize(); },
@@ -447,6 +452,46 @@
       return best ? frame(best, null) : null;
     }
     return { get, locate, mainFrame };
+  })();
+
+  // ---------- Kids: unlimited practice on one map (not scored) ----------
+  const Practice = (function () {
+    const P = window.GGK_PRACTICE || { MAPS: [], REG: {}, EASY: {}, DISPLAY: {} };
+    const CENTER = { usa: [-98, 39], world: [10, 25], na: [-95, 35], sa: [-60, -18], europe: [15, 50], africa: [20, 2], asia: [90, 32], oceania: [150, -22] };
+    const CONT = { europe: "Europe", asia: "Asia", africa: "Africa", na: "North America", sa: "South America", oceania: "Oceania" };
+    let known = null; // "kind:key" -> a daily question about that place (clue, answer, fact)
+    function daily() {
+      if (!known) { known = new Map(); QUESTIONS.forEach((day) => day.forEach((q) => { if (q.kind) known.set(q.kind + ":" + q.key, q); })); }
+      return known;
+    }
+    const area = (f) => { const a = d3.geoArea(f); return Math.min(a, 4 * Math.PI - a); };
+    // Every state; or the countries on that map that are big enough to tap, plus any from the daily game.
+    function pool(id) {
+      const k = daily();
+      if (id === "usa") return [...k.values()].filter((q) => q.kind === "state").map((q) => q.key);
+      const list = id === "world" ? [...new Set(Object.values(P.REG).flat())] : (P.REG[id] || []);
+      const easy = P.EASY[id] || [], min = id === "world" ? 3e-3 : 4.5e-4;
+      return list.filter((n) => {
+        const f = Place.get({ kind: "country", key: n });
+        return f && (easy.includes(n) || k.has("country:" + n) || area(f) >= min);
+      });
+    }
+    function question(kind, key) {
+      const q = daily().get(kind + ":" + key);
+      if (q) return Object.assign({}, q);
+      const name = P.DISPLAY[key] || key, c = d3.geoCentroid(Place.get({ kind, key }));
+      const cont = Object.keys(CONT).filter((r) => P.REG[r].includes(key)).map((r) => CONT[r]).join(" and ");
+      return { clue: "Find " + name + ".", answer: name, kind, key, fact: cont ? "Continent: " + cont + "." : "", lon: c[0], lat: c[1] };
+    }
+    let map = null, bag = [], last = null;
+    function start(id) { map = id; bag = []; last = null; }
+    // Goes through the whole map in a random order before anything repeats.
+    function next() {
+      if (!bag.length) { bag = d3.shuffle(pool(map)); if (bag.length > 1 && bag[bag.length - 1] === last) bag.unshift(bag.pop()); }
+      last = bag.pop();
+      return question(map === "usa" ? "state" : "country", last);
+    }
+    return { maps: P.MAPS, start, next, center: () => CENTER[map] };
   })();
 
   // ---------- Starfield behind the globe (Milky Way) ----------
@@ -703,12 +748,16 @@
     }
   }
   // Five segments across the top of the clue card, colored as each answer lands.
+  // Practice questions are all worth 100.
+  function maxFor(i) { return session && session.endless ? 100 : MAX_PTS[i]; }
   function renderProgress(current) {
     const g = session.progress.guesses, box = $("prog");
     box.innerHTML = "";
-    for (let k = 0; k < 5; k++) {
+    // Unlimited practice shows the last few answers.
+    const base = session.endless ? Math.max(0, (current >= 0 ? current : g.length) - 4) : 0;
+    for (let k = base; k < base + 5; k++) {
       const seg = document.createElement("i");
-      if (g[k] && k !== current) seg.className = tierFor(g[k].pts, MAX_PTS[k]);
+      if (g[k] && k !== current) seg.className = tierFor(g[k].pts, maxFor(k));
       else if (k === current) seg.className = "now";
       box.appendChild(seg);
     }
@@ -826,8 +875,9 @@
   function showQuestion() {
     const i = session.progress.guesses.length, q = session.qs[i];
     if (i === 0) reportProgress(); // they've started
-    $("qNum").textContent = "Question " + (i + 1) + " of 5 · " + (i < 2 ? "U.S." : "World");
-    $("qPts").textContent = MAX_PTS[i] + " pts";
+    $("qNum").textContent = session.endless ? "Practice · " + session.label + " · #" + (i + 1)
+      : "Question " + (i + 1) + " of 5 · " + (i < 2 ? "U.S." : "World");
+    $("qPts").textContent = maxFor(i) + " pts";
     $("qClue").textContent = q.clue;
     $("confirmBtn").hidden = false; $("confirmBtn").disabled = true;
     $("nextBtn").hidden = true;
@@ -844,6 +894,7 @@
     gs.style.setProperty("--bb", bottom + "px");
     Globe.setInsets(top, bottom);
     Globe.reset();
+    if (session.endless) Globe.face(Practice.center());
   }
   Globe.onPin(() => { $("confirmBtn").disabled = false; $("hint").hidden = true; Feedback.pin(); });
 
@@ -852,24 +903,24 @@
     const i = session.progress.guesses.length, q = session.qs[i];
     const spot = KIDS ? Place.locate(q, p) : null;
     const ans = spot ? spot.pt : [q.lon, q.lat];
-    const miles = spot ? spot.miles : milesBetween(p, ans), pts = pointsFor(miles, MAX_PTS[i]);
+    const miles = spot ? spot.miles : milesBetween(p, ans), pts = pointsFor(miles, maxFor(i));
     session.progress.guesses.push({ lon: +p[0].toFixed(4), lat: +p[1].toFixed(4), miles: Math.round(miles), pts });
-    store.set(session.key, session.progress);
+    if (session.key) store.set(session.key, session.progress);
     if (session.progress.guesses.length < 5) reportProgress(); // the final answer is recorded when the score saves
     $("confirmBtn").disabled = true;
     Feedback.unlock();
     // Fill in the result card now (hidden) so we know how much of the map it will cover.
     const card = $("result");
-    $("rEmoji").textContent = emojiFor(pts, MAX_PTS[i]);
+    $("rEmoji").textContent = emojiFor(pts, maxFor(i));
     $("rAnswer").textContent = q.answer;
     $("rDist").textContent = spot && spot.inside ? "Inside " + q.answer.replace(/^The /, "the ") + "!"
-      : pts === MAX_PTS[i] ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
+      : pts === maxFor(i) ? "Nailed it — " + Math.round(miles) + " mi" : fmt(Math.round(miles)) + " miles away";
     $("rPts").textContent = "+" + pts;
     $("rFact").textContent = q.fact;
     card.classList.remove("show"); card.style.visibility = "hidden"; card.hidden = false;
     const cardH = card.offsetHeight + $("bottomBar").offsetHeight + 16;
     card.hidden = true; card.style.visibility = "";
-    const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, MAX_PTS[i]);
+    const chip = $("milesChip"), total = Math.round(miles), tier = tierFor(pts, maxFor(i));
     chip.textContent = "0 mi"; chip.classList.remove("done"); chip.hidden = false;
     await Globe.reveal(p, ans, {
       padBottom: cardH,
@@ -881,12 +932,13 @@
     });
     // Same spot, same size: Confirm becomes Next, and the card slides up over the map.
     $("confirmBtn").hidden = true;
-    $("nextBtn").textContent = i === 4 ? "See results" : "Next";
+    $("nextBtn").textContent = !session.endless && i === 4 ? "See results" : "Next";
     $("nextBtn").hidden = false;
     card.hidden = false;
     requestAnimationFrame(() => card.classList.add("show"));
   };
   $("nextBtn").onclick = () => {
+    if (session.endless) { session.qs.push(Practice.next()); return showQuestion(); }
     if (session.progress.guesses.length >= 5) finish(false); else showQuestion();
   };
 
@@ -1646,7 +1698,55 @@
   // (GeoGrabber still lives at geogeniuses.win/geograbber; it's just no longer promoted here.)
   function renderGrab() {
     $("grabCard").hidden = false;
+    if (KIDS) { $("pracCard").hidden = false; askPractice(); }
     askGrab();
+  }
+
+  // ---------- Kids: the practice pop-up (pick a map, then practice as long as you like) ----------
+  const PRAC_ASK_KEY = "ggg:practiceAsk";
+  if (KIDS) {
+    $("ppMaps").innerHTML = Practice.maps.map((m) =>
+      '<button type="button" class="pp-map" data-map="' + m.id + '"><span>' + m.icon + "</span><b>" + m.label + "</b></button>").join("");
+    $("ppMaps").addEventListener("click", (e) => { const b = e.target.closest(".pp-map"); if (b) startPractice(b.dataset.map); });
+    $("pracBtn").onclick = openPractice;
+    $("ppLater").onclick = closePractice;
+  }
+  function openPractice() {
+    const pop = $("pracPop"), dim = $("gpDim");
+    if (!pop.hidden) return;
+    pop.hidden = false; dim.hidden = false;
+    requestAnimationFrame(() => { pop.classList.add("show"); dim.classList.add("show"); });
+  }
+  function closePractice() {
+    const pop = $("pracPop"), dim = $("gpDim");
+    if (!pop || pop.hidden) return;
+    pop.classList.remove("show"); dim.classList.remove("show");
+    setTimeout(() => { pop.hidden = true; dim.hidden = true; }, 260);
+  }
+  // Pops up by itself once a day, after today's five are done.
+  function askPractice() {
+    const today = todayCentral();
+    if (!session || session.practice || session.date !== today) return;
+    if (store.get(PRAC_ASK_KEY) === today) return;
+    setTimeout(() => {
+      if ($("doneScreen").hidden || !$("sheet").hidden || !$("pracPop").hidden) return;
+      store.set(PRAC_ASK_KEY, today);
+      openPractice();
+    }, 1800);
+  }
+  function startPractice(id) {
+    closePractice();
+    Practice.start(id);
+    const m = Practice.maps.find((x) => x.id === id);
+    document.querySelectorAll(".practice").forEach((n) => n.remove());
+    session = { date: todayCentral(), dayIdx: -1, practice: true, endless: true, label: m.label, key: null, progress: { guesses: [], submitted: true }, qs: [Practice.next()] };
+    const tag = document.createElement("div");
+    tag.className = "practice prac-bar";
+    tag.innerHTML = "<span></span><button type=\"button\">Stop</button>";
+    tag.querySelector("span").textContent = m.icon + " Practice — " + m.label + " (not scored)";
+    tag.querySelector("button").onclick = () => { tag.remove(); begin(todayCentral(), false); };
+    $("app").insertBefore(tag, $("app").children[1]);
+    showQuestion();
   }
 
   // Once a day, after today's score, suggest Gobble Town in a pop-up.
@@ -1672,8 +1772,8 @@
     setTimeout(() => { pop.hidden = true; dim.hidden = true; }, 260);
   }
   $("gpLater").onclick = closeGrabAsk;
-  $("gpDim").onclick = closeGrabAsk;
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeGrabAsk(); });
+  $("gpDim").onclick = () => { closeGrabAsk(); closePractice(); };
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeGrabAsk(); closePractice(); } });
 
   async function loadBoard() {
     $("boardList").innerHTML = '<li class="muted">Loading…</li>';
@@ -1811,5 +1911,5 @@
   })();
 
   // Exposed for testing only.
-  window.__ggg = { pointsFor, baseScore, emojiFor, computeBoard, milesBetween, globe: Globe, place: Place, kids: KIDS };
+  window.__ggg = { pointsFor, baseScore, emojiFor, computeBoard, milesBetween, globe: Globe, place: Place, practice: Practice, kids: KIDS };
 })();
