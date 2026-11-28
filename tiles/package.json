@@ -6,7 +6,7 @@
   "scripts": {
     "serve": "node tests/serve.mjs",
     "test": "node --test tests/unit/*.test.mjs",
-    "e2e": "node tests/e2e/play.mjs",
+    "e2e": "node tests/e2e/play.mjs && node tests/e2e/real.mjs",
     "demo": "python3 tools/make_demo.py && node tools/demo-chart.mjs",
     "draft": "node tools/draft-chart.mjs",
     "icons": "node tools/make-icons.mjs"

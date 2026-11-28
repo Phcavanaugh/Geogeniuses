@@ -301,3 +301,5 @@ body.playing #scene { display: none; }
 .btn.diff { box-shadow: 0 6px 0 rgba(0,0,0,0.25), 0 0 26px rgba(255,255,255,0.12); }
 .btn.diff.easy { box-shadow: 0 6px 0 #078a73, 0 0 26px rgba(31,224,191,0.45); }
 .btn.diff.hard { box-shadow: 0 6px 0 #a3125a, 0 0 26px rgba(255,79,154,0.45); }
+.mode-hint { margin-top: -2px; }
+.listen-row + .listen-row { margin-top: 4px; }

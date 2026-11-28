@@ -251,8 +251,6 @@ export class Stage {
       const cg = g.createLinearGradient(0, H * 0.27 - big / 2, 0, H * 0.27 + big / 2);
       cg.addColorStop(0, '#ffffff'); cg.addColorStop(1, '#b69bff');
       g.fillStyle = cg; g.fillText(String(st.combo), cx, H * 0.27);
-      g.font = `800 ${Math.round(big * 0.22)}px ${FONT}`; g.fillStyle = '#e7ddff';
-      g.fillText('COMBO', cx, H * 0.27 + big * 0.62);
       g.globalAlpha = 1;
     }
     if (this.mile && this.mile.t < 1.2) {
