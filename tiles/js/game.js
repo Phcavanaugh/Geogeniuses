@@ -20,6 +20,17 @@ export class Game {
     this.pressed = [0, 0, 0, 0];
     this.pointers = new Map();
     this.running = false; this.finished = false;
+    if (this.real) {
+      // Real mode: group notes played together; each group "owns" the piece of song up to the next group.
+      this.groupOf = []; this.groupT = []; this.groupEnd = [];
+      for (let i = 0; i < this.notes.length; i++) {
+        const n = this.notes[i];
+        if (i === 0 || n.t - this.notes[i - 1].t > CHORD_EPS) { this.groupT.push(n.t); this.groupEnd.push(n.t + n.d); }
+        const g = this.groupT.length - 1;
+        this.groupOf.push(g); this.groupEnd[g] = Math.max(this.groupEnd[g], n.t + n.d);
+      }
+      this.piece = null; this.lastGroup = -1; this.piecesPlayed = 0;
+    }
     this.chordAt = new Set();
     for (let i = 1; i < this.notes.length; i++) if (Math.abs(this.notes[i].t - this.notes[i - 1].t) <= CHORD_EPS) { this.chordAt.add(i); this.chordAt.add(i - 1); }
     this.build();
@@ -80,7 +91,12 @@ export class Game {
   start() {
     const first = this.notes.length ? this.notes[0].t : 0;
     this.startPos = this.fromPos ?? Math.min(0, first - this.travel - 0.8);
-    this.engine.play(this.startPos, { delay: 0.1 });
+    this.engine.play(this.startPos, { delay: 0.1, silent: this.real });
+    if (this.real && first > Math.max(0, this.startPos) + 0.05) {
+      // the intro plays by itself; from the first tile on, the player drives the music
+      const from = Math.max(0, this.startPos);
+      this.piece = this.engine.playPiece(from, first, this.engine.ctxTimeOf(from));
+    }
     this.running = true;
     this.loop();
   }
@@ -149,15 +165,31 @@ export class Game {
   press(lane, t) {
     this.pressed[lane]++;
     const r = this.judge.press(lane, t);
-    if (r) { this.effect(r, t); if (this.settings.hitSounds) this.sfx.blip(lane, 0, 0.9); }
+    if (r) { this.effect(r, t); if (this.settings.hitSounds && !this.real) this.sfx.blip(lane, 0, 0.9); }
   }
   release(lane, t) {
     this.pressed[lane] = Math.max(0, this.pressed[lane] - 1);
     if (this.pressed[lane] === 0) { const r = this.judge.release(lane, t); if (r) this.effect(r, t); }
   }
 
+  // Real mode: a hit plays this group's piece of the song from the moment of the tap.
+  realAudio(ev) {
+    const gi = this.groupOf[ev.note.i];
+    if (ev.type === 'hit' && gi !== this.lastGroup) {
+      this.lastGroup = gi;
+      this.piece?.stop();
+      const last = gi === this.groupT.length - 1;
+      const to = last ? this.engine.duration : Math.max(this.groupT[gi + 1], this.groupEnd[gi]) + 0.15;
+      this.piece = this.engine.playPiece(this.groupT[gi], to);
+      this.piecesPlayed++;
+    } else if (ev.type === 'holdBroken' && gi === this.lastGroup) {
+      this.piece?.stop(); this.piece = null;
+    }
+  }
+
   effect(ev) {
     if (!ev) return;
+    if (this.real) this.realAudio(ev);
     const lane = ev.note.lane, st = this.stage;
     if (ev.type === 'hit') { st.hit(lane, ev.grade); st.say(WORDS[ev.grade], ev.grade); }
     else if (ev.type === 'holdDone') st.hit(lane, 'perfect');
@@ -192,6 +224,7 @@ export class Game {
     cancelAnimationFrame(this.raf);
     const t = this.songNow();
     this.releaseAll(t);
+    this.piece?.stop(); this.piece = null; this.lastGroup = -1;
     this.engine.pause();
     this.pausedAt = t;
     this.showOverlay(`
@@ -225,7 +258,7 @@ export class Game {
     const cd = document.createElement('div'); cd.className = 'countdown'; this.el.appendChild(cd);
     for (const n of ['3', '2', '1']) { cd.textContent = n; cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop'); await new Promise(r => setTimeout(r, 550)); if (this.destroyed) return; }
     cd.remove();
-    this.engine.play(pos, { delay: 0.05 });
+    this.engine.play(pos, { delay: 0.05, silent: this.real });
     this.running = true;
     this.loop();
   }
@@ -254,6 +287,7 @@ export class Game {
     if (this.destroyed) return;
     this.destroyed = true; this.running = false;
     cancelAnimationFrame(this.raf);
+    this.piece?.stop(); this.piece = null;
     this.engine.stopSource(); this.engine.playing = false;
     this.engine.onStateChange = null;
     window.removeEventListener('keydown', this._key); window.removeEventListener('keyup', this._key);

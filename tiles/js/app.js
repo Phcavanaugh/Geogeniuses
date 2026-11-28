@@ -83,6 +83,9 @@ async function chooseDiff(song) {
     <h2>${esc(song.title)}</h2>
     <p class="muted">${esc(song.artist || '')}</p>
     <div class="diff-row">${diffs.map(d => { const b = store.getBest(p.id, song.id, d); return `<button class="btn big diff ${d}" data-v="${d}"><span>${DIFF_NAME[d]}</span>${stars(b?.stars || 0)}${b ? `<small>Best ${b.score.toLocaleString()}</small>` : ''}</button>`; }).join('')}</div>
+    <div class="listen-row"><small class="muted">Music</small>
+      <div class="seg">${[['normal', 'Always on'], ['real', 'Real mode']].map(([k, n]) => `<button class="seg-btn ${(!!p.real) === (k === 'real') ? 'on' : ''}" data-mode="${k}" data-v="" data-keep="1">${n}</button>`).join('')}</div>
+      <small class="muted mode-hint">${p.real ? 'The music only plays when you hit the tiles.' : 'The music plays the whole time.'}</small></div>
     <div class="listen-row"><small class="muted">Listening with</small>
       <div class="seg">${['speaker', 'headphones'].map(k => `<button class="seg-btn ${S.settings.offsetProfile === k ? 'on' : ''}" data-listen="${k}" data-v="" data-keep="1">${k === 'speaker' ? 'Speaker' : 'AirPods / Bluetooth'}</button>`).join('')}</div></div>
     <label class="switch-row"><span><b>Relaxed mode</b><br><small>Bigger timing window, never runs out of energy</small></span>
@@ -90,6 +93,12 @@ async function chooseDiff(song) {
     <button class="btn ghost" data-v="">Cancel</button>`, {
     onOpen: m => {
       m.querySelector('#relaxed').addEventListener('change', e => { relaxed = e.target.checked; });
+      m.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => {
+        const prof = store.getProfiles(), me = prof.list.find(x => x.id === p.id);
+        if (me) { me.real = b.dataset.mode === 'real'; store.saveProfiles(prof); p.real = me.real; }
+        m.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
+        m.querySelector('.mode-hint').textContent = p.real ? 'The music only plays when you hit the tiles.' : 'The music plays the whole time.';
+      }));
       m.querySelectorAll('[data-listen]').forEach(b => b.addEventListener('click', () => {
         S.settings.offsetProfile = b.dataset.listen; store.saveSettings(S.settings);
         m.querySelectorAll('[data-listen]').forEach(x => x.classList.toggle('on', x === b));
@@ -112,11 +121,13 @@ async function play(song, diff, relaxed, { autoplay = false } = {}) {
     return;
   }
   const chart = chartFor(song);
+  const real = !!store.currentProfile().real;
   setScreen('game', '');
   const game = new Game({
+    real,
     root: app, engine, sfx, notes: chart.difficulties[diff].notes, settings: S.settings, relaxed, bpm: chart.bpm, beatOffset: chart.beatOffset,
     offsetMs: offsetMs(S.settings), autoplay: autoplay || /[?&]autoplay=1/.test(location.search),
-    onDone: r => results(song, diff, relaxed, r),
+    onDone: r => results(song, diff, relaxed, r, real),
     onQuit: () => songsScreen(),
     onRetry: rel => play(song, diff, rel),
   });
@@ -124,7 +135,7 @@ async function play(song, diff, relaxed, { autoplay = false } = {}) {
   game.start();
 }
 
-function results(song, diff, relaxed, r) {
+function results(song, diff, relaxed, r, real) {
   const p = store.currentProfile();
   const best = store.recordResult(p.id, song.id, diff, r);
   click('win');
@@ -132,7 +143,7 @@ function results(song, diff, relaxed, r) {
   setScreen('results', `
     <div class="results">
       <h2>${r.stars === 3 ? 'Amazing!' : r.stars === 2 ? 'Great job!' : r.stars === 1 ? 'Nice!' : 'Good try!'}</h2>
-      <p class="muted">${esc(song.title)} · ${DIFF_NAME[diff]}${relaxed ? ' · Relaxed' : ''}</p>
+      <p class="muted">${esc(song.title)} · ${DIFF_NAME[diff]}${relaxed ? ' · Relaxed' : ''}${real ? ' · Real mode' : ''}</p>
       ${stars(r.stars, 3, 'big pop')}
       <div class="score-big">${r.score.toLocaleString()}</div>
       ${best ? '<div class="badge">New best!</div>' : ''}

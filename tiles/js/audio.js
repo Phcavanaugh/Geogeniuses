@@ -74,13 +74,14 @@ export class AudioEngine {
 
   get duration() { return this.buffer ? this.buffer.duration - this.shift : 0; }
 
-  play(pos = 0, { delay = 0.06, rate = 1 } = {}) {
+  // silent: run the clock without playing the song (Real mode plays pieces itself).
+  play(pos = 0, { delay = 0.06, rate = 1, silent = false } = {}) {
     const ctx = this.ensure();
     this.stopSource();
     this.rate = rate;
     const when = ctx.currentTime + delay;
     this.pos0 = pos; this.ctxT0 = when; this.playing = true;
-    if (!this.buffer) return;
+    if (!this.buffer || silent) return;
     const bufPos = pos + this.shift;
     if (bufPos >= this.buffer.duration) return;
     const src = ctx.createBufferSource();
@@ -100,6 +101,31 @@ export class AudioEngine {
   }
 
   seek(pos) { if (this.playing) this.play(pos, { rate: this.rate, delay: 0.03 }); else this.pos0 = pos; }
+
+  // Plays one piece of the song (chart time `from`..`to`) at context time `when`, with short fades
+  // so cuts don't click. Returns a handle with stop(). Used by Real mode.
+  playPiece(from, to, when = 0) {
+    const ctx = this.ensure();
+    if (!this.buffer) return null;
+    const start = Math.max(ctx.currentTime, when || ctx.currentTime);
+    const off = Math.max(0, from + this.shift);
+    const dur = Math.min(this.buffer.duration - off, Math.max(0.03, to - from));
+    if (dur <= 0.01) return null;
+    const src = ctx.createBufferSource(), g = ctx.createGain();
+    src.buffer = this.buffer; src.connect(g); g.connect(this.music);
+    g.gain.setValueAtTime(0, start);
+    g.gain.linearRampToValueAtTime(1, start + 0.006);
+    g.gain.setValueAtTime(1, start + Math.max(0.006, dur - 0.04));
+    g.gain.linearRampToValueAtTime(0, start + dur);
+    src.start(start, off, dur + 0.01);
+    return {
+      from, to, src,
+      stop() {
+        const t = ctx.currentTime;
+        try { g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + 0.02); src.stop(t + 0.03); } catch {}
+      },
+    };
+  }
 
   stopSource() {
     if (this.src) { const s = this.src; this.src = null; try { s.onended = null; s.stop(); } catch {} try { s.disconnect(); } catch {} }
