@@ -2,20 +2,13 @@
 import { Judge, starsFor } from './judge.js';
 import { lastEnd, CHORD_EPS } from './chart.js';
 import { icon } from './ui.js';
+import { Stage, LANE_COLORS } from './stage.js';
+export { LANE_COLORS };
 
-export const LANE_COLORS = ['#ff5d8f', '#ffb627', '#2ec4b6', '#4d96ff'];
-const LANE_LIGHT = ['#ffc2d6', '#ffe2a3', '#a9efe8', '#bcd6ff'];
 const KEYS = { d: 0, f: 1, j: 2, k: 3, 1: 0, 2: 1, 3: 2, 4: 3, ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
 const WORDS = { perfect: 'Perfect!', great: 'Great!', good: 'Good', miss: 'Miss', holdDone: 'Nice hold!' };
 
 export function travelTime(speed, relaxed) { return (2.6 - (Math.max(1, Math.min(10, speed)) - 1) * 0.18) * (relaxed ? 1.1 : 1); }
-
-function rr(ctx, x, y, w, h, r) {
-  r = Math.min(r, w / 2, h / 2);
-  ctx.beginPath();
-  ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
-  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
-}
 
 export class Game {
   constructor(opts) {
@@ -26,7 +19,6 @@ export class Game {
     this.endT = lastEnd(this.notes) + 1.2;
     this.pressed = [0, 0, 0, 0];
     this.pointers = new Map();
-    this.fx = []; this.word = null;
     this.running = false; this.finished = false;
     this.chordAt = new Set();
     for (let i = 1; i < this.notes.length; i++) if (Math.abs(this.notes[i].t - this.notes[i - 1].t) <= CHORD_EPS) { this.chordAt.add(i); this.chordAt.add(i - 1); }
@@ -40,18 +32,18 @@ export class Game {
       <canvas class="playfield" aria-label="Game lanes. Tap the tiles as they reach the line."></canvas>
       <div class="hud">
         <div class="hud-row">
-          <div class="hud-score"><span class="score-num">0</span></div>
+          <div class="hud-score"><span class="score-num">0</span>${this.relaxed ? '<span class="relaxed-tag">Relaxed</span>' : ''}</div>
           <div class="hud-progress"><div class="bar"><div class="fill"></div></div>
             <span class="pstar" style="left:33%">${icon('star')}</span><span class="pstar" style="left:66%">${icon('star')}</span><span class="pstar" style="left:100%">${icon('star')}</span></div>
           <button class="icon-btn pause-btn" aria-label="Pause">${icon('pause')}</button>
         </div>
-        ${this.relaxed ? '<div class="relaxed-tag">Relaxed</div>' : '<div class="energy" aria-label="Energy"><div class="energy-fill"></div></div>'}
+        ${this.relaxed ? '' : '<div class="energy" aria-label="Energy"><div class="energy-fill"></div></div>'}
       </div>
       <div class="game-overlay" hidden></div>`;
     this.root.appendChild(el);
     this.el = el;
     this.canvas = el.querySelector('canvas');
-    this.g = this.canvas.getContext('2d', { alpha: false });
+    this.stage = new Stage(this.canvas);
     this.scoreEl = el.querySelector('.score-num');
     this.fillEl = el.querySelector('.fill');
     this.starEls = [...el.querySelectorAll('.pstar')];
@@ -77,36 +69,9 @@ export class Game {
   layout() {
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const W = this.canvas.clientWidth || window.innerWidth, H = this.canvas.clientHeight || window.innerHeight;
-    this.W = W; this.H = H; this.dpr = dpr;
-    this.canvas.width = Math.round(W * dpr); this.canvas.height = Math.round(H * dpr);
-    this.playW = Math.min(W, Math.max(320, H * 0.72));
-    this.playX = (W - this.playW) / 2;
-    this.laneW = this.playW / 4;
-    this.hitY = H * 0.8;
-    this.tileH = Math.max(44, Math.min(96, this.laneW * 0.62));
-    this.pxPerSec = (this.hitY + this.tileH) / this.travel;
-    // static background, drawn once per size
-    const bg = document.createElement('canvas'); bg.width = this.canvas.width; bg.height = this.canvas.height;
-    const b = bg.getContext('2d'); b.scale(dpr, dpr);
-    const gr = b.createLinearGradient(0, 0, 0, H); gr.addColorStop(0, '#140f3a'); gr.addColorStop(0.6, '#2b1763'); gr.addColorStop(1, '#45207a');
-    b.fillStyle = gr; b.fillRect(0, 0, W, H);
-    let seed = 11; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
-    for (let i = 0; i < 70; i++) { b.globalAlpha = 0.15 + rnd() * 0.5; b.fillStyle = '#fff'; b.beginPath(); b.arc(rnd() * W, rnd() * H * 0.85, rnd() * 1.6 + 0.3, 0, 7); b.fill(); }
-    b.globalAlpha = 1;
-    for (let l = 0; l < 4; l++) {
-      const x = this.playX + l * this.laneW;
-      b.fillStyle = l % 2 ? 'rgba(255,255,255,0.035)' : 'rgba(255,255,255,0.06)';
-      b.fillRect(x, 0, this.laneW, H);
-      if (l) { b.fillStyle = 'rgba(255,255,255,0.12)'; b.fillRect(x - 0.5, 0, 1, H); }
-    }
-    // landing spots
-    for (let l = 0; l < 4; l++) {
-      const x = this.playX + l * this.laneW + 6, w = this.laneW - 12;
-      rr(b, x, this.hitY - this.tileH, w, this.tileH, 14);
-      b.strokeStyle = LANE_COLORS[l]; b.globalAlpha = 0.5; b.lineWidth = 3; b.setLineDash([8, 7]); b.stroke(); b.setLineDash([]); b.globalAlpha = 1;
-    }
-    b.fillStyle = 'rgba(255,255,255,0.85)'; rr(b, this.playX + 4, this.hitY - 2, this.playW - 8, 4, 2); b.fill();
-    this.bg = bg;
+    this.stage.layout(W, H, dpr, this.travel);
+    const st = this.stage;
+    Object.assign(this, { W, H, dpr, playW: st.playW, playX: st.playX, laneW: st.laneW, hitY: st.hitY });
     if (!this.running) this.draw(this.lastT ?? this.startPos ?? 0);
   }
 
@@ -191,105 +156,18 @@ export class Game {
     if (this.pressed[lane] === 0) { const r = this.judge.release(lane, t); if (r) this.effect(r, t); }
   }
 
-  effect(ev, t) {
+  effect(ev) {
     if (!ev) return;
-    const now = performance.now();
-    const lane = ev.note.lane;
-    if (ev.type === 'hit') { this.fx.push({ kind: 'ring', lane, t0: now, color: LANE_COLORS[lane], big: ev.grade === 'perfect' }); this.word = { text: WORDS[ev.grade], t0: now, grade: ev.grade }; }
-    else if (ev.type === 'holdDone') { this.fx.push({ kind: 'ring', lane, t0: now, color: '#fff', big: true }); }
-    else if (ev.type === 'miss' || ev.type === 'holdBroken') { this.word = { text: ev.type === 'miss' ? WORDS.miss : 'Let go early', t0: now, grade: 'miss' }; this.fx.push({ kind: 'missflash', lane, t0: now }); }
+    const lane = ev.note.lane, st = this.stage;
+    if (ev.type === 'hit') { st.hit(lane, ev.grade); st.say(WORDS[ev.grade], ev.grade); }
+    else if (ev.type === 'holdDone') st.hit(lane, 'perfect');
+    else if (ev.type === 'miss' || ev.type === 'holdBroken') { st.miss(lane); st.say(ev.type === 'miss' ? WORDS.miss : 'Let go early', 'miss'); }
+    const c = this.judge.combo;
+    if ((ev.type === 'hit' || ev.type === 'holdDone') && c > 0 && c % 25 === 0 && c !== this._mile) { this._mile = c; st.milestone(c); }
   }
 
   draw(t) {
-    const g = this.g, { W, H, dpr, laneW, playX, hitY, tileH, pxPerSec } = this;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    g.drawImage(this.bg, 0, 0);
-    g.setTransform(dpr, 0, 0, dpr, 0, 0);
-    // pressed lanes glow
-    for (let l = 0; l < 4; l++) if (this.pressed[l]) {
-      const gr = g.createLinearGradient(0, hitY, 0, hitY - H * 0.45);
-      gr.addColorStop(0, LANE_COLORS[l] + '66'); gr.addColorStop(1, LANE_COLORS[l] + '00');
-      g.fillStyle = gr; g.fillRect(playX + l * laneW, hitY - H * 0.45, laneW, H * 0.45 + tileH * 0.2);
-    }
-    const yOf = nt => hitY - (nt - t) * pxPerSec;
-    const notes = this.judge.notes;
-    const tMax = t + this.travel + 0.3;
-    for (let i = 0; i < notes.length; i++) {
-      const n = notes[i];
-      if (n.t > tMax) break;
-      const end = n.t + n.d;
-      if (end < t - 1) continue;
-      if (n.state === 'done' && !(n.d > 0 && n.heldTo < end)) continue;
-      const x = playX + n.lane * laneW + 6, w = laneW - 12;
-      const missed = n.state === 'missed';
-      if (n.d > 0) {
-        const yEnd = yOf(end);
-        let yStart = yOf(n.t);
-        const holding = n.state === 'holding';
-        if (holding) yStart = hitY;
-        if (n.state === 'done') { if (n.heldTo >= end) continue; yStart = Math.min(yStart, yOf(n.heldTo)); }
-        const bodyW = w * 0.44, bx = x + (w - bodyW) / 2;
-        g.globalAlpha = missed || n.state === 'done' ? 0.3 : 0.85;
-        const gr = g.createLinearGradient(0, yEnd, 0, yStart);
-        gr.addColorStop(0, LANE_LIGHT[n.lane]); gr.addColorStop(1, LANE_COLORS[n.lane]);
-        g.fillStyle = gr; rr(g, bx, yEnd, bodyW, Math.max(0, yStart - yEnd), bodyW / 2); g.fill();
-        g.globalAlpha = 1;
-        if (holding) { g.fillStyle = '#fff'; g.globalAlpha = 0.35 + 0.25 * Math.sin(performance.now() / 70); rr(g, bx - 4, yEnd, bodyW + 8, yStart - yEnd, bodyW / 2); g.fill(); g.globalAlpha = 1; }
-        if (!holding && n.state !== 'done') this.tile(x, yOf(n.t) - tileH, w, tileH, n.lane, missed, this.chordAt.has(i), true);
-        else if (holding) this.tile(x, hitY - tileH, w, tileH, n.lane, false, false, true, true);
-      } else {
-        this.tile(x, yOf(n.t) - tileH, w, tileH, n.lane, missed, this.chordAt.has(i), false);
-      }
-    }
-    // effects
-    const now = performance.now();
-    this.fx = this.fx.filter(f => now - f.t0 < 400);
-    for (const f of this.fx) {
-      const p = (now - f.t0) / 400, cx = playX + (f.lane + 0.5) * laneW, cy = hitY - tileH / 2;
-      if (f.kind === 'ring') {
-        g.strokeStyle = f.color; g.globalAlpha = 1 - p; g.lineWidth = f.big ? 6 : 4;
-        g.beginPath(); g.arc(cx, cy, laneW * (0.25 + p * (f.big ? 0.6 : 0.45)), 0, 7); g.stroke();
-        for (let k = 0; k < 6; k++) { const a = k * 1.047 + f.lane; g.fillStyle = f.color; g.beginPath(); g.arc(cx + Math.cos(a) * laneW * 0.7 * p, cy + Math.sin(a) * laneW * 0.7 * p, 4 * (1 - p) + 1, 0, 7); g.fill(); }
-      } else if (f.kind === 'missflash') {
-        g.globalAlpha = 0.25 * (1 - p); g.fillStyle = '#ff3b3b'; g.fillRect(playX + f.lane * laneW, 0, laneW, H);
-      }
-      g.globalAlpha = 1;
-    }
-    // combo + judgement word
-    const cx = playX + this.playW / 2;
-    g.textAlign = 'center'; g.textBaseline = 'middle';
-    if (this.judge.combo >= 5) {
-      g.globalAlpha = 0.28; g.fillStyle = '#fff'; g.font = `800 ${Math.round(Math.min(110, this.playW * 0.26))}px ui-rounded, "SF Pro Rounded", system-ui, sans-serif`;
-      g.fillText(String(this.judge.combo), cx, H * 0.36);
-      g.font = `700 ${Math.round(Math.min(26, this.playW * 0.06))}px ui-rounded, system-ui, sans-serif`; g.fillText('combo', cx, H * 0.36 + Math.min(70, this.playW * 0.16));
-      g.globalAlpha = 1;
-    }
-    if (this.word) {
-      const p = (now - this.word.t0) / 600;
-      if (p < 1) {
-        const s = 1 + 0.25 * Math.max(0, 1 - p * 5);
-        g.globalAlpha = Math.min(1, 2 * (1 - p));
-        g.font = `800 ${Math.round(Math.min(44, this.playW * 0.11) * s)}px ui-rounded, "SF Pro Rounded", system-ui, sans-serif`;
-        g.lineWidth = 6; g.strokeStyle = 'rgba(20,15,58,0.8)';
-        const col = { perfect: '#ffe066', great: '#7ef0c8', good: '#bcd6ff', miss: '#ff8fa3' }[this.word.grade] || '#fff';
-        g.strokeText(this.word.text, cx, H * 0.55); g.fillStyle = col; g.fillText(this.word.text, cx, H * 0.55);
-        g.globalAlpha = 1;
-      }
-    }
-  }
-
-  tile(x, y, w, h, lane, missed, chord, isHoldHead, active) {
-    const g = this.g;
-    if (y > this.H || y + h < -10) return;
-    g.globalAlpha = missed ? 0.35 : 1;
-    g.fillStyle = missed ? '#6b6488' : LANE_COLORS[lane];
-    rr(g, x, y, w, h, 14); g.fill();
-    g.fillStyle = 'rgba(255,255,255,0.28)'; rr(g, x + 5, y + 5, w - 10, h * 0.32, 9); g.fill();
-    g.fillStyle = 'rgba(0,0,0,0.16)'; rr(g, x + 3, y + h - 9, w - 6, 6, 3); g.fill();
-    if (isHoldHead) { g.fillStyle = 'rgba(255,255,255,0.9)'; g.beginPath(); g.arc(x + w / 2, y + h * 0.58, Math.min(9, h * 0.16), 0, 7); g.fill(); }
-    if (chord && !missed) { g.strokeStyle = '#fff'; g.lineWidth = 3; rr(g, x + 1.5, y + 1.5, w - 3, h - 3, 13); g.stroke(); }
-    if (active) { g.strokeStyle = '#fff'; g.lineWidth = 4; rr(g, x, y, w, h, 14); g.stroke(); }
-    g.globalAlpha = 1;
+    this.stage.draw(t, { notes: this.judge.notes, pressed: this.pressed, combo: this.judge.combo, chordAt: this.chordAt, bpm: this.bpm, beatOffset: this.beatOffset });
   }
 
   hud(t) {

@@ -31,6 +31,7 @@ function click(kind) { sfx.soft(kind); }
 
 function setScreen(name, html) {
   app.className = 'screen-' + name;
+  document.body.classList.toggle('playing', name === 'game' || name === 'editor');
   app.innerHTML = html;
   app.scrollTop = 0;
 }
@@ -41,8 +42,8 @@ function home() {
   setScreen('home', `
     <div class="home">
       <div class="logo" aria-label="Tile Tumble">
-        <div class="logo-tiles">${LANE_COLORS.map((c, i) => `<span style="background:${c};animation-delay:${i * 0.15}s"></span>`).join('')}</div>
-        <h1>Tile<br>Tumble</h1>
+        <div class="logo-tiles">${LANE_COLORS.map((c, i) => `<span style="background:${c};color:${c};animation-delay:${i * 0.15}s"></span>`).join('')}</div>
+        <h1>Tile<span>Tumble</span></h1>
       </div>
       <button class="btn huge primary" data-a="play">${icon('play')} Play</button>
       <button class="player-chip" data-a="players">${icon('user')} <span>${esc(p.name)}</span></button>
@@ -66,7 +67,7 @@ async function songsScreen() {
       ${list.length ? list.map((s, i) => {
         const diffs = playableDiffs(s);
         return `<button class="song-card" data-a="song" data-id="${esc(s.id)}" style="--accent:${LANE_COLORS[i % 4]}">
-          <span class="song-art">${icon('music')}</span>
+          <span class="song-art"><i></i><i></i><i></i><i></i></span>
           <span class="song-meta"><span class="song-title">${esc(s.title)}</span><span class="song-artist">${esc(s.artist || '')}</span></span>
           <span class="song-stars">${diffs.map(d => { const b = store.getBest(p.id, s.id, d); return `<span class="ds"><small>${DIFF_NAME[d]}</small>${stars(b?.stars || 0)}</span>`; }).join('')}</span>
         </button>`;
@@ -113,7 +114,7 @@ async function play(song, diff, relaxed, { autoplay = false } = {}) {
   const chart = chartFor(song);
   setScreen('game', '');
   const game = new Game({
-    root: app, engine, sfx, notes: chart.difficulties[diff].notes, settings: S.settings, relaxed,
+    root: app, engine, sfx, notes: chart.difficulties[diff].notes, settings: S.settings, relaxed, bpm: chart.bpm, beatOffset: chart.beatOffset,
     offsetMs: offsetMs(S.settings), autoplay: autoplay || /[?&]autoplay=1/.test(location.search),
     onDone: r => results(song, diff, relaxed, r),
     onQuit: () => songsScreen(),
@@ -146,7 +147,26 @@ function results(song, diff, relaxed, r) {
       </div>
     </div>`);
   window.__tt.lastResult = { ...r, meanErrorMs: Math.round(r.meanError * 1000) };
+  if (r.stars >= 2) confetti(r.stars === 3 ? 160 : 80);
   app.querySelector('[data-a="again"]').onclick = () => play(song, diff, relaxed);
+}
+
+function confetti(count) {
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas'); c.id = 'confetti'; document.body.appendChild(c);
+  const dpr = Math.min(2, devicePixelRatio || 1), W = innerWidth, H = innerHeight;
+  c.width = W * dpr; c.height = H * dpr; const g = c.getContext('2d'); g.scale(dpr, dpr);
+  const cols = [...LANE_COLORS, '#ffffff', '#ffe27a'];
+  const ps = Array.from({ length: count }, () => ({ x: W / 2 + (Math.random() - 0.5) * 60, y: H * 0.3, vx: (Math.random() - 0.5) * 900, vy: -300 - Math.random() * 700, r: Math.random() * 6, vr: (Math.random() - 0.5) * 12, w: 6 + Math.random() * 6, h: 4 + Math.random() * 8, c: cols[Math.floor(Math.random() * cols.length)] }));
+  let last = performance.now(), t0 = last;
+  const step = now => {
+    const dt = Math.min(0.04, (now - last) / 1000); last = now;
+    g.clearRect(0, 0, W, H);
+    for (const p of ps) { p.vy += 1100 * dt; p.vx *= 0.99; p.x += p.vx * dt; p.y += p.vy * dt; p.r += p.vr * dt;
+      g.save(); g.translate(p.x, p.y); g.rotate(p.r); g.fillStyle = p.c; g.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); g.restore(); }
+    if (now - t0 < 3200 && document.body.contains(c)) requestAnimationFrame(step); else c.remove();
+  };
+  requestAnimationFrame(step);
 }
 
 async function players() {
@@ -444,7 +464,7 @@ function playtest(song, chart, diff, from, ed) {
   const host = document.createElement('div'); host.className = 'playtest-host'; document.body.appendChild(host);
   const back = () => { host.remove(); ed.show(); };
   const game = new Game({
-    root: host, engine, sfx, notes, settings: S.settings, relaxed: false, offsetMs: offsetMs(S.settings),
+    root: host, engine, sfx, notes, settings: S.settings, relaxed: false, offsetMs: offsetMs(S.settings), bpm: chart.bpm, beatOffset: chart.beatOffset,
     fromPos: from > 0 ? from - travelTime(S.settings.speed, false) - 0.6 : undefined,
     onDone: r => { back(); toast(`Playtest: ${r.counts.perfect} perfect, ${r.counts.great} great, ${r.counts.good} good, ${r.counts.miss} missed. Your taps averaged ${Math.round(r.meanError * 1000)} ms ${r.meanError >= 0 ? 'late' : 'early'}.`, 6000); },
     onQuit: back, onRetry: () => { back(); },
