@@ -54,3 +54,15 @@ test('the shipped demo chart is valid and playable', () => {
   const songs = JSON.parse(readFileSync(new URL('../../songs/songs.json', import.meta.url), 'utf8')).songs;
   assert.ok(songs.find(s => s.id === 'starlight-skip'));
 });
+
+test('every song on the site with a chart has its files and a valid, published chart', async () => {
+  const { existsSync } = await import('node:fs');
+  const root = new URL('../../', import.meta.url);
+  const songs = JSON.parse(readFileSync(new URL('songs/songs.json', root), 'utf8')).songs;
+  for (const s of songs.filter(x => x.chart)) {
+    for (const f of [s.audio, s.chart, s.stems?.backing, s.stems?.lead, s.cover].filter(Boolean)) assert.ok(existsSync(new URL(f, root)), `${s.id}: missing ${f}`);
+    const c = normalizeChart(readFileSync(new URL(s.chart, root), 'utf8'));
+    assert.equal(c.songId, s.id);
+    for (const d of ['easy', 'hard']) assert.equal(validateNotes(c.difficulties[d].notes, { duration: c.audio.duration }).errors.length, 0, `${s.id} ${d}`);
+  }
+});

@@ -13,6 +13,61 @@
       "cover": "art/cover-starlight-skip.jpg"
     },
     {
+      "id": "twinkle",
+      "title": "Twinkle Twinkle Little Star",
+      "artist": "Traditional (Mozart variations",
+      "audio": "songs/twinkle.mp3",
+      "chart": "songs/twinkle.chart.json",
+      "stems": {
+        "backing": "songs/twinkle.backing.mp3",
+        "lead": "songs/twinkle.lead.mp3"
+      }
+    },
+    {
+      "id": "ode-to-joy",
+      "title": "Ode to Joy",
+      "artist": "Ludwig van Beethoven",
+      "audio": "songs/ode-to-joy.mp3",
+      "chart": "songs/ode-to-joy.chart.json",
+      "stems": {
+        "backing": "songs/ode-to-joy.backing.mp3",
+        "lead": "songs/ode-to-joy.lead.mp3"
+      }
+    },
+    {
+      "id": "fur-elise",
+      "title": "Für Elise",
+      "artist": "Ludwig van Beethoven",
+      "audio": "songs/fur-elise.mp3",
+      "chart": "songs/fur-elise.chart.json",
+      "stems": {
+        "backing": "songs/fur-elise.backing.mp3",
+        "lead": "songs/fur-elise.lead.mp3"
+      }
+    },
+    {
+      "id": "mountain-king",
+      "title": "In the Hall of the Mountain King",
+      "artist": "Edvard Grieg",
+      "audio": "songs/mountain-king.mp3",
+      "chart": "songs/mountain-king.chart.json",
+      "stems": {
+        "backing": "songs/mountain-king.backing.mp3",
+        "lead": "songs/mountain-king.lead.mp3"
+      }
+    },
+    {
+      "id": "nachtmusik",
+      "title": "Eine kleine Nachtmusik",
+      "artist": "Wolfgang Amadeus Mozart",
+      "audio": "songs/nachtmusik.mp3",
+      "chart": "songs/nachtmusik.chart.json",
+      "stems": {
+        "backing": "songs/nachtmusik.backing.mp3",
+        "lead": "songs/nachtmusik.lead.mp3"
+      }
+    },
+    {
       "id": "no-batidao",
       "title": "NO BATIDÃO",
       "artist": "ZXKAI & slxughter",
