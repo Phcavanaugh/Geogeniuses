@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Tile Tumble</title>
+<meta name="description" content="Tap the falling tiles in time with the music.">
+<meta name="theme-color" content="#140f3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tile Tumble">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="./icons/icon.svg">
+<link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png">
+<link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+<link rel="stylesheet" href="./css/tiles.css">
+</head>
+<body>
+<div id="app" class="screen-loading"><div class="loading-box"><div class="spinner"></div><p>Loading Tile Tumble…</p></div></div>
+<div id="modal" hidden></div>
+<div id="toast" role="status" aria-live="polite" hidden></div>
+<noscript><p class="loading-box">Tile Tumble needs JavaScript turned on.</p></noscript>
+<script type="module" src="./js/app.js"></script>
+</body>
+</html>

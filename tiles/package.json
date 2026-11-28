@@ -1,0 +1,14 @@
+{
+  "name": "tile-tumble",
+  "private": true,
+  "type": "module",
+  "description": "Tile Tumble: a kid-friendly falling-tiles rhythm game with a parent chart editor. Static site, no build step.",
+  "scripts": {
+    "serve": "node tests/serve.mjs",
+    "test": "node --test tests/unit/*.test.mjs",
+    "e2e": "node tests/e2e/play.mjs",
+    "demo": "python3 tools/make_demo.py && node tools/demo-chart.mjs",
+    "draft": "node tools/draft-chart.mjs",
+    "icons": "node tools/make-icons.mjs"
+  }
+}
