@@ -43,10 +43,10 @@ try {
   await page.locator('[data-a="play"]').tap();
   await page.waitForSelector('.song-card');
   const titles = await page.locator('.song-title').allTextContents();
-  if (titles.length !== 1 || titles[0] !== 'Starlight Skip') fail('kids should only see finished songs, saw ' + titles);
+  if (titles[0] !== 'Starlight Skip' || titles.length !== 6 || titles.some(t => /Riptide|BATID|Tipsy/.test(t))) fail('kids should only see finished songs, saw ' + titles);
   if (await page.locator('a[href^="http"]').count()) fail('external link on a kid screen');
   await shot(page, '02-songs');
-  ok('song list shows only the finished demo song (unfinished songs hidden), no external links');
+  ok(`song list shows the ${titles.length} finished songs (unfinished ones hidden), no external links`);
 
   await page.locator('.song-card').first().tap();
   await page.waitForSelector('.btn.diff.hard');
