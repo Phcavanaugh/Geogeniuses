@@ -151,7 +151,7 @@ try {
     return document.getElementById('cal-status').textContent;
   });
   const ms = Number(calibrated.match(/(-?\d+) ms/)?.[1]);
-  const injected = Math.round(await page.evaluate(() => window.__tt.calInjected) * 1000);
+  const injected = Math.round(await page.evaluate(() => window.__tt.calInjected - window.__tt.engine.deviceLatency()) * 1000);
   console.log(`     taps were actually sent ${injected} ms after each click; measured ${ms} ms`);
   if (Math.abs(ms - injected) > 8) fail('calibration should find about 80 ms, got: ' + calibrated);
   await shot(page, '08-calibrated');

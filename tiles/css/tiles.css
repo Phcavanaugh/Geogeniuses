@@ -216,3 +216,4 @@ input[type=range] { width: 100%; accent-color: var(--sun); height: 32px; }
 .sheet p { margin: 0; }
 .sheet .switch-row { font-weight: 400; }
 .sheet .switch-row small { color: var(--muted); }
+.listen-row { display: flex; flex-direction: column; align-items: center; gap: 6px; }
