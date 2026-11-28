@@ -41,10 +41,7 @@ function home() {
   const p = store.currentProfile();
   setScreen('home', `
     <div class="home">
-      <div class="logo" aria-label="Tile Tumble">
-        <div class="logo-tiles">${LANE_COLORS.map((c, i) => `<span style="background:${c};color:${c};animation-delay:${i * 0.15}s"></span>`).join('')}</div>
-        <h1>Tile<span>Tumble</span></h1>
-      </div>
+      <h1 class="logo"><img class="logo-img" src="art/logo.webp" alt="Tile Tumble" width="1000" height="428"></h1>
       <button class="btn huge primary" data-a="play">${icon('play')} Play</button>
       <button class="player-chip" data-a="players">${icon('user')} <span>${esc(p.name)}</span></button>
       <div class="home-foot">
@@ -67,7 +64,7 @@ async function songsScreen() {
       ${list.length ? list.map((s, i) => {
         const diffs = playableDiffs(s);
         return `<button class="song-card" data-a="song" data-id="${esc(s.id)}" style="--accent:${LANE_COLORS[i % 4]}">
-          <span class="song-art"><i></i><i></i><i></i><i></i></span>
+          <span class="song-art">${s.cover ? `<img src="${esc(s.cover)}" alt="" loading="lazy">` : '<i></i><i></i><i></i><i></i>'}</span>
           <span class="song-meta"><span class="song-title">${esc(s.title)}</span><span class="song-artist">${esc(s.artist || '')}</span></span>
           <span class="song-stars">${diffs.map(d => { const b = store.getBest(p.id, s.id, d); return `<span class="ds"><small>${DIFF_NAME[d]}</small>${stars(b?.stars || 0)}</span>`; }).join('')}</span>
         </button>`;
@@ -83,6 +80,7 @@ async function chooseDiff(song) {
   const diffs = playableDiffs(song);
   let relaxed = p.relaxed !== false;
   const v = await sheet(`
+    ${song.cover ? `<img class="sheet-cover" src="${esc(song.cover)}" alt="">` : ''}
     <h2>${esc(song.title)}</h2>
     <p class="muted">${esc(song.artist || '')}</p>
     <div class="diff-row">${diffs.map(d => { const b = store.getBest(p.id, song.id, d); return `<button class="btn big diff ${d}" data-v="${d}"><span>${DIFF_NAME[d]}</span>${stars(b?.stars || 0)}${b ? `<small>Best ${b.score.toLocaleString()}</small>` : ''}</button>`; }).join('')}</div>
@@ -152,6 +150,7 @@ function results(song, diff, relaxed, r, real) {
     <div class="results">
       <h2>${r.stars === 3 ? 'Amazing!' : r.stars === 2 ? 'Great job!' : r.stars === 1 ? 'Nice!' : 'Good try!'}</h2>
       <p class="muted">${esc(song.title)} · ${DIFF_NAME[diff]}${relaxed ? ' · Relaxed' : ''}${real ? ' · Real mode' : ''}</p>
+      ${r.stars ? `<img class="medal" src="art/medal-${['', 'bronze', 'silver', 'gold'][r.stars]}.webp" alt="${['', 'Bronze', 'Silver', 'Gold'][r.stars]} medal">` : ''}
       ${stars(r.stars, 3, 'big pop')}
       <div class="score-big">${r.score.toLocaleString()}</div>
       ${best ? '<div class="badge">New best!</div>' : ''}
