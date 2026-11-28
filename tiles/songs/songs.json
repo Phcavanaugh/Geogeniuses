@@ -9,7 +9,8 @@
       "stems": {
         "backing": "songs/starlight-skip.backing.mp3",
         "lead": "songs/starlight-skip.lead.mp3"
-      }
+      },
+      "cover": "art/cover-starlight-skip.jpg"
     },
     {
       "id": "no-batidao",
@@ -17,21 +18,24 @@
       "artist": "ZXKAI & slxughter",
       "note": "original version",
       "audio": null,
-      "chart": null
+      "chart": null,
+      "cover": "art/cover-no-batidao.jpg"
     },
     {
       "id": "riptide",
       "title": "Riptide",
       "artist": "Vance Joy",
       "audio": null,
-      "chart": null
+      "chart": null,
+      "cover": "art/cover-riptide.jpg"
     },
     {
       "id": "a-bar-song-tipsy",
       "title": "A Bar Song (Tipsy)",
       "artist": "Shaboozey",
       "audio": null,
-      "chart": null
+      "chart": null,
+      "cover": "art/cover-a-bar-song-tipsy.jpg"
     }
   ]
 }
