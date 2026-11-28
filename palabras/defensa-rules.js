@@ -12,7 +12,7 @@
 // Each critter knocked out pays a coin; each round you finish pays 100 + the round. The rounds are Bloons TD 6's
 // standard rounds, and Easy / Medium / Hard are Bloons' (4–5 plays Easy, 7 Medium, 10 Hard).
 
-import { BT } from './defensa-bt.js?v=94';
+import { BT } from './defensa-bt.js?v=95';
 export const U = 13.33;                                   // Bloons units per board unit
 export const bu = v => v / U;                             // Bloons units → board units
 export const COLS = 24, ROWS = 17, MARGIN = 1.1;          // play area 320×227 BU, landscape; the island reaches MARGIN past it
@@ -314,6 +314,7 @@ export class Game {
       walls:this.walls.map(w => ({ p:w.p, d:w.d, a:w.a, b:w.b, hp:w.hp, spent:w.spent })) };
   }
   load(s){
+    this.bowl = this.map.bowl;      // needed to check where saved towers sit (startRound sets it again)
     Object.assign(this, { r:s.r, lives:s.lives, coins:s.coins, points:s.points || 0 });
     this.towers = (s.towers || []).map(t => ({ ...t, id:nid(), lvl:1 + Math.max(t.a, t.b), cd:0, aim:Math.PI, shotAt:-9, target:t.target || 'first' }));
     this.walls = (s.walls || []).map(w => ({ ...w, id:nid(), wall:true, cd:0, max:this.wallStat(w).max }));
