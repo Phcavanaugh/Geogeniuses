@@ -1,0 +1,8 @@
+{
+  "songs": [
+    { "id": "starlight-skip", "title": "Starlight Skip", "artist": "Tile Tumble Band", "audio": "songs/starlight-skip.mp3", "chart": "songs/starlight-skip.chart.json" },
+    { "id": "no-batidao", "title": "NO BATIDÃO", "artist": "ZXKAI & slxughter", "note": "original version", "audio": null, "chart": null },
+    { "id": "riptide", "title": "Riptide", "artist": "Vance Joy", "audio": null, "chart": null },
+    { "id": "a-bar-song-tipsy", "title": "A Bar Song (Tipsy)", "artist": "Shaboozey", "audio": null, "chart": null }
+  ]
+}
