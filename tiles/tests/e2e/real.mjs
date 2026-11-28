@@ -1,4 +1,5 @@
-// Real mode check: the song only sounds when tiles are hit, and a late tap makes the music late.
+// Real mode check: the backing track keeps playing; the tune (lead track) only sounds when tiles are hit,
+// starting from the tap, so a late tap makes the tune late.
 //   node tests/e2e/real.mjs
 import { createRequire } from 'node:module';
 import { serve } from '../serve.mjs';
@@ -26,7 +27,7 @@ try {
     const log = [];
     const orig = e.playPiece.bind(e);
     // lag vs. the moment the tile reached the line (the game's timing offset is part of that moment)
-    e.playPiece = (from, to, when) => { log.push({ from, lag: (when || e.ctx.currentTime) - e.ctxTimeOf(from) - g.offset }); return orig(from, to, when); };
+    e.playPiece = (from, to, when, buf) => { log.push({ from, lead: buf === g.leadBuffer && !!buf, lag: (when || e.ctx.currentTime) - e.ctxTimeOf(from) - g.offset }); return orig(from, to, when, buf); };
     const notes = g.notes.map(n => ({ ...n }));
     // plan: groups 0-9 on time, 10-19 80 ms late, skip every note of group 20
     const groups = []; for (const n of notes) { const last = groups[groups.length - 1]; if (last && Math.abs(last[0].t - n.t) < 0.02) last.push(n); else groups.push([n]); }
@@ -47,17 +48,28 @@ try {
       };
       requestAnimationFrame(tick);
     });
-    return { log, groupT: plan.map(p => p.gr[0].t), counts: g.judge.counts, continuousSource: continuous.some(Boolean), intro: g.notes[0].t };
+    return { log, groupT: plan.map(p => p.gr[0].t), counts: g.judge.counts, backingShare: continuous.filter(Boolean).length / continuous.length, backingIsStem: e.buffer !== g.leadBuffer && Math.abs(e.buffer.duration - g.leadBuffer.duration) < 0.1, intro: g.notes[0].t };
   });
   const pieces = out.log.filter(p => p.from >= out.intro - 0.001);
-  check(!out.continuousSource, 'the full song never plays by itself in Real mode');
-  check(pieces.length === 23, `one piece of music per hit group (${pieces.length} pieces for 23 hit groups, 1 skipped)`);
+  check(out.backingIsStem && out.backingShare > 0.9, `the backing track keeps playing the whole time (${Math.round(out.backingShare * 100)}% of frames)`);
+  check(pieces.every(p => p.lead), 'tapped pieces come from the lead (tune) track');
+  check(pieces.length === 23, `one piece of the tune per hit group (${pieces.length} pieces for 23 hit groups, 1 skipped)`);
   const onTime = pieces.slice(0, 10).map(p => p.lag * 1000), late = pieces.slice(10, 20).map(p => p.lag * 1000);
   const avg = a => a.reduce((x, y) => x + y, 0) / a.length;
   console.log(`     on-time taps: music started ${avg(onTime).toFixed(0)} ms off; late taps: ${avg(late).toFixed(0)} ms off`);
-  check(Math.abs(avg(onTime)) < 25, 'on-time taps start the music on time');
-  check(avg(late) > 60 && avg(late) < 110, 'taps 80 ms late make the music start about 80 ms late');
-  check(!pieces.some(p => Math.abs(p.from - out.groupT[20]) < 0.001), 'a missed tile leaves its piece of the song silent');
+  check(Math.abs(avg(onTime)) < 25, 'on-time taps start the tune on time');
+  check(avg(late) > 60 && avg(late) < 110, 'taps 80 ms late make the tune come in about 80 ms late');
+  check(!pieces.some(p => Math.abs(p.from - out.groupT[20]) < 0.001), 'a missed tile leaves its note silent (beat keeps going)');
+  // the line follows the last touch
+  const line = await page.evaluate(async () => {
+    const g = window.__tt.game, cv = g.canvas, r = cv.getBoundingClientRect(), H = g.H;
+    cv.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 999, clientX: r.left + g.playX + g.laneW * 0.5, clientY: r.top + H * 0.55, pointerType: 'touch', bubbles: true }));
+    cv.dispatchEvent(new PointerEvent('pointerup', { pointerId: 999, clientX: r.left + g.playX + g.laneW * 0.5, clientY: r.top + H * 0.55, pointerType: 'touch', bubbles: true }));
+    await new Promise(res => setTimeout(res, 600));
+    return { hitY: g.stage.hitY, want: H * 0.55, y0: g.stage.y(0) };
+  });
+  await page.screenshot({ path: new URL('./shots/line-moved.png', import.meta.url).pathname }).catch(() => {});
+  check(Math.abs(line.hitY - line.want) < 3 && Math.abs(line.y0 - line.hitY) < 0.5, `the line moves to the last touch (${Math.round(line.hitY)} vs ${Math.round(line.want)}) and tiles land on it`);
   check(!errors.length, 'no page errors ' + errors.join('; '));
 } finally { await browser.close(); server.close(); }
 if (failed) { console.log('FAILED'); process.exitCode = 1; } else console.log('Real mode checks passed.');

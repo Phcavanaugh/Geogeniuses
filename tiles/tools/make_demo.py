@@ -133,22 +133,28 @@ def main():
         if b % 2 == 0: add(drums, st, 0.55 * kick())
         if b % 4 in (1, 3) and b >= LEAD_BARS * 4: add(drums, st, 0.32 * snare())
         add(drums, st, 0.10 * hat()); add(drums, st + BEAT / 2, 0.07 * hat())
-    mix = mel + acc + drums
-    mix = np.tanh(mix * 1.1) / np.tanh(1.1)
-    mix *= 0.89 / np.max(np.abs(mix))
-    fade = int(1.5 * SR); mix[-fade:] *= np.linspace(1, 0, fade)
-    # stereo: slight width on pads
-    left = mix + 0.15 * acc; right = mix - 0.15 * acc
-    st = np.stack([left, right], 1)
-    st *= 0.89 / np.max(np.abs(st))
-    pcm = (st * 32767).astype(np.int16)
+    # Linear mix so the two stems add up exactly to the full song.
+    fade = np.ones(len(mel)); n = int(1.5 * SR); fade[-n:] = np.linspace(1, 0, n)
+    back_l = (acc + drums) * fade + 0.15 * acc * fade
+    back_r = (acc + drums) * fade - 0.15 * acc * fade
+    lead = mel * fade
+    peak = np.max(np.abs(np.stack([back_l + lead, back_r + lead])))
+    g = 0.89 / peak
+    stems = {
+        'starlight-skip.mp3': np.stack([back_l + lead, back_r + lead], 1) * g,
+        'starlight-skip.backing.mp3': np.stack([back_l, back_r], 1) * g,
+        'starlight-skip.lead.mp3': np.stack([lead, lead], 1) * g,
+    }
     os.makedirs(os.path.join(ROOT, 'songs'), exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
-        wav = os.path.join(tmp, 'demo.wav')
-        with wave.open(wav, 'wb') as w:
-            w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR); w.writeframes(pcm.tobytes())
-        out = os.path.join(ROOT, 'songs', 'starlight-skip.mp3')
-        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', '160k', out], check=True)
+        for name, st in stems.items():
+            wav = os.path.join(tmp, name + '.wav')
+            with wave.open(wav, 'wb') as w:
+                w.setnchannels(2); w.setsampwidth(2); w.setframerate(SR); w.writeframes((st * 32767).astype(np.int16).tobytes())
+            rate = '160k' if name.count('.') == 1 else '128k'
+            subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-codec:a', 'libmp3lame', '-b:a', rate, os.path.join(ROOT, 'songs', name)], check=True)
+    st = stems['starlight-skip.mp3']
+    mix = st[:, 0]
     first = next(i for i, v in enumerate(np.max(np.abs(st), 1)) if v > 0.01) / SR
     score = {'bpm': BPM, 'beat': BEAT, 'leadBars': LEAD_BARS, 'duration': round(len(mix) / SR, 3),
              'firstSound': round(first, 4), 'notes': notes}

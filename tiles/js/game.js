@@ -91,11 +91,11 @@ export class Game {
   start() {
     const first = this.notes.length ? this.notes[0].t : 0;
     this.startPos = this.fromPos ?? Math.min(0, first - this.travel - 0.8);
-    this.engine.play(this.startPos, { delay: 0.1, silent: this.real });
+    this.engine.play(this.startPos, { delay: 0.1 });
     if (this.real && first > Math.max(0, this.startPos) + 0.05) {
-      // the intro plays by itself; from the first tile on, the player drives the music
+      // any lead sound before the first tile plays by itself
       const from = Math.max(0, this.startPos);
-      this.piece = this.engine.playPiece(from, first, this.engine.ctxTimeOf(from));
+      this.piece = this.engine.playPiece(from, first, this.engine.ctxTimeOf(from), this.leadBuffer);
     }
     this.running = true;
     this.loop();
@@ -145,6 +145,7 @@ export class Game {
     if (!this.running) return;
     try { this.canvas.setPointerCapture(e.pointerId); } catch {}
     const lane = this.laneAt(e.clientX);
+    this.stage.setLine(e.clientY - this.canvas.getBoundingClientRect().top);
     this.pointers.set(e.pointerId, lane);
     this.press(lane, this.eventTime(e));
   }
@@ -172,7 +173,8 @@ export class Game {
     if (this.pressed[lane] === 0) { const r = this.judge.release(lane, t); if (r) this.effect(r, t); }
   }
 
-  // Real mode: a hit plays this group's piece of the song from the moment of the tap.
+  // Real mode: the backing track plays on the clock; a hit plays this group's piece of the lead
+  // track (the tune) from the moment of the tap.
   realAudio(ev) {
     const gi = this.groupOf[ev.note.i];
     if (ev.type === 'hit' && gi !== this.lastGroup) {
@@ -180,7 +182,7 @@ export class Game {
       this.piece?.stop();
       const last = gi === this.groupT.length - 1;
       const to = last ? this.engine.duration : Math.max(this.groupT[gi + 1], this.groupEnd[gi]) + 0.15;
-      this.piece = this.engine.playPiece(this.groupT[gi], to);
+      this.piece = this.engine.playPiece(this.groupT[gi], to, 0, this.leadBuffer);
       this.piecesPlayed++;
     } else if (ev.type === 'holdBroken' && gi === this.lastGroup) {
       this.piece?.stop(); this.piece = null;
@@ -258,7 +260,7 @@ export class Game {
     const cd = document.createElement('div'); cd.className = 'countdown'; this.el.appendChild(cd);
     for (const n of ['3', '2', '1']) { cd.textContent = n; cd.classList.remove('pop'); void cd.offsetWidth; cd.classList.add('pop'); await new Promise(r => setTimeout(r, 550)); if (this.destroyed) return; }
     cd.remove();
-    this.engine.play(pos, { delay: 0.05, silent: this.real });
+    this.engine.play(pos, { delay: 0.05 });
     this.running = true;
     this.loop();
   }

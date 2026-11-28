@@ -26,6 +26,10 @@ A falling-tiles rhythm game for kids, with a grown-ups-only song setup and chart
 3. In `songs/songs.json`, set that song's `"audio"` and `"chart"` paths.
 4. The chart must have `"published": true`. Turning on *Kids can play* in the editor does this before you export.
 
+## Real mode (song split in two)
+
+Real mode needs two extra files listed under `stems` in `songs/songs.json`: a **backing** track (drums, bass, chords) that plays on the clock, and a **lead** track (the tune or vocals) that only plays, piece by piece, when tiles are hit. Both must be cut from the same recording so they line up with the full song. Songs without stems don't offer Real mode.
+
 ## Checks
 
 ```

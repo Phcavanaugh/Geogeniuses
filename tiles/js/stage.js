@@ -47,15 +47,24 @@ export class Stage {
     this.playX = (W - this.playW) / 2;
     this.cx = W / 2;
     this.laneW = this.playW / 4;
-    this.hitY = H * 0.8;
-    const topY = H * 0.03;
     this.K = 0.85;
-    this.horizonY = (topY * (1 + this.K) - this.hitY) / this.K;
     this.tileH = Math.max(42, Math.min(96, this.laneW * 0.6));
-    this.tileU = 1.25 * this.tileH / ((this.hitY - this.horizonY) * this.K);
-    this.uBottom = ((this.hitY - this.horizonY) / (H - this.horizonY) - 1) / this.K; // u at screen bottom (negative)
+    this.baseY = H * 0.8;
+    this.hitY = this.lineTarget = this.baseY;
+    this.geom();
     this.bg = this.makeBg();
   }
+
+  // Track geometry for the current line height. The line is "now": tiles reach it on the beat,
+  // wherever it is on screen.
+  geom() {
+    const topY = this.H * 0.03;
+    this.horizonY = (topY * (1 + this.K) - this.hitY) / this.K;
+    this.tileU = 1.25 * this.tileH / ((this.hitY - this.horizonY) * this.K);
+    this.uBottom = ((this.hitY - this.horizonY) / (this.H - this.horizonY) - 1) / this.K; // u at screen bottom (negative)
+  }
+  // Move the line to where the player last touched (Magic Tiles style), within a sensible band.
+  setLine(y) { this.lineTarget = Math.max(this.H * 0.42, Math.min(this.H * 0.9, y)); }
 
   s(u) { return 1 / (1 + this.K * Math.max(u, -0.6)); }
   y(u) { return this.horizonY + (this.hitY - this.horizonY) * this.s(u); }
@@ -114,8 +123,10 @@ export class Stage {
 
   // ---- frame
   draw(t, st) {
-    const g = this.g, { W, H, dpr, laneW, hitY } = this;
+    const g = this.g, { W, H, dpr, laneW } = this;
     const now = performance.now(), dt = Math.min(0.05, (now - this.lastNow) / 1000); this.lastNow = now;
+    if (Math.abs(this.lineTarget - this.hitY) > 0.5) { this.hitY += (this.lineTarget - this.hitY) * Math.min(1, dt * 12); this.geom(); }
+    const hitY = this.hitY;
     g.setTransform(1, 0, 0, 1, 0, 0);
     g.drawImage(this.bg, 0, 0);
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -207,7 +218,7 @@ export class Stage {
       else if (n.state !== 'done') this.tile(n.lane, u0, missed, st.chordAt.has(i), n.d > 0, false);
     }
 
-    // hit line + pads
+    // hit line
     const pulseW = 1 + pulse * 0.6;
     g.globalCompositeOperation = 'lighter';
     g.strokeStyle = `rgba(190,170,255,${0.25 + 0.2 * pulse})`; g.lineWidth = 14 * pulseW;
@@ -215,20 +226,11 @@ export class Stage {
     g.globalCompositeOperation = 'source-over';
     g.strokeStyle = '#fff'; g.lineWidth = 3;
     g.beginPath(); g.moveTo(this.x(0, 1), hitY); g.lineTo(this.x(4, 1), hitY); g.stroke();
-    for (let l = 0; l < 4; l++) {
-      const cx = this.x(l + 0.5, 1), on = st.pressed[l] > 0;
-      g.beginPath(); g.ellipse(cx, hitY, laneW * 0.36, laneW * 0.11, 0, 0, Math.PI * 2);
-      g.fillStyle = on ? rgba(LANE_COLORS[l], 0.75) : 'rgba(10,6,28,0.55)'; g.fill();
-      g.strokeStyle = LANE_COLORS[l]; g.lineWidth = on ? 4 : 2.5; g.stroke();
-      if (on) { g.globalCompositeOperation = 'lighter'; g.globalAlpha = 0.8; g.drawImage(this.glows[l], cx - laneW * 0.6, hitY - laneW * 0.35, laneW * 1.2, laneW * 0.7); g.globalAlpha = 1; g.globalCompositeOperation = 'source-over'; }
-    }
 
     // rings, particles
     g.globalCompositeOperation = 'lighter';
     for (const r of this.rings) {
       const p = r.t / 0.4, cx = this.x(r.lane + 0.5, 1);
-      g.strokeStyle = rgba(LANE_LIGHT[r.lane], (1 - p) * 0.9); g.lineWidth = (r.big ? 6 : 4) * (1 - p) + 1;
-      g.beginPath(); g.ellipse(cx, hitY, laneW * (0.35 + p * (r.big ? 0.75 : 0.5)), laneW * (0.11 + p * (r.big ? 0.25 : 0.17)), 0, 0, Math.PI * 2); g.stroke();
       g.globalAlpha = (1 - p) * 0.7; g.drawImage(this.glows[r.lane], cx - laneW * 0.8, hitY - this.tileH, laneW * 1.6, this.tileH * 1.6); g.globalAlpha = 1;
     }
     for (const p of this.parts) {

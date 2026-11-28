@@ -64,4 +64,18 @@ export async function loadAudio(engine, song, onProgress) {
   const first = firstSoundTime(chs, buf.sampleRate);
   return { buffer: buf, firstSound: first, shift: decoderShift(song.chartData, first) };
 }
-export function forgetAudio() { bufferCache.clear(); }
+// Real mode needs the song split in two: a backing track (keeps playing) and a lead track (the
+// tune, played only when tiles are hit). Returns { backing, lead } decoded buffers, or null.
+const stemCache = new Map();
+export function hasStems(song) { return !!(song.stems?.backing && song.stems?.lead); }
+export async function loadStems(engine, song, onProgress) {
+  if (!hasStems(song)) return null;
+  if (stemCache.has(song.id)) return stemCache.get(song.id);
+  onProgress?.('Getting the music ready…');
+  const get = async url => { const r = await fetch(url); if (!r.ok) throw new Error(`Could not download the music (${r.status}).`); return engine.decode(await r.arrayBuffer()); };
+  const [backing, lead] = await Promise.all([get(song.stems.backing), get(song.stems.lead)]);
+  stemCache.clear(); stemCache.set(song.id, { backing, lead });
+  return { backing, lead };
+}
+
+export function forgetAudio() { bufferCache.clear(); stemCache.clear(); }
