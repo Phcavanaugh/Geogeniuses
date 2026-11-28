@@ -2,7 +2,7 @@
 // falling back to the cached copy when offline. Files under /tiles/ are cached as they're used, so
 // a song played once can be played again offline. Only touches caches named "tiletumble-*".
 const PREFIX = 'tiletumble-';
-const VERSION = PREFIX + 'v4';
+const VERSION = PREFIX + 'v5';
 const CORE = ['./', './index.html', './manifest.webmanifest', './css/tiles.css', './icons/icon.svg', './icons/apple-touch-icon.png',
   './js/app.js', './js/audio.js', './js/beats.js', './js/chart.js', './js/editor.js', './js/game.js', './js/stage.js', './js/judge.js', './js/songs.js', './js/store.js', './js/ui.js',
   './songs/songs.json'];

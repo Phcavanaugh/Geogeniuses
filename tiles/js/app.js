@@ -2,7 +2,7 @@
 // accounts and nothing to buy. Everything is saved on this device.
 import { AudioEngine, Sfx } from './audio.js';
 import { Game, LANE_COLORS, travelTime } from './game.js';
-import { loadCatalog, playableDiffs, visibleToKids, loadAudio, chartFor, forgetAudio } from './songs.js';
+import { loadCatalog, playableDiffs, visibleToKids, loadAudio, loadStems, hasStems, chartFor, forgetAudio } from './songs.js';
 import * as store from './store.js';
 import { icon, esc, stars, toast, sheet, pickFile } from './ui.js';
 import { slugify, emptyChart, chartStats, firstSoundTime } from './chart.js';
@@ -75,6 +75,9 @@ async function songsScreen() {
     </div>`);
 }
 
+const HINT_REAL = 'The beat keeps going. The tune only plays when you hit the tiles.';
+const HINT_NORMAL = 'The whole song plays by itself.';
+
 async function chooseDiff(song) {
   const p = store.currentProfile();
   const diffs = playableDiffs(song);
@@ -83,9 +86,9 @@ async function chooseDiff(song) {
     <h2>${esc(song.title)}</h2>
     <p class="muted">${esc(song.artist || '')}</p>
     <div class="diff-row">${diffs.map(d => { const b = store.getBest(p.id, song.id, d); return `<button class="btn big diff ${d}" data-v="${d}"><span>${DIFF_NAME[d]}</span>${stars(b?.stars || 0)}${b ? `<small>Best ${b.score.toLocaleString()}</small>` : ''}</button>`; }).join('')}</div>
-    <div class="listen-row"><small class="muted">Music</small>
-      <div class="seg">${[['normal', 'Always on'], ['real', 'Real mode']].map(([k, n]) => `<button class="seg-btn ${(!!p.real) === (k === 'real') ? 'on' : ''}" data-mode="${k}" data-v="" data-keep="1">${n}</button>`).join('')}</div>
-      <small class="muted mode-hint">${p.real ? 'The music only plays when you hit the tiles.' : 'The music plays the whole time.'}</small></div>
+    ${hasStems(song) ? `<div class="listen-row"><small class="muted">Music</small>
+      <div class="seg">${[['normal', 'Normal'], ['real', 'Real mode']].map(([k, n]) => `<button class="seg-btn ${(!!p.real) === (k === 'real') ? 'on' : ''}" data-mode="${k}" data-v="" data-keep="1">${n}</button>`).join('')}</div>
+      <small class="muted mode-hint">${p.real ? HINT_REAL : HINT_NORMAL}</small></div>` : ''}
     <div class="listen-row"><small class="muted">Listening with</small>
       <div class="seg">${['speaker', 'headphones'].map(k => `<button class="seg-btn ${S.settings.offsetProfile === k ? 'on' : ''}" data-listen="${k}" data-v="" data-keep="1">${k === 'speaker' ? 'Speaker' : 'AirPods / Bluetooth'}</button>`).join('')}</div></div>
     <label class="switch-row"><span><b>Relaxed mode</b><br><small>Bigger timing window, never runs out of energy</small></span>
@@ -97,7 +100,7 @@ async function chooseDiff(song) {
         const prof = store.getProfiles(), me = prof.list.find(x => x.id === p.id);
         if (me) { me.real = b.dataset.mode === 'real'; store.saveProfiles(prof); p.real = me.real; }
         m.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b));
-        m.querySelector('.mode-hint').textContent = p.real ? 'The music only plays when you hit the tiles.' : 'The music plays the whole time.';
+        m.querySelector('.mode-hint').textContent = p.real ? HINT_REAL : HINT_NORMAL;
       }));
       m.querySelectorAll('[data-listen]').forEach(b => b.addEventListener('click', () => {
         S.settings.offsetProfile = b.dataset.listen; store.saveSettings(S.settings);
@@ -111,20 +114,25 @@ async function chooseDiff(song) {
 }
 
 async function play(song, diff, relaxed, { autoplay = false } = {}) {
+  const real = hasStems(song) && !!store.currentProfile().real;
   setScreen('loading', `<div class="loading-box"><div class="spinner"></div><p id="load-msg">Getting the music ready…</p></div>`);
   try {
     await unlock();
-    const a = await loadAudio(engine, song, m => { const el = document.getElementById('load-msg'); if (el) el.textContent = m; });
-    engine.buffer = a.buffer; engine.shift = a.shift;
+    const msg = m => { const el = document.getElementById('load-msg'); if (el) el.textContent = m; };
+    const a = await loadAudio(engine, song, msg);
+    engine.buffer = a.buffer; engine.shift = a.shift; S.leadBuffer = null;
+    if (real) {
+      const st = await loadStems(engine, song, msg);
+      engine.buffer = st.backing; S.leadBuffer = st.lead; // stems are cut from the same file, so the same start correction applies
+    }
   } catch (e) {
     setScreen('loading', `<div class="loading-box"><p>${esc(e.message || 'Could not load the music.')}</p><button class="btn big" data-a="songs">${icon('back')} Back</button></div>`);
     return;
   }
   const chart = chartFor(song);
-  const real = !!store.currentProfile().real;
   setScreen('game', '');
   const game = new Game({
-    real,
+    real, leadBuffer: S.leadBuffer,
     root: app, engine, sfx, notes: chart.difficulties[diff].notes, settings: S.settings, relaxed, bpm: chart.bpm, beatOffset: chart.beatOffset,
     offsetMs: offsetMs(S.settings), autoplay: autoplay || /[?&]autoplay=1/.test(location.search),
     onDone: r => results(song, diff, relaxed, r, real),

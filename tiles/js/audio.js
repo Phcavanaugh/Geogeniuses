@@ -74,14 +74,13 @@ export class AudioEngine {
 
   get duration() { return this.buffer ? this.buffer.duration - this.shift : 0; }
 
-  // silent: run the clock without playing the song (Real mode plays pieces itself).
-  play(pos = 0, { delay = 0.06, rate = 1, silent = false } = {}) {
+  play(pos = 0, { delay = 0.06, rate = 1 } = {}) {
     const ctx = this.ensure();
     this.stopSource();
     this.rate = rate;
     const when = ctx.currentTime + delay;
     this.pos0 = pos; this.ctxT0 = when; this.playing = true;
-    if (!this.buffer || silent) return;
+    if (!this.buffer) return;
     const bufPos = pos + this.shift;
     if (bufPos >= this.buffer.duration) return;
     const src = ctx.createBufferSource();
@@ -104,15 +103,15 @@ export class AudioEngine {
 
   // Plays one piece of the song (chart time `from`..`to`) at context time `when`, with short fades
   // so cuts don't click. Returns a handle with stop(). Used by Real mode.
-  playPiece(from, to, when = 0) {
+  playPiece(from, to, when = 0, buffer = this.buffer) {
     const ctx = this.ensure();
-    if (!this.buffer) return null;
+    if (!buffer) return null;
     const start = Math.max(ctx.currentTime, when || ctx.currentTime);
     const off = Math.max(0, from + this.shift);
-    const dur = Math.min(this.buffer.duration - off, Math.max(0.03, to - from));
+    const dur = Math.min(buffer.duration - off, Math.max(0.03, to - from));
     if (dur <= 0.01) return null;
     const src = ctx.createBufferSource(), g = ctx.createGain();
-    src.buffer = this.buffer; src.connect(g); g.connect(this.music);
+    src.buffer = buffer; src.connect(g); g.connect(this.music);
     g.gain.setValueAtTime(0, start);
     g.gain.linearRampToValueAtTime(1, start + 0.006);
     g.gain.setValueAtTime(1, start + Math.max(0.006, dur - 0.04));
