@@ -9,9 +9,14 @@ const ls = {
   del(k) { try { localStorage.removeItem(P + k); } catch {} },
 };
 
-export const DEFAULT_SETTINGS = { music: 0.7, sfx: 0.35, hitSounds: true, speed: 5, offsetMs: 0, offsetProfile: 'speaker', offsets: { speaker: 0, headphones: 0 } };
+export const DEFAULT_SETTINGS = { music: 0.7, sfx: 0.35, hitSounds: true, speed: 5, offsetMs: 0, offsetProfile: 'speaker', offsets: { speaker: 0, headphones: 180 }, v: 2 };
 
-export function getSettings() { return { ...DEFAULT_SETTINGS, ...ls.get('settings', {}) }; }
+export function getSettings() {
+  const s = { ...DEFAULT_SETTINGS, ...ls.get('settings', {}) };
+  // v2: Bluetooth starts at a typical AirPods delay instead of 0 (until a Timing check is run).
+  if (!s.v || s.v < 2) { s.offsets = { ...s.offsets }; if (!s.offsets.headphones) s.offsets.headphones = 180; s.v = 2; }
+  return s;
+}
 export function saveSettings(s) { ls.set('settings', s); }
 
 export function getProfiles() {

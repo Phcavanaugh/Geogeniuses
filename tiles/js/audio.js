@@ -65,6 +65,13 @@ export class AudioEngine {
     return this.pos0 + (this.now() - this.ctxT0) * this.rate;
   }
 
+  // Extra output delay the browser reports (e.g. Bluetooth). Not every browser reports it; the
+  // Timing check covers the rest.
+  deviceLatency() {
+    const l = this.ctx?.outputLatency;
+    return Number.isFinite(l) && l > 0 && l < 0.6 ? l : 0;
+  }
+
   get duration() { return this.buffer ? this.buffer.duration - this.shift : 0; }
 
   play(pos = 0, { delay = 0.06, rate = 1 } = {}) {

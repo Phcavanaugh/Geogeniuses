@@ -12,7 +12,16 @@ const engine = new AudioEngine();
 const sfx = new Sfx(engine);
 const S = { catalog: [], settings: store.getSettings(), parent: false };
 const DIFF_NAME = { easy: 'Easy', hard: 'Hard' };
-export const offsetMs = s => (s.offsets?.[s.offsetProfile] ?? 0);
+// Timing offset in ms: the saved offset for the current output (speaker / Bluetooth) plus any
+// output delay the browser itself reports.
+// An uncalibrated default (e.g. the 180 ms Bluetooth guess) is skipped when the browser already
+// reports a big delay itself, so it isn't counted twice.
+export const offsetMs = s => {
+  const lat = engine.deviceLatency();
+  const saved = (!s.calibrated?.[s.offsetProfile] && lat > 0.08) ? 0 : (s.offsets?.[s.offsetProfile] ?? 0);
+  return saved + Math.round(lat * 1000);
+};
+const savedOffset = s => (s.offsets?.[s.offsetProfile] ?? 0);
 
 window.__tt = { engine, S }; // used by automated tests
 
@@ -73,10 +82,18 @@ async function chooseDiff(song) {
     <h2>${esc(song.title)}</h2>
     <p class="muted">${esc(song.artist || '')}</p>
     <div class="diff-row">${diffs.map(d => { const b = store.getBest(p.id, song.id, d); return `<button class="btn big diff ${d}" data-v="${d}"><span>${DIFF_NAME[d]}</span>${stars(b?.stars || 0)}${b ? `<small>Best ${b.score.toLocaleString()}</small>` : ''}</button>`; }).join('')}</div>
+    <div class="listen-row"><small class="muted">Listening with</small>
+      <div class="seg">${['speaker', 'headphones'].map(k => `<button class="seg-btn ${S.settings.offsetProfile === k ? 'on' : ''}" data-listen="${k}" data-v="" data-keep="1">${k === 'speaker' ? 'Speaker' : 'AirPods / Bluetooth'}</button>`).join('')}</div></div>
     <label class="switch-row"><span><b>Relaxed mode</b><br><small>Bigger timing window, never runs out of energy</small></span>
       <input type="checkbox" class="switch" id="relaxed" ${relaxed ? 'checked' : ''}></label>
     <button class="btn ghost" data-v="">Cancel</button>`, {
-    onOpen: m => m.querySelector('#relaxed').addEventListener('change', e => { relaxed = e.target.checked; }),
+    onOpen: m => {
+      m.querySelector('#relaxed').addEventListener('change', e => { relaxed = e.target.checked; });
+      m.querySelectorAll('[data-listen]').forEach(b => b.addEventListener('click', () => {
+        S.settings.offsetProfile = b.dataset.listen; store.saveSettings(S.settings);
+        m.querySelectorAll('[data-listen]').forEach(x => x.classList.toggle('on', x === b));
+      }));
+    },
   });
   if (!v) return;
   const prof = store.getProfiles(); const me = prof.list.find(x => x.id === p.id); if (me) { me.relaxed = relaxed; store.saveProfiles(prof); }
@@ -231,7 +248,8 @@ function parentTab(tab) {
       <h3>Timing</h3>
       <p class="muted small">Bluetooth headphones and speakers play sound a little late. Run the timing check once for each, so taps line up with the music.</p>
       <div class="seg">${['speaker', 'headphones'].map(k => `<button class="seg-btn ${s.offsetProfile === k ? 'on' : ''}" data-oprof="${k}">${k === 'speaker' ? 'Device speaker / wired' : 'Bluetooth'}</button>`).join('')}</div>
-      <label>Timing offset <span class="val" id="off-val">${offsetMs(s)} ms</span><input type="range" min="-150" max="450" step="5" value="${offsetMs(s)}" data-set="offset"></label>
+      <label>Timing offset <span class="val" id="off-val">${savedOffset(s)} ms</span><input type="range" min="-150" max="450" step="5" value="${savedOffset(s)}" data-set="offset"></label>
+      ${engine.deviceLatency() ? `<p class="muted small">This device also reports ${Math.round(engine.deviceLatency() * 1000)} ms of sound delay, which is added automatically.</p>` : ''}
       <button class="btn big primary" data-p="calibrate">${icon('music')} Timing check</button>
       <h3>Reset</h3>
       <button class="btn small ghost danger" data-p="reset">Erase everything on this device</button>
@@ -271,7 +289,7 @@ function bindParent(tab) {
   body.querySelectorAll('[data-set]').forEach(i => i.oninput = () => {
     const k = i.dataset.set, s = S.settings;
     if (k === 'hitSounds') s.hitSounds = i.checked;
-    else if (k === 'offset') { s.offsets = { ...s.offsets, [s.offsetProfile]: Number(i.value) }; document.getElementById('off-val').textContent = i.value + ' ms'; }
+    else if (k === 'offset') { s.offsets = { ...s.offsets, [s.offsetProfile]: Number(i.value) }; s.calibrated = { ...s.calibrated, [s.offsetProfile]: true }; document.getElementById('off-val').textContent = i.value + ' ms'; }
     else { s[k] = Number(i.value); if (k === 'speed') document.getElementById('speed-val').textContent = i.value; }
     store.saveSettings(s); applyVolumes();
     if (k === 'sfx' || k === 'music') { unlock().then(() => sfx.blip(2)); }
@@ -394,8 +412,9 @@ async function calibrate() {
     const use = diffs.slice(2).sort((a, b) => a - b);
     const med = use[Math.floor(use.length / 2)];
     const spread = use[Math.floor(use.length * 0.85)] - use[Math.floor(use.length * 0.15)];
-    const ms = Math.round(med * 1000 / 5) * 5;
+    const ms = Math.round((med - engine.deviceLatency()) * 1000 / 5) * 5;
     S.settings.offsets = { ...S.settings.offsets, [S.settings.offsetProfile]: Math.max(-150, Math.min(450, ms)) };
+    S.settings.calibrated = { ...S.settings.calibrated, [S.settings.offsetProfile]: true };
     store.saveSettings(S.settings);
     status.innerHTML = `Offset set to <b>${ms} ms</b> for ${S.settings.offsetProfile === 'speaker' ? 'speaker' : 'Bluetooth'}.` + (spread > 0.08 ? ' Your taps were a bit uneven, so you may want to run it again.' : ' Looks steady.');
   }
