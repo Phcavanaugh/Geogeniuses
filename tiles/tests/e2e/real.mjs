@@ -60,6 +60,16 @@ try {
   check(Math.abs(avg(onTime)) < 25, 'on-time taps start the tune on time');
   check(avg(late) > 60 && avg(late) < 110, 'taps 80 ms late make the tune come in about 80 ms late');
   check(!pieces.some(p => Math.abs(p.from - out.groupT[20]) < 0.001), 'a missed tile leaves its note silent (beat keeps going)');
+  // the line follows the last touch
+  const line = await page.evaluate(async () => {
+    const g = window.__tt.game, cv = g.canvas, r = cv.getBoundingClientRect(), H = g.H;
+    cv.dispatchEvent(new PointerEvent('pointerdown', { pointerId: 999, clientX: r.left + g.playX + g.laneW * 0.5, clientY: r.top + H * 0.55, pointerType: 'touch', bubbles: true }));
+    cv.dispatchEvent(new PointerEvent('pointerup', { pointerId: 999, clientX: r.left + g.playX + g.laneW * 0.5, clientY: r.top + H * 0.55, pointerType: 'touch', bubbles: true }));
+    await new Promise(res => setTimeout(res, 600));
+    return { hitY: g.stage.hitY, want: H * 0.55, y0: g.stage.y(0) };
+  });
+  await page.screenshot({ path: new URL('./shots/line-moved.png', import.meta.url).pathname }).catch(() => {});
+  check(Math.abs(line.hitY - line.want) < 3 && Math.abs(line.y0 - line.hitY) < 0.5, `the line moves to the last touch (${Math.round(line.hitY)} vs ${Math.round(line.want)}) and tiles land on it`);
   check(!errors.length, 'no page errors ' + errors.join('; '));
 } finally { await browser.close(); server.close(); }
 if (failed) { console.log('FAILED'); process.exitCode = 1; } else console.log('Real mode checks passed.');

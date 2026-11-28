@@ -145,6 +145,7 @@ export class Game {
     if (!this.running) return;
     try { this.canvas.setPointerCapture(e.pointerId); } catch {}
     const lane = this.laneAt(e.clientX);
+    this.stage.setLine(e.clientY - this.canvas.getBoundingClientRect().top);
     this.pointers.set(e.pointerId, lane);
     this.press(lane, this.eventTime(e));
   }
