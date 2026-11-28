@@ -217,3 +217,87 @@ input[type=range] { width: 100%; accent-color: var(--sun); height: 32px; }
 .sheet .switch-row { font-weight: 400; }
 .sheet .switch-row small { color: var(--muted); }
 .listen-row { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+
+/* ============ Neon night theme ============ */
+:root { --neon-pink: #ff4f9a; --neon-blue: #4f8cff; --neon-mint: #1fe0bf; --neon-sun: #ffb627; --glass: rgba(22, 12, 58, 0.62); --edge: rgba(190, 160, 255, 0.28); }
+body { background: #07051a; }
+#app { background: transparent; }
+#app.screen-game, #app.screen-editor { background: #07051a; }
+#scene { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+#scene .sky { position: absolute; inset: 0; background: linear-gradient(180deg, #2a0b4d 0%, #1a0a42 40%, #3b0f5c 62%, #07051a 63%); }
+#scene .sun { position: absolute; left: 50%; top: 62%; width: min(70vw, 420px); aspect-ratio: 1; transform: translate(-50%, -56%);
+  border-radius: 50%; background: linear-gradient(180deg, #ffe27a 0%, #ff7a59 50%, #ff2e88 100%);
+  -webkit-mask: linear-gradient(180deg, #000 30%, transparent 30% 31.5%, #000 31.5% 38%, transparent 38% 40.5%, #000 40.5% 46%, transparent 46% 49.5%, #000 49.5%);
+          mask: linear-gradient(180deg, #000 30%, transparent 30% 31.5%, #000 31.5% 38%, transparent 38% 40.5%, #000 40.5% 46%, transparent 46% 49.5%, #000 49.5%);
+  filter: drop-shadow(0 0 40px rgba(255, 70, 150, 0.6)); opacity: 0.9; }
+#scene .stars { position: absolute; inset: 0 0 40% 0; opacity: 0.8;
+  background-image: radial-gradient(1.5px 1.5px at 12% 18%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 28% 42%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 44% 12%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 63% 30%, #fff 50%, transparent 51%), radial-gradient(2px 2px at 78% 14%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 88% 46%, #fff 50%, transparent 51%),
+    radial-gradient(1px 1px at 6% 52%, #fff 50%, transparent 51%), radial-gradient(1.5px 1.5px at 92% 28%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 35% 26%, #fff 50%, transparent 51%), radial-gradient(1px 1px at 55% 50%, #fff 50%, transparent 51%);
+  animation: twinkle 4s ease-in-out infinite alternate; }
+@keyframes twinkle { to { opacity: 0.45; } }
+#scene .floor { position: absolute; left: -50%; right: -50%; top: 62.5%; bottom: -10%; perspective: 260px; perspective-origin: 50% 0; background: linear-gradient(180deg, #2a0a45, #07051a 40%); box-shadow: 0 -2px 24px rgba(255, 79, 154, 0.7); }
+#scene .grid { position: absolute; inset: 0 0 -100% 0; transform: rotateX(62deg); transform-origin: 50% 0;
+  background-image: linear-gradient(rgba(255, 79, 154, 0.85) 2px, transparent 2px), linear-gradient(90deg, rgba(79, 140, 255, 0.7) 2px, transparent 2px);
+  background-size: 60px 60px; animation: drive 1.2s linear infinite;
+  -webkit-mask: linear-gradient(180deg, transparent, #000 25%); mask: linear-gradient(180deg, transparent, #000 25%); }
+@keyframes drive { to { background-position: 0 60px; } }
+body.playing #scene { display: none; }
+
+/* glassy cards + sheets */
+.sheet, .pcard, .song-card, .tab, .check { -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); }
+.sheet { background: rgba(26, 13, 66, 0.88); border: 1px solid var(--edge); }
+.modal-sheet { box-shadow: 0 -10px 60px rgba(255, 79, 154, 0.25), 0 0 0 1px rgba(255,255,255,0.04) inset; }
+.pcard { background: var(--glass); border: 1px solid var(--edge); }
+.tab { background: var(--glass); border: 1px solid var(--edge); }
+.tab.on { background: linear-gradient(90deg, #ff4f9a, #ffb627); color: #1b0830; border-color: transparent; }
+
+/* buttons */
+.btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); }
+.btn.primary { background: linear-gradient(180deg, #ffe27a, #ffb627 55%, #ff8a1f); color: #3a1600; border: 0; box-shadow: 0 5px 0 #b8570a, 0 0 24px rgba(255, 170, 40, 0.45); }
+.btn.primary:active { box-shadow: 0 2px 0 #b8570a, 0 0 16px rgba(255, 170, 40, 0.45); }
+.icon-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.12); }
+.btn.huge { font-size: 2.1rem; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 900; position: relative; overflow: hidden; }
+.btn.huge::after { content: ""; position: absolute; top: 0; bottom: 0; width: 40%; left: -60%; background: linear-gradient(100deg, transparent, rgba(255,255,255,0.55), transparent); animation: shine 2.8s ease-in-out infinite; }
+@keyframes shine { 0%, 55% { left: -60%; } 100% { left: 130%; } }
+
+/* home */
+.home { gap: 22px; padding-bottom: 12vh; }
+.logo h1 { font-size: clamp(3.4rem, 17vw, 6rem); color: #fff; background: none; -webkit-background-clip: initial; background-clip: initial;
+  text-shadow: 0 0 6px #fff, 0 0 18px #ff4f9a, 0 0 42px #ff4f9a, 0 0 80px #8a3bff; font-style: italic; transform: skew(-6deg); }
+.logo h1 span { display: block; color: #bff6ff; text-shadow: 0 0 6px #fff, 0 0 18px #4f8cff, 0 0 42px #4f8cff, 0 0 80px #1fe0bf; }
+.logo-tiles span { box-shadow: inset 0 10px 0 rgba(255,255,255,0.35), 0 0 22px currentColor; }
+.player-chip { background: var(--glass); border: 1px solid var(--edge); }
+
+/* song list */
+.topbar h2 { text-shadow: 0 0 14px rgba(255, 79, 154, 0.7); }
+.song-card { background: var(--glass); border: 1px solid var(--edge); border-left: 0; position: relative; overflow: hidden; box-shadow: 0 0 0 1px rgba(255,255,255,0.03) inset; }
+.song-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--accent); box-shadow: 0 0 18px var(--accent); }
+.song-art { background: linear-gradient(145deg, var(--accent), #2a0b4d); box-shadow: 0 0 20px color-mix(in srgb, var(--accent) 55%, transparent); display: flex; align-items: flex-end; justify-content: center; gap: 4px; padding: 12px 10px; }
+.song-art i { display: block; width: 8px; border-radius: 4px; background: #fff; height: 30%; animation: eq 0.9s ease-in-out infinite alternate; }
+.song-art i:nth-child(2) { animation-delay: -0.3s; } .song-art i:nth-child(3) { animation-delay: -0.6s; } .song-art i:nth-child(4) { animation-delay: -0.15s; }
+@keyframes eq { from { height: 20%; } to { height: 85%; } }
+.song-title { font-size: 1.3rem; }
+
+/* game HUD */
+.hud { background: linear-gradient(rgba(7,5,26,0.85), rgba(7,5,26,0)); }
+.hud-score { display: flex; flex-direction: column; line-height: 1; text-shadow: 0 0 10px rgba(255, 79, 154, 0.7), 0 2px 6px rgba(0,0,0,0.6); }
+.hud-score .relaxed-tag { margin: 4px 0 0; font-size: 0.7rem; font-weight: 700; text-shadow: none; }
+.hud-progress .bar { height: 8px; background: rgba(255,255,255,0.14); box-shadow: 0 0 0 1px rgba(255,255,255,0.08) inset; }
+.hud-progress .fill { background: linear-gradient(90deg, #4f8cff, #1fe0bf, #ffb627, #ff4f9a); box-shadow: 0 0 12px rgba(255, 79, 154, 0.8); }
+.pstar.lit { filter: drop-shadow(0 0 8px #ffd23f); }
+.energy-fill { background: linear-gradient(90deg, #1fe0bf, #7ef0c8); box-shadow: 0 0 10px #1fe0bf; }
+.countdown { color: #fff; text-shadow: 0 0 10px #fff, 0 0 30px #ff4f9a, 0 0 60px #8a3bff; font-style: italic; }
+.game-overlay { background: rgba(7, 5, 26, 0.72); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+
+/* results */
+.results h2 { font-size: 2.6rem; font-style: italic; text-shadow: 0 0 8px #fff, 0 0 26px #ff4f9a, 0 0 60px #8a3bff; }
+.stars.big .on { filter: drop-shadow(0 0 14px #ffd23f); }
+.score-big { text-shadow: 0 0 20px rgba(79, 140, 255, 0.8); }
+.tally span { background: var(--glass); border: 1px solid var(--edge); }
+#confetti { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+@media (prefers-reduced-motion: reduce) { #scene .grid, #scene .stars, .song-art i, .btn.huge::after { animation: none; } }
+.sheet h2 + p.muted { text-align: center; margin-top: -6px; }
+.btn.diff { box-shadow: 0 6px 0 rgba(0,0,0,0.25), 0 0 26px rgba(255,255,255,0.12); }
+.btn.diff.easy { box-shadow: 0 6px 0 #078a73, 0 0 26px rgba(31,224,191,0.45); }
+.btn.diff.hard { box-shadow: 0 6px 0 #a3125a, 0 0 26px rgba(255,79,154,0.45); }
